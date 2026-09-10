@@ -53,19 +53,29 @@ third-party packages in use and their licenses.
 ## Current development status
 
 Foundation stage: repository structure, documentation, a minimal frontend
-page, and a backend `GET /api/v1/health` endpoint. No billing calculation,
-database schema, or CRUD features exist yet — these will be implemented
-from the official competition specification in later, separately
-reviewable changes.
+page, a backend `GET /api/v1/health` endpoint, and now the domain model
+and database foundation — TypeScript domain types
+(`RentalProperty`, `Room`, `MeterReading`, `ElectricityTariff`,
+`ElectricityTariffTier`, `WaterTariff`, `Invoice`, `InvoiceItem`), an
+initial PostgreSQL schema, and the official competition default
+tariff configuration as seed data. See
+[`docs/DOMAIN_MODEL.md`](docs/DOMAIN_MODEL.md) and
+[`docs/DATABASE_DESIGN.md`](docs/DATABASE_DESIGN.md).
+
+The database schema has **not** been run against a live database yet (no
+Supabase connection was available for this task). Calculation Core
+(the actual billing formulas) and CRUD (Controllers/Services/Repositories
+for these domains) still do not exist — these are separate, later,
+reviewable tasks.
 
 ## Repository structure
 
 ```
 OpenUtilityBill/
-  backend/     Node.js + TypeScript + Express REST API
+  backend/     Node.js + TypeScript + Express REST API, domain models
   frontend/    Vite + TypeScript + Bootstrap client
-  database/    Future PostgreSQL schema/migrations (Supabase-hosted)
-  docs/        Architecture, error handling, and learning documentation
+  database/    PostgreSQL schema (migrations/) and seed data (seeds/)
+  docs/        Architecture, domain model, database, and learning docs
 ```
 
 ## Quick start
@@ -82,7 +92,14 @@ and typecheck commands for both `backend/` and `frontend/`.
 - [`docs/ERROR_HANDLING.md`](docs/ERROR_HANDLING.md) — success/failure
   contract, error codes, fail-fast pipeline.
 - [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) — setup and commands.
-- [`database/README.md`](database/README.md) — future database plans.
+- [`docs/DOMAIN_MODEL.md`](docs/DOMAIN_MODEL.md) — business entities,
+  relationships, and the historical-snapshot principle.
+- [`docs/DATABASE_DESIGN.md`](docs/DATABASE_DESIGN.md) — schema
+  reasoning: normalization, keys, constraints, `NUMERIC` vs. `FLOAT`.
+- [`docs/TRANSACTIONS.md`](docs/TRANSACTIONS.md) — ACID guarantees and
+  transaction boundaries for future write workflows.
+- [`database/README.md`](database/README.md) — schema/seed files and how
+  to run them.
 
 ## License
 
