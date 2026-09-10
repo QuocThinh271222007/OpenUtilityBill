@@ -4,6 +4,27 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- Corrected the competition tariff seed dates: electricity
+  `effective_from` now cites the real legal date (2025-05-10, per
+  Decision 1279/QĐ-BCT) with `effective_to = 2026-12-31` documented as
+  bounding the seeded 8% VAT setting, not the underlying price; water
+  `effective_from` (2026-09-06) is documented as the competition
+  configuration's activation date, not a legal tariff date, with
+  `effective_to` left `NULL`.
+- Removed the derived `difference_amount` column/field from `invoices`
+  and the `Invoice` model — it duplicated `actual_charged_amount -
+  calculated_total` and risked going stale; it is now computed on
+  demand instead of persisted.
+- Added `UNIQUE (property_id, name)` to `rooms` so a room name is
+  unambiguous within one property (not globally).
+- Added `CHECK` constraints so `previous_reading`/`current_reading`
+  cannot exceed a declared `meter_maximum_value`.
+- Tightened `electricity_vat_rate`, `water_tariffs.vat_rate`, and
+  `environmental_fee_rate` to `0 <= rate <= 1`, since rates are stored
+  as decimal fractions (e.g. `0.08`, not `8`).
+
 ### Added
 
 - Domain model and database foundation: TypeScript domain types for

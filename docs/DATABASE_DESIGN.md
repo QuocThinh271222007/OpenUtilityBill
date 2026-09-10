@@ -98,6 +98,7 @@ an application convention someone could forget to check.
 | `(name, effective_from)` | `electricity_tariffs`, `water_tariffs` | Supports idempotent seeding via `ON CONFLICT` (see `database/seeds/001_competition_defaults.sql`) and prevents two configuration rows with the same name and effective date. |
 | `(room_id, billing_period, utility_type)` | `meter_readings` | Exactly one reading per room, per month, per utility — the schema-level guarantee behind `docs/DOMAIN_MODEL.md`'s `MeterReading` invariant. |
 | `(tariff_id, tier_number)` | `electricity_tariff_tiers` | A tier number must not repeat within one tariff version. |
+| `(property_id, name)` | `rooms` | A room name/number must be unambiguous *within one property* (two "Room 101" rows in the same property would be confusing when picking a room to bill). This is **not** a global uniqueness rule — "Property A / 101" and "Property B / 101" are both valid, since they belong to different properties. |
 | `(room_id, billing_period)` | `invoices` | One invoice per room per month, for the initial mandatory scope (see "Invoice revision" below). |
 | `(invoice_id, display_order)` | `invoice_items` | Two breakdown lines on the same invoice must not claim the same display position. |
 
@@ -110,18 +111,47 @@ rule list is enforced with a `CHECK`:
 - `tier_number > 0`
 - `threshold_kwh > 0` when not `NULL`
 - `unit_price >= 0`
-- `electricity_vat_rate >= 0`, `vat_rate >= 0`, `environmental_fee_rate >= 0`
+- `0 <= electricity_vat_rate <= 1`, `0 <= vat_rate <= 1`,
+  `0 <= environmental_fee_rate <= 1` — see "Rates are stored as decimal
+  fractions in [0, 1]" below
 - `previous_reading >= 0`, `current_reading >= 0`
 - `meter_maximum_value > 0` when provided
+- `previous_reading <= meter_maximum_value` and
+  `current_reading <= meter_maximum_value`, when `meter_maximum_value`
+  is provided — see "Meter maximum value" below
 - `calculated_total >= 0`
 - `actual_charged_amount >= 0` when provided
 - `effective_to >= effective_from` when `effective_to` is set (both
   tariff tables)
-- `difference_amount` only set when `actual_charged_amount` is also set
 - `billing_period` is always the first day of its month
   (`EXTRACT(DAY FROM billing_period) = 1`)
 - `utility_type`, `electricity_billing_method`, `water_billing_method`,
   `invoice_items.category` are restricted to their documented value sets
+- `(property_id, name)` is unique per `rooms` row — see the unique
+  constraints table above
+
+### Rates are stored as decimal fractions in [0, 1]
+
+`electricity_vat_rate`, `water_tariffs.vat_rate`, and
+`environmental_fee_rate` all represent a percentage as a decimal
+fraction: 8% is stored as `0.08`, not `8`. The `CHECK (rate >= 0 AND rate
+<= 1)` constraint exists specifically to catch the most common
+configuration mistake for this representation — entering the whole
+percentage number (`8`) instead of the fraction (`0.08`). This bound does
+**not** apply to price fields (`unit_price`, `price_per_cubic_meter`,
+`price_per_person`) — those are currency amounts, not rates, and have no
+natural upper bound.
+
+### Meter maximum value
+
+`meter_readings.meter_maximum_value` is optional (`NULL` when the meter
+has no known/relevant maximum). When it *is* provided, both
+`previous_reading` and `current_reading` must be `<=` it — a reading
+above a meter's own declared maximum is physically impossible and is
+rejected at the database level. This is **not** a rollover calculation:
+it says nothing about whether `current_reading < previous_reading` is a
+valid wraparound versus a data-entry mistake (see below) — it only
+rejects readings that could never be correct regardless of rollover.
 
 **Deliberately not a `CHECK` constraint:** "`water_reading_id` must be
 `NOT NULL` when `water_billing_method = 'PER_CUBIC_METER'`." This is a
@@ -137,16 +167,35 @@ This is deferred to the Service layer's fail-fast validation when the
 A meter that rolls over past `meter_maximum_value` can legitimately
 report a smaller `current_reading` than `previous_reading` (it wrapped
 back toward zero). Distinguishing "valid rollover" from "data entry
-error" needs the reading's relationship to `meter_maximum_value`, which
-is exactly the kind of calculation this project keeps out of the
-database (see "Why no triggers/stored procedures yet" below) — it will
-live in Calculation Core.
+error" needs more than a bounds check on each reading individually (it
+needs to reason about *how far* the readings are from
+`meter_maximum_value` and in which direction) — that is exactly the kind
+of calculation this project keeps out of the database (see "Why no
+triggers/stored procedures yet" below) — it will live in Calculation
+Core. What the database *does* reject is a reading that exceeds
+`meter_maximum_value` outright (see "Meter maximum value" above) —
+that is a simple bounds check, not a rollover calculation.
 
-**Considered and deferred:** a uniqueness constraint on `(property_id,
-name)` for `rooms`, to prevent two rooms in the same property sharing a
-name. Not part of the task's required invariant list; left for a future
-migration if duplicate room names turn out to cause real confusion in
-practice, rather than added speculatively now.
+## Derived values are not persisted
+
+`invoices` stores `calculated_total` and `actual_charged_amount`, but
+**not** a `difference_amount` column. The difference
+(`actual_charged_amount - calculated_total`) is fully derived from those
+two already-persisted values — it is not new information. Persisting it
+as a third column would create a consistency risk: if
+`actual_charged_amount` is corrected after the invoice is first created
+(e.g. reconciling with what the tenant actually paid), a separately
+stored `difference_amount` would need to be updated in lock-step, or it
+silently goes stale. The single source of truth stays exactly two
+columns; the future Service/Calculation layer computes the difference
+on demand whenever it needs to be displayed, rather than caching it in
+the database. This is the same "don't store what you can derive"
+principle applied to a case where the derived value would otherwise
+duplicate, rather than protect, historical meaning — contrast this with
+the *intentional* duplication in "Intentional historical snapshots"
+above, which exists specifically to prevent values from changing
+underneath an old invoice. A derived arithmetic result is not at risk of
+that problem, so there is no reason to snapshot it.
 
 ## Deletion behavior (`ON DELETE` policy)
 
@@ -173,7 +222,7 @@ pointing at them independently.**
 Every field representing money, a rate, a fee, or a calculated financial
 amount (`unit_price`, `electricity_vat_rate`, `vat_rate`,
 `environmental_fee_rate`, `price_per_cubic_meter`, `price_per_person`,
-`calculated_total`, `actual_charged_amount`, `difference_amount`,
+`calculated_total`, `actual_charged_amount`,
 `invoice_items.amount`/`unit_price`/`quantity`, `threshold_kwh`,
 meter readings) uses PostgreSQL `NUMERIC(precision, scale)`, never
 `REAL`/`FLOAT`/`DOUBLE PRECISION`.
@@ -227,6 +276,39 @@ concrete need
 (see "no unnecessary PostgreSQL extensions" in the task brief). If
 overlapping tariff versions become a real data-quality problem, that is
 a candidate for a future, explicitly justified migration.
+
+### The seeded dates mean different things for electricity and water
+
+`database/seeds/001_competition_defaults.sql` sets different
+`effective_from`/`effective_to` values for the two tariffs, and they are
+**not** interchangeable in meaning:
+
+- **Electricity** (`effective_from = 2025-05-10`,
+  `effective_to = 2026-12-31`): `effective_from` is a real **legal**
+  effective date — the competition specification cites Decision
+  1279/QĐ-BCT as taking effect from 10/05/2025 for the underlying
+  electricity price schedule. `effective_to = 2026-12-31` does **not**
+  mean the electricity price itself expires on that date — it bounds
+  *this configuration row*, which also bundles the competition's 8%
+  electricity VAT setting, and the specification states that 8% VAT rate
+  applies only through 31/12/2026. Past that date, a new
+  `electricity_tariffs` row (e.g. with an updated VAT rate) would need
+  to be seeded/inserted — the schema already supports that as a new
+  row with a later `effective_from`, no migration required.
+- **Water** (`effective_from = 2026-09-06`, `effective_to = NULL`): the
+  competition specification does not cite any legal water-tariff
+  document with a real effective date. `2026-09-06` is documented as the
+  **competition configuration's activation/publication date** — the date
+  these fixed values were established for use in this project — not a
+  claim that a real local water utility's legal tariff took effect that
+  day. `effective_to` is `NULL` because there is no cited basis for an
+  end date.
+
+This distinction matters for the oral defense: `effective_from` on
+`electricity_tariffs` can be defended by citing an external legal
+document; `effective_from` on `water_tariffs` cannot, and should be
+explained as "when this competition's fixed configuration was adopted,"
+not "when a real water tariff took effect."
 
 ## Why SQL stays readable and direct
 

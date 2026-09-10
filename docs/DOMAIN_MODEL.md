@@ -68,7 +68,10 @@ Relationships are expressed as **foreign key IDs** (`roomId: number`,
 - **Key fields:** `id`, `propertyId`, `name`, `tenantCount`, `createdAt`.
 - **Relationships:** belongs to one `RentalProperty`; parent of
   `MeterReading` and `Invoice` (1 → N each).
-- **Invariant:** `tenantCount >= 0`.
+- **Invariant:** `tenantCount >= 0`; `name` is unique *within its
+  property* (`UNIQUE (propertyId, name)`) — not globally unique. Two
+  different properties may each have a room named "101"; the same
+  property may not have two.
 - **Why it exists separately:** a `RentalProperty` is not itself
   billable — a `Room` is. Splitting them lets a property have many
   independently-billed rooms with their own tenant counts and reading
@@ -93,7 +96,11 @@ affected by that change — see `Invoice.tenantCountUsed` below and
 - **Invariant:** exactly one reading per
   `(roomId, billingPeriod, utilityType)`; `billingPeriod` must be the
   first day of its month; `previousReading >= 0`, `currentReading >= 0`,
-  `meterMaximumValue > 0` when present.
+  `meterMaximumValue > 0` when present; when `meterMaximumValue` is
+  present, both `previousReading` and `currentReading` must be `<=` it
+  (a reading above the meter's own declared maximum is physically
+  impossible — this is a simple bounds check, not a rollover
+  calculation; see `docs/DATABASE_DESIGN.md` "Meter maximum value").
 - **Why it exists separately:** electricity and water both need "a
   previous and current reading for a room in a month," differing only in
   `utilityType`. A single normalized table avoids two near-duplicate
@@ -117,7 +124,9 @@ this task only preserves the data, not the formula.
 - **Relationships:** parent of `ElectricityTariffTier` (1 → N);
   referenced by `Invoice.electricityTariffId`.
 - **Invariant:** `effectiveTo >= effectiveFrom` when `effectiveTo` is
-  set; unique per `(name, effectiveFrom)`.
+  set; unique per `(name, effectiveFrom)`; `0 <= electricityVatRate <=
+  1` (a decimal fraction, e.g. `0.08` for 8% — see `docs/DATABASE_DESIGN.md`
+  "Rates are stored as decimal fractions in [0, 1]").
 - **Why it exists separately from ElectricityTariffTier:** the tariff
   holds configuration that applies once per version (VAT, quota
   parameter, fallback tier number); the tiers are a variable-length list
@@ -154,7 +163,11 @@ this task only preserves the data, not the formula.
   `environmentalFeeRate`, `createdAt`.
 - **Relationships:** referenced by `Invoice.waterTariffId`.
 - **Invariant:** `effectiveTo >= effectiveFrom` when set; unique per
-  `(name, effectiveFrom)`.
+  `(name, effectiveFrom)`; `0 <= vatRate <= 1` and
+  `0 <= environmentalFeeRate <= 1` (decimal fractions — see
+  `docs/DATABASE_DESIGN.md` "Rates are stored as decimal fractions in
+  [0, 1]"). `pricePerCubicMeter`/`pricePerPerson` are currency amounts,
+  not rates, and have no such upper bound.
 - **Why it exists separately (and why it isn't split further):**
   `PER_CUBIC_METER` and `PER_PERSON` are two *billing methods* of the
   same configuration version, not two independent systems — both share
@@ -172,16 +185,26 @@ this task only preserves the data, not the formula.
   `electricityTariffId`, `waterTariffId`, `electricityBillingMethod`,
   `waterBillingMethod`, `electricityReadingId`, `waterReadingId`
   (nullable), `calculatedTotal`, `actualChargedAmount` (nullable),
-  `differenceAmount` (nullable), `createdAt`.
+  `createdAt`.
 - **Relationships:** belongs to one `Room`; references one
   `ElectricityTariff`, one `WaterTariff`, one electricity `MeterReading`,
   and optionally one water `MeterReading`; parent of `InvoiceItem`
   (1 → N).
 - **Invariant:** unique per `(roomId, billingPeriod)`; `calculatedTotal
-  >= 0`; `actualChargedAmount >= 0` when present; `differenceAmount` only
-  set when `actualChargedAmount` is present.
+  >= 0`; `actualChargedAmount >= 0` when present.
 - **Why it exists separately:** it is the durable record of "what was
   actually billed and why" — see "Historical snapshot principle" below.
+- **Why there is no `differenceAmount` field:** the difference between
+  what was actually charged and what was calculated
+  (`actualChargedAmount - calculatedTotal`) is fully derived from those
+  two persisted fields. Storing a third field for a derived value risks
+  it going stale — if `actualChargedAmount` is corrected later, a
+  previously stored `differenceAmount` would silently become wrong
+  unless something remembers to update it too. The single source of
+  truth is `calculatedTotal` and `actualChargedAmount`; the difference
+  is computed on demand by the Service/Calculation layer when needed for
+  display, not persisted. See "Derived values are not persisted" in
+  `docs/DATABASE_DESIGN.md`.
 
 ## InvoiceItem
 
