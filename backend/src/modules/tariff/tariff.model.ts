@@ -16,6 +16,11 @@
  * - `thresholdKwh` dương cho bậc có giới hạn; NULL cho bậc cuối cùng
  *   (nghĩa là "phần sản lượng còn lại, không giới hạn").
  * - `effectiveTo >= effectiveFrom` khi `effectiveTo` có giá trị.
+ * - `electricityVatRate`, `vatRate`, `environmentalFeeRate` là PHÂN SỐ
+ *   THẬP PHÂN trong đoạn [0, 1] (ví dụ 8% = "0.08"), KHÔNG phải số
+ *   nguyên phần trăm ("8"). `pricePerCubicMeter`/`pricePerPerson`
+ *   KHÔNG theo quy ước này — đó là đơn giá tiền, không có giới hạn trên
+ *   tự nhiên (xem docs/DATABASE_DESIGN.md).
  *
  * Numeric representation:
  * `electricityVatRate`, `unitPrice`, `thresholdKwh`, `pricePerCubicMeter`,

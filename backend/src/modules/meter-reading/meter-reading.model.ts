@@ -15,6 +15,12 @@
  *   "quay vòng" (rollover) khi đạt giá trị tối đa. Bản thân phép tính
  *   rollover CHƯA được cài đặt ở task này; schema chỉ giữ chỗ dữ liệu
  *   cần thiết cho Calculation Core sau này.
+ * - Khi `meterMaximumValue` có giá trị: `previousReading <=
+ *   meterMaximumValue` VÀ `currentReading <= meterMaximumValue`. Đây
+ *   CHỈ là loại bỏ chỉ số vượt quá giá trị tối đa vật lý của công tơ —
+ *   KHÔNG phải phép tính rollover (rollover vẫn cho phép `currentReading
+ *   < previousReading` một cách hợp lệ; xem docs/DATABASE_DESIGN.md mục
+ *   "Meter maximum value").
  * - `billingPeriod` PHẢI là ngày đầu tiên của tháng (ví dụ 2026-09-01),
  *   để một tháng luôn ứng với đúng một giá trị `billingPeriod`, dễ
  *   truy vấn theo tháng (`WHERE billing_period = '2026-09-01'`).

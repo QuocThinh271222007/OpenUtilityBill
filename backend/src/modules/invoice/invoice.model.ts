@@ -19,15 +19,26 @@ import type {
  *   "Why one invoice per room/month" bên dưới.
  * - `calculatedTotal >= 0`.
  * - `actualChargedAmount >= 0` khi có giá trị.
- * - `differenceAmount` chỉ có ý nghĩa khi `actualChargedAmount` khác
- *   NULL (số tiền thực tế được nhập sau, không phải lúc tạo invoice).
  *
  * Numeric representation:
- * `calculatedTotal`, `actualChargedAmount`, `differenceAmount`,
- * `quantity`, `unitPrice`, `amount` đều là `string` — cùng quy ước với
+ * `calculatedTotal`, `actualChargedAmount`, `quantity`, `unitPrice`,
+ * `amount` đều là `string` — cùng quy ước với
  * ../meter-reading/meter-reading.model.ts và ../tariff/tariff.model.ts
  * (cột database NUMERIC, không phải FLOAT/REAL; xem
  * docs/DATABASE_DESIGN.md).
+ *
+ * Why there is no `differenceAmount` field:
+ * Chênh lệch (difference = actualChargedAmount - calculatedTotal) là
+ * giá trị HOÀN TOÀN SUY RA ĐƯỢC từ hai field đã có
+ * (`calculatedTotal`, `actualChargedAmount`). Lưu thêm một field thứ ba
+ * cho giá trị suy ra được sẽ tạo rủi ro mất đồng bộ — nếu
+ * `actualChargedAmount` được sửa sau (ví dụ điều chỉnh số tiền thực
+ * thu), một `differenceAmount` đã lưu trước đó sẽ trở thành SAI mà
+ * không ai biết trừ khi có thêm logic đồng bộ lại nó. Nguồn sự thật
+ * duy nhất (single source of truth) là `calculatedTotal` và
+ * `actualChargedAmount`; Service/Calculation module (task sau) sẽ tính
+ * chênh lệch on-demand mỗi khi cần hiển thị, không lưu lại (xem
+ * docs/DATABASE_DESIGN.md mục "Derived values are not persisted").
  *
  * Does NOT:
  * - tính toán bất kỳ giá trị nào. File này chỉ mô tả hình dạng dữ liệu;
@@ -98,9 +109,6 @@ export interface Invoice {
 
   /** NULL cho tới khi số tiền thực thu được nhập sau. */
   actualChargedAmount: string | null;
-
-  /** Chỉ có ý nghĩa khi actualChargedAmount khác NULL. */
-  differenceAmount: string | null;
 
   createdAt: Date;
 }

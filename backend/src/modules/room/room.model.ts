@@ -12,6 +12,9 @@
  * - `tenantCount >= 0`.
  * - `tenantCount` là trạng thái HIỆN TẠI (current state) của phòng —
  *   KHÔNG phải giá trị lịch sử dùng để tính một hoá đơn cụ thể.
+ * - `name` duy nhất TRONG PHẠM VI một property (UNIQUE(propertyId,
+ *   name)) — KHÔNG phải duy nhất toàn hệ thống. Hai property khác nhau
+ *   vẫn có thể cùng có một phòng tên "101".
  *
  * Does NOT:
  * - tự đảm bảo hoá đơn cũ không đổi khi `tenantCount` thay đổi sau này.

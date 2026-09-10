@@ -15,10 +15,12 @@
 --   "Why no triggers/stored procedures yet".
 -- - tạo dữ liệu cấu hình mặc định — xem
 --   database/seeds/001_competition_defaults.sql (chạy SAU file này).
--- - enforce mọi ràng buộc nghiệp vụ chéo bảng (ví dụ: water_reading_id
---   phải khớp với water_billing_method). Những ràng buộc như vậy đòi
---   hỏi trigger, và trigger bị tránh ở giai đoạn này — trách nhiệm này
---   thuộc về Service layer khi CreateInvoice workflow được cài đặt (xem
+-- - enforce mọi ràng buộc nghiệp vụ chéo bảng (ví dụ: một meter_reading
+--   được invoice tham chiếu phải thuộc đúng room/billing_period/
+--   utility_type của invoice đó). Những ràng buộc như vậy đòi hỏi
+--   composite foreign key hoặc trigger, và cả hai đều bị tránh ở giai
+--   đoạn này — trách nhiệm này thuộc về Service layer khi CreateInvoice
+--   workflow được cài đặt (xem chi tiết ở bảng invoices bên dưới và
 --   docs/TRANSACTIONS.md).
 --
 -- ID strategy:
@@ -63,13 +65,21 @@ CREATE TABLE rental_properties (
 -- invoices phụ thuộc) — không nên biến mất chỉ vì property cha bị xoá
 -- nhầm. Muốn xoá property, phải xoá/di chuyển room trước — một hành
 -- động rõ ràng, có chủ đích, thay vì một hiệu ứng phụ ẩn của CASCADE.
+--
+-- UNIQUE (property_id, name): tên/số phòng phải KHÔNG MƠ HỒ trong PHẠM
+-- VI một property — hai phòng "101" khác nhau trong cùng một property
+-- sẽ gây nhầm lẫn khi chọn phòng để tạo hoá đơn. Đây KHÔNG phải ràng
+-- buộc tên phòng duy nhất toàn hệ thống: "Property A / 101" và
+-- "Property B / 101" vẫn hợp lệ, vì chúng thuộc hai property khác nhau.
 CREATE TABLE rooms (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     property_id BIGINT NOT NULL
         REFERENCES rental_properties (id) ON DELETE RESTRICT,
     name TEXT NOT NULL,
     tenant_count INTEGER NOT NULL CHECK (tenant_count >= 0),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    UNIQUE (property_id, name)
 );
 
 -- ------------------------------------------------------------
@@ -99,6 +109,11 @@ CREATE TABLE rooms (
 -- lỗi nhập liệu" cần logic nghiệp vụ (so sánh với meter_maximum_value),
 -- không phải một CHECK constraint đơn giản — xem Calculation Core
 -- (task sau).
+--
+-- Tuy nhiên, khi đã khai báo meter_maximum_value, MỘT chỉ số (previous
+-- hay current) không bao giờ hợp lệ nếu VƯỢT QUÁ giá trị tối đa của
+-- công tơ — đây không phải phép tính rollover, chỉ là loại bỏ chỉ số
+-- vật lý không thể xảy ra, nên vẫn là một CHECK đơn giản, hợp lý ở đây.
 CREATE TABLE meter_readings (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     room_id BIGINT NOT NULL
@@ -113,7 +128,12 @@ CREATE TABLE meter_readings (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
 
     -- Đúng một reading cho mỗi phòng + kỳ hoá đơn + loại tiện ích.
-    UNIQUE (room_id, billing_period, utility_type)
+    UNIQUE (room_id, billing_period, utility_type),
+
+    -- Không có chỉ số nào được vượt quá giá trị tối đa đã khai báo của
+    -- công tơ (khi giá trị này được cung cấp).
+    CHECK (meter_maximum_value IS NULL OR previous_reading <= meter_maximum_value),
+    CHECK (meter_maximum_value IS NULL OR current_reading <= meter_maximum_value)
 );
 
 -- ------------------------------------------------------------
@@ -129,12 +149,18 @@ CREATE TABLE meter_readings (
 -- UNIQUE (name, effective_from) hỗ trợ seed idempotent bằng
 -- ON CONFLICT (xem database/seeds/001_competition_defaults.sql) và
 -- ngăn hai bản ghi cấu hình trùng tên + trùng ngày hiệu lực.
+--
+-- electricity_vat_rate được lưu dưới dạng PHÂN SỐ THẬP PHÂN trong đoạn
+-- [0, 1] (ví dụ 8% = 0.08), KHÔNG phải số nguyên phần trăm (8). Ràng
+-- buộc 0 <= rate <= 1 bắt lỗi cấu hình phổ biến nhất: nhập nhầm "8"
+-- thay vì "0.08".
 CREATE TABLE electricity_tariffs (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     name TEXT NOT NULL,
     effective_from DATE NOT NULL,
     effective_to DATE,
-    electricity_vat_rate NUMERIC(5, 4) NOT NULL CHECK (electricity_vat_rate >= 0),
+    electricity_vat_rate NUMERIC(5, 4) NOT NULL
+        CHECK (electricity_vat_rate >= 0 AND electricity_vat_rate <= 1),
     people_per_quota_unit INTEGER NOT NULL CHECK (people_per_quota_unit > 0),
     fallback_tier_number INTEGER NOT NULL CHECK (fallback_tier_number > 0),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -173,6 +199,11 @@ CREATE TABLE electricity_tariff_tiers (
 -- trong một bảng vì chúng thuộc cùng một PHIÊN BẢN cấu hình (cùng ngày
 -- hiệu lực, cùng VAT, cùng phí môi trường) — không phải hai hệ thống
 -- độc lập. Xem backend/src/modules/tariff/tariff.model.ts.
+--
+-- vat_rate và environmental_fee_rate cũng là PHÂN SỐ THẬP PHÂN trong
+-- [0, 1] — cùng quy ước với electricity_vat_rate ở trên. price_per_*
+-- KHÔNG bị ràng buộc theo quy ước này vì đó là đơn giá tiền (VND), không
+-- phải tỉ lệ phần trăm.
 CREATE TABLE water_tariffs (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     name TEXT NOT NULL,
@@ -180,8 +211,9 @@ CREATE TABLE water_tariffs (
     effective_to DATE,
     price_per_cubic_meter NUMERIC(14, 2) NOT NULL CHECK (price_per_cubic_meter >= 0),
     price_per_person NUMERIC(14, 2) NOT NULL CHECK (price_per_person >= 0),
-    vat_rate NUMERIC(5, 4) NOT NULL CHECK (vat_rate >= 0),
-    environmental_fee_rate NUMERIC(5, 4) NOT NULL CHECK (environmental_fee_rate >= 0),
+    vat_rate NUMERIC(5, 4) NOT NULL CHECK (vat_rate >= 0 AND vat_rate <= 1),
+    environmental_fee_rate NUMERIC(5, 4) NOT NULL
+        CHECK (environmental_fee_rate >= 0 AND environmental_fee_rate <= 1),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
 
     UNIQUE (name, effective_from),
@@ -232,23 +264,43 @@ CREATE TABLE invoices (
     -- Có thể NULL: phương pháp PER_PERSON tính theo số người, không cần
     -- chỉ số nước thực tế. Việc water_reading_id bắt buộc hay không tuỳ
     -- theo water_billing_method là một ràng buộc NGHIỆP VỤ chéo cột —
-    -- cố ý KHÔNG enforce bằng CHECK ở đây (sẽ cần logic phức tạp hơn
-    -- một constraint đơn giản); Service layer (CreateInvoice, task sau)
-    -- chịu trách nhiệm xác thực fail-fast trước khi ghi dữ liệu.
+    -- cố ý KHÔNG enforce bằng CHECK ở đây.
     water_reading_id BIGINT
         REFERENCES meter_readings (id) ON DELETE RESTRICT,
+    --
+    -- Ràng buộc nghiệp vụ chéo bảng liên quan tới hai cột trên, CỐ Ý
+    -- KHÔNG được enforce bằng FK/CHECK ở đây (sẽ cần composite foreign
+    -- key hoặc trigger — cả hai đều bị tránh ở giai đoạn này, xem
+    -- docs/DATABASE_DESIGN.md "Why no triggers/stored procedures yet").
+    -- Đây là ranh giới CÓ CHỦ ĐÍCH, không phải thiếu sót — Service layer
+    -- (CreateInvoice, task sau) chịu trách nhiệm xác thực fail-fast
+    -- TRƯỚC KHI transaction ghi invoice (xem docs/TRANSACTIONS.md):
+    --   - electricity_reading_id phải thuộc đúng room_id của invoice;
+    --   - electricity_reading billing_period phải khớp với
+    --     invoices.billing_period;
+    --   - electricity_reading utility_type phải là 'ELECTRICITY';
+    --   - khi water_billing_method = 'PER_CUBIC_METER': water_reading_id
+    --     KHÔNG được NULL, phải thuộc đúng room_id, billing_period khớp,
+    --     và utility_type phải là 'WATER'.
 
     calculated_total NUMERIC(14, 2) NOT NULL CHECK (calculated_total >= 0),
     -- NULL cho tới khi số tiền thực thu được nhập sau (đối chiếu với số
     -- khách thực trả).
+    --
+    -- Không có cột difference_amount ở đây. Chênh lệch
+    -- (actual_charged_amount - calculated_total) là giá trị HOÀN TOÀN
+    -- SUY RA ĐƯỢC từ hai cột đã lưu — lưu thêm một cột thứ ba sẽ tạo
+    -- rủi ro mất đồng bộ (actual_charged_amount có thể được sửa sau mà
+    -- quên cập nhật difference_amount theo). Nguồn sự thật duy nhất
+    -- (single source of truth) là calculated_total và
+    -- actual_charged_amount; Service/Calculation module (task sau) sẽ
+    -- tính chênh lệch on-demand khi cần hiển thị, không lưu lại. Xem
+    -- docs/DATABASE_DESIGN.md.
     actual_charged_amount NUMERIC(14, 2) CHECK (actual_charged_amount >= 0),
-    -- Chỉ có ý nghĩa khi actual_charged_amount khác NULL.
-    difference_amount NUMERIC(14, 2),
 
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
 
-    UNIQUE (room_id, billing_period),
-    CHECK (difference_amount IS NULL OR actual_charged_amount IS NOT NULL)
+    UNIQUE (room_id, billing_period)
 );
 
 -- ------------------------------------------------------------
