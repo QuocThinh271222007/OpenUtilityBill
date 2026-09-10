@@ -1,0 +1,11 @@
+/* SPDX-License-Identifier: MIT */
+
+/*
+ * CSS tuỳ chỉnh nhỏ, bổ sung cho Bootstrap khi cần. Hiện tại chưa cần
+ * override gì lớn — file này giữ chỗ mở rộng có chủ đích cho tương
+ * lai, thay vì thêm một framework CSS khác.
+ */
+
+body {
+  background-color: #f8f9fa;
+}
