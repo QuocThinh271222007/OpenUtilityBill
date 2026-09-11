@@ -1,15 +1,14 @@
 # CreateInvoice workflow
 
 This document explains `CreateInvoiceService`
-(`backend/src/modules/invoice/create-invoice.service.ts`) — the first
-complete Service/Orchestrator workflow in this project, connecting the
-Repository read layer, Calculation Core, and invoice persistence into
-one fail-fast pipeline. It complements `docs/ARCHITECTURE.md`,
-`docs/DATABASE_ACCESS.md`, and `docs/TRANSACTIONS.md`.
-
-**No Express route/Controller calls this Service yet** — this is a
-Service-layer task only. See "What is still deferred" at the end of
-this document.
+(`backend/src/modules/invoice/create-invoice.service.ts`) and
+`GetInvoiceService` (`backend/src/modules/invoice/get-invoice.service.ts`)
+— the Service/Orchestrator layer behind the invoice REST API,
+connecting the Repository layer, Calculation Core, and invoice
+persistence into fail-fast pipelines. It complements
+`docs/ARCHITECTURE.md`, `docs/DATABASE_ACCESS.md`,
+`docs/TRANSACTIONS.md`, and `docs/API.md` (the HTTP contract these
+Services are exposed through — `POST`/`GET /api/v1/invoices`).
 
 ## Sequence
 
@@ -165,35 +164,90 @@ differenceAmount field"): it is fully derived from
 stored. When `actualChargedAmount` is `null`, `billingDifference` is
 `null` — no comparison is attempted.
 
+## actualChargedAmount scale corrective (write-boundary defect fixed)
+
+Independent review found a real boundary defect: `invoices
+.actual_charged_amount` is `NUMERIC(14, 2)`, but `CreateInvoiceService`
+originally accepted **any** valid exact decimal string for
+`actualChargedAmount` (e.g. `"367000.123456"`), computed
+`billingDifference` from the *full* value, and only then persisted it —
+letting PostgreSQL silently round the stored value to `"367000.12"`.
+The returned `billingDifference` and the persisted
+`invoice.actualChargedAmount` would then describe two different source
+values — a correctness bug, not a display issue.
+
+Fixed by validating `actualChargedAmount`'s *shape* in
+`validateCreateInvoiceInput` (step 1, before any Repository read) —
+`isValidActualChargedAmountScale`
+(`backend/src/modules/invoice/invoice-input-validation.ts`): a
+non-negative decimal string, at most 12 integer digits, at most 2
+fractional digits (so it always fits `NUMERIC(14, 2)` exactly). Checked
+by regex only — never `Number(...)`/`parseFloat(...)`. An invalid value
+now fails with `VALIDATION_ERROR` before `roomRepository.findById` is
+even called; migration 001 was **not** touched, and
+`actual_charged_amount` was **not** widened — the column already
+correctly represents "a final charged monetary amount," not an
+intermediate calculation, so the fix belongs at the input boundary, not
+the schema.
+
+## GetInvoiceService — persisted readback, not recalculation
+
+`GetInvoiceService` (`backend/src/modules/invoice/get-invoice.service.ts`)
+answers `GET /api/v1/invoices?roomId=...&billingPeriod=...`. It:
+
+1. Validates `roomId`/`billingPeriod` (same shape rules as
+   `CreateInvoiceService`, factored into
+   `invoice-input-validation.ts` so both Services share one
+   implementation).
+2. Calls `InvoiceRepository.findByRoomAndPeriod` — `null` → `INVOICE_NOT_FOUND`.
+3. Calls `InvoiceRepository.findItemsByInvoiceId` (new Repository
+   method, `ORDER BY display_order ASC` — never relies on PostgreSQL's
+   natural row order).
+4. If the persisted `invoice.actualChargedAmount` is not `null`, calls
+   `calculateBillingDifference` against the persisted
+   `calculatedTotal` — the **same** derived-not-stored rule as
+   `CreateInvoiceService`, just computed from what was actually saved.
+
+It does **not** call any electricity/water calculation function
+(`calculateMeterUsage`, `calculateTieredElectricity`,
+`calculateWaterCharge`, ...) — a historical invoice must return the
+exact amount that was legally calculated and charged at creation time,
+even if the room's tenant count or the active tariff version has since
+changed (see "Room snapshot" above).
+
 ## Tests actually executed
 
-- `CALCULATION_TESTS` (unchanged Calculation Core, 76/76) and all
-  Repository/Service unit tests (fake Repositories/UnitOfWork, no
-  PostgreSQL): these ran in this repository's CI-equivalent local run
-  and are `TEST_RUNTIME_EXECUTED` — see the task's final report for the
-  exact pass count.
-- The two write-path integration tests
+- `CALCULATION_TESTS` (unchanged Calculation Core, 76/76 including the
+  7 official cases), and all Repository/Service/HTTP unit tests (fake
+  Repositories/UnitOfWork/Service, no PostgreSQL — including the
+  `actualChargedAmount` scale corrective tests and the Controller tests
+  using a fake `Request`/`Response`): these ran in this repository's
+  local run and are `TEST_RUNTIME_EXECUTED` — see the REST API task's
+  final report for the exact pass count.
+- The write-path integration test
   (`backend/src/repositories/__tests__/postgres-invoice-unit-of-work.integration.test.ts`,
   covering both COMMIT and a genuine `UNIQUE(invoice_id, display_order)`
-  rollback) are `TEST_IMPLEMENTED` and gated by `DATABASE_URL` — they
-  `SKIP` (not fail) when it is unset. As with every other integration
-  test in this project's history, no session so far has had a
-  `DATABASE_URL` available, so these remain `TEST_IMPLEMENTED` only, not
-  `TEST_RUNTIME_EXECUTED` — this project never reports a runtime PASS
-  that was not actually observed (see `docs/DATABASE_ACCESS.md`
-  "Transactions" for the same distinction applied to the earlier
-  `runInTransaction` mechanism test).
+  rollback) and the real end-to-end API integration test
+  (`backend/src/modules/invoice/__tests__/invoice.api.integration.test.ts`,
+  a real Express app on an ephemeral port + built-in `fetch`, driving
+  `POST` then `GET` through real PostgreSQL) are `TEST_IMPLEMENTED` and
+  gated by `DATABASE_URL` — they `SKIP` (not fail) when it is unset. As
+  with every other integration test in this project's history, no
+  session so far has had a `DATABASE_URL` available, so these remain
+  `TEST_IMPLEMENTED` only, not `TEST_RUNTIME_EXECUTED` — this project
+  never reports a runtime PASS that was not actually observed (see
+  `docs/DATABASE_ACCESS.md` "Transactions" for the same distinction
+  applied to the earlier `runInTransaction` mechanism test).
 
 ## What is still deferred
 
-- Any Express route/Controller calling `CreateInvoiceService` — no REST
-  billing endpoint exists.
 - Full CRUD for `RentalProperty`/`Room`/`MeterReading`/
   `ElectricityTariff`/`WaterTariff` — only reads and this one
-  `CreateInvoice` write path exist.
+  `CreateInvoice` write path exist; no admin endpoints to manage them.
 - `PropertyRepository` — no current read use case needs it.
 - Invoice revision/versioning for the same (room, billingPeriod) — the
   `UNIQUE(room_id, billing_period)` constraint would need a schema
   change first (see `backend/src/modules/invoice/invoice.model.ts`
   "Invoice revision (future)").
-- Any frontend, authentication, roles, admin UI, or Docker work.
+- Any frontend, authentication, roles, admin UI, or Docker work — the
+  REST API (`docs/API.md`) has no consumer yet and no access control.

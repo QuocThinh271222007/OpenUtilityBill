@@ -4,6 +4,75 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- `actualChargedAmount` persistence-precision defect: `CreateInvoiceService`
+  previously accepted any valid exact decimal string for
+  `actualChargedAmount` (e.g. `"367000.123456"`), computed
+  `billingDifference` from the full value, then let PostgreSQL silently
+  round the stored `NUMERIC(14, 2)` value on write — so the returned
+  `billingDifference` and the persisted `actualChargedAmount` could
+  describe two different numbers. Fixed by validating the value's shape
+  (non-negative, ≤ 12 integer digits, ≤ 2 fractional digits — regex
+  only, never `Number()`/`parseFloat()`) in `validateCreateInvoiceInput`,
+  before any Repository read. Migration 001 was not touched and
+  `actual_charged_amount` was not widened — see
+  `docs/CREATE_INVOICE_WORKFLOW.md` "actualChargedAmount scale
+  corrective".
+
+### Added
+
+- Invoice REST API: `POST /api/v1/invoices` and
+  `GET /api/v1/invoices` — the first real business HTTP endpoints,
+  wired Route → Controller → Service with no business logic or SQL in
+  the Controller (`backend/src/modules/invoice/{invoice.routes,invoice.controller,invoice.http}.ts`).
+  `billingPeriod` on the wire is strictly `"YYYY-MM-DD"` (rejects
+  malformed shape, non-existent calendar dates, and non-first-of-month
+  values with `400 VALIDATION_ERROR`); financial values and IDs stay
+  decimal/BIGINT strings end to end; `Date` fields are serialized
+  explicitly (`billingPeriod` → `"YYYY-MM-DD"`, `createdAt` → full
+  ISO-8601). A single explicit error-code → HTTP-status table
+  (`mapResultErrorCodeToHttpStatus`) maps `Result` failures to
+  `400`/`404`/`409`/`422`/`500`; an unrecognized code and any
+  unexpected (non-`Result`) exception both fall through to a generic
+  `500`, never a stack trace. See `docs/API.md`.
+- `GetInvoiceService` (`backend/src/modules/invoice/get-invoice.service.ts`):
+  reads a persisted, historical invoice back — validates input, loads
+  the invoice and its items (`InvoiceRepository.findItemsByInvoiceId`,
+  new, `ORDER BY display_order ASC`), and derives `billingDifference`
+  from the persisted `calculatedTotal`/`actualChargedAmount`. Does
+  **not** recalculate electricity/water — a historical invoice must
+  keep returning the amount legally charged at creation time even if
+  tariffs or tenant count have since changed.
+- `backend/src/composition/invoice.composition.ts`: the composition
+  root that assembles the real, Postgres-backed
+  `CreateInvoiceService`/`GetInvoiceService`. Deliberately lazy —
+  `getDatabaseClient()` is only ever called inside each factory
+  function, and the Controller only calls the factory *after*
+  validating the request — so importing `app.ts` (and therefore
+  `GET /api/v1/health`) never depends on `DATABASE_URL`, and even a
+  malformed invoice request still returns `400` (not `500`) with no
+  database configured.
+- Unit tests (no PostgreSQL) for: the `actualChargedAmount` scale
+  corrective (`create-invoice.service.test.ts`); `GetInvoiceService`
+  orchestration (`get-invoice.service.test.ts`); the pure HTTP helpers
+  — date parsing/formatting, serialization, error-code mapping
+  (`invoice.http.test.ts`); and the Controller, using a fake
+  `Request`/`Response` plus a fake Service, no Express server
+  (`invoice.controller.test.ts`). A `DATABASE_URL`-gated real
+  integration test (`invoice.api.integration.test.ts`) drives a real
+  Express app (`app.listen(0)`) through a real HTTP round trip with
+  Node's built-in `fetch` — no `supertest` or other new test
+  dependency — covering `POST` → `GET` → duplicate `POST` (`409`)
+  against real PostgreSQL; it `SKIP`s (not fails) when `DATABASE_URL`
+  is unset, and has not yet been `TEST_RUNTIME_EXECUTED` in this
+  repository's history (see `docs/CREATE_INVOICE_WORKFLOW.md` "Tests
+  actually executed").
+
+No property/room/meter-reading/tariff CRUD, authentication, roles,
+admin UI, or frontend work is included in this change — see
+`docs/CREATE_INVOICE_WORKFLOW.md` "What is still deferred".
+
 ### Added
 
 - CreateInvoice workflow: the first complete Service/Orchestrator write

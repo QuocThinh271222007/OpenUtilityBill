@@ -78,7 +78,11 @@ only the operations a real, current use case needs — see the table in
 `CreateInvoiceService` — see `docs/CREATE_INVOICE_WORKFLOW.md`. Write
 inputs use dedicated `NewInvoice`/`NewInvoiceItem` types, not
 `Omit<Invoice, ...>`/`Partial<Invoice>`, so the write contract stays
-readable on its own instead of being inferred from the read model.
+readable on its own instead of being inferred from the read model. It
+also has one more read method, `findItemsByInvoiceId` (`ORDER BY
+display_order ASC`, explicit — never PostgreSQL's natural row order),
+added for `GetInvoiceService`'s persisted-invoice readback (`GET
+/api/v1/invoices`, see `docs/API.md`).
 
 ## Parameterized queries (SQL injection prevention)
 

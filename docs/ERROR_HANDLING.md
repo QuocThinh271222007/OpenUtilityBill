@@ -65,19 +65,29 @@ fail(code, message)         // → { success: false, error: { code, message } }
 
 Error codes are `UPPER_SNAKE_CASE`, domain-specific, and describe *what*
 failed, not *how* (no HTTP status codes or stack traces embedded in the
-code). Reserved for future use, once the corresponding features are
-implemented:
+code). The invoice REST API (`docs/API.md`) now wires several of these
+to real logic — `POST`/`GET /api/v1/invoices` map every one of them to
+an HTTP status via one small table
+(`backend/src/modules/invoice/invoice.http.ts`,
+`mapResultErrorCodeToHttpStatus` — see `docs/API.md` "HTTP status
+mapping" for the full table, including Calculation Core's own
+`INVALID_*` codes not repeated here):
 
+- `VALIDATION_ERROR` — Service-level input shape validation (e.g.
+  `roomId`, `billingPeriod`, billing methods, `actualChargedAmount`
+  scale).
 - `ROOM_NOT_FOUND`
 - `METER_READING_NOT_FOUND`
 - `INVALID_METER_READING`
 - `TARIFF_NOT_FOUND`
-- `INVALID_TARIFF_CONFIGURATION`
+- `AMBIGUOUS_TARIFF_CONFIGURATION`
 - `INVOICE_ALREADY_EXISTS`
+- `INVOICE_NOT_FOUND` — `GetInvoiceService`, no persisted invoice for
+  the given (roomId, billingPeriod).
 - `TRANSACTION_FAILED`
-
-None of these are wired to real logic yet — this foundation only reserves
-the naming convention so future modules stay consistent.
+- `DATABASE_READ_FAILED` / `DATABASE_WRITE_FAILED`
+- `INTERNAL_ERROR` — an unexpected (non-`Result`) exception caught at
+  the Controller boundary; never a raw stack trace in the response.
 
 ## 6. Fail-fast pipeline
 

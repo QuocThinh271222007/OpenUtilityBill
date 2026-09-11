@@ -86,12 +86,21 @@ The first complete write workflow is implemented:
 `CreateInvoiceService` (`backend/src/modules/invoice/`) orchestrates
 Room/MeterReading/Tariff reads, Calculation Core, and a transactional
 `InvoiceUnitOfWork` to persist an invoice and its full breakdown
-atomically, with race-condition-safe duplicate protection. See
-[`docs/CREATE_INVOICE_WORKFLOW.md`](docs/CREATE_INVOICE_WORKFLOW.md).
+atomically, with race-condition-safe duplicate protection.
+`GetInvoiceService` reads a persisted invoice back (no recalculation).
+See [`docs/CREATE_INVOICE_WORKFLOW.md`](docs/CREATE_INVOICE_WORKFLOW.md).
 
-Full CRUD for other domains, REST billing endpoints, and billing UI
-screens still do not exist — these are separate, later, reviewable
-tasks. No route or Controller calls the database yet.
+The first real business REST endpoints now exist:
+`POST /api/v1/invoices` and `GET /api/v1/invoices`, wired through
+Route → Controller → Service with no business logic or SQL in the
+Controller, and a lazy composition root
+(`backend/src/composition/invoice.composition.ts`) so
+`GET /api/v1/health` keeps working with no `DATABASE_URL` set. See
+[`docs/API.md`](docs/API.md).
+
+Full CRUD for other domains (property/room/meter-reading/tariff),
+authentication, and a frontend that consumes this API still do not
+exist — these are separate, later, reviewable tasks.
 
 ## Repository structure
 
@@ -99,8 +108,10 @@ tasks. No route or Controller calls the database yet.
 OpenUtilityBill/
   backend/     Node.js + TypeScript + Express REST API, domain models,
                Calculation Core (backend/src/calculation/), database
-               adapter (backend/src/database/), and Repository layer
-               (backend/src/repositories/)
+               adapter (backend/src/database/), Repository layer
+               (backend/src/repositories/), and the composition root
+               that wires real Services to real Repositories
+               (backend/src/composition/)
   frontend/    Vite + TypeScript + Bootstrap client
   database/    PostgreSQL schema (migrations/), seed data (seeds/), and
                runtime validation SQL (validation/)
@@ -136,8 +147,13 @@ and typecheck commands for both `backend/` and `frontend/`.
   the Repository boundary, parameterized queries, transactions, and the
   `NUMERIC`/`BIGINT` precision boundary at the database adapter.
 - [`docs/CREATE_INVOICE_WORKFLOW.md`](docs/CREATE_INVOICE_WORKFLOW.md) —
-  the `CreateInvoiceService` sequence: reads, calculation, transactional
-  write, duplicate/race protection, invoice snapshot principle.
+  the `CreateInvoiceService`/`GetInvoiceService` sequence: reads,
+  calculation, transactional write, duplicate/race protection, invoice
+  snapshot principle, persisted readback.
+- [`docs/API.md`](docs/API.md) — REST contract for
+  `POST`/`GET /api/v1/invoices`: request/response shape, the
+  `YYYY-MM-DD` date wire format, decimal-string financial contract,
+  HTTP status mapping, and the lazy database composition.
 - [`database/README.md`](database/README.md) — schema/seed files and how
   to run them.
 
@@ -149,7 +165,9 @@ Calculation Core implements the official competition billing rules
 (meter usage, tiered/fallback electricity, water, invoice totals) and is
 covered by automated tests against the official published test cases
 (`cd backend && npm test`). A Repository layer over Postgres.js exists
-(read-only for Room/MeterReading/Tariff, read+write for Invoice) and a
-complete `CreateInvoiceService` workflow ties them together
-transactionally; full CRUD for other domains, REST billing endpoints,
-and billing UI screens are not implemented yet.
+(read-only for Room/MeterReading/Tariff, read+write for Invoice), a
+complete `CreateInvoiceService`/`GetInvoiceService` pair ties them
+together transactionally, and `POST`/`GET /api/v1/invoices` expose that
+through a real REST endpoint (see `docs/API.md`); full CRUD for other
+domains, authentication, and billing UI screens are not implemented
+yet.
