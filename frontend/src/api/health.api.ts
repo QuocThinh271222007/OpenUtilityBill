@@ -1,17 +1,12 @@
 // SPDX-License-Identifier: MIT
 
+import { apiRequest } from "./api-client";
 import type { ApiResult, HealthStatus } from "../types/health.types";
-
-const API_V1_PREFIX = "/api/v1";
 
 /**
  * Responsibility:
  * Gọi REST API GET /api/v1/health và trả về kết quả thô theo
  * ApiResult contract (chưa xử lý hiển thị).
- *
- * Expected output:
- * ApiResult<HealthStatus> — success khi backend phản hồi đúng contract,
- * failure (code NETWORK_ERROR) khi không kết nối được tới backend.
  *
  * Does NOT:
  * - thao tác DOM
@@ -21,17 +16,6 @@ const API_V1_PREFIX = "/api/v1";
  * Tách lời gọi API khỏi việc hiển thị giúp có thể đổi UI, hoặc viết
  * test cho phần gọi mạng, mà không cần sửa logic hiển thị.
  */
-export async function fetchHealth(): Promise<ApiResult<HealthStatus>> {
-  try {
-    const response = await fetch(`${API_V1_PREFIX}/health`);
-    return (await response.json()) as ApiResult<HealthStatus>;
-  } catch {
-    return {
-      success: false,
-      error: {
-        code: "NETWORK_ERROR",
-        message: "Không thể kết nối tới backend.",
-      },
-    };
-  }
+export function fetchHealth(): Promise<ApiResult<HealthStatus>> {
+  return apiRequest<HealthStatus>("/health");
 }

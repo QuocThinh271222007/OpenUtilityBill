@@ -1,26 +1,13 @@
 // SPDX-License-Identifier: MIT
 
+export type { ApiError, ApiResult } from "./api.types";
+
 /**
  * Responsibility:
- * Khai báo type mô tả dữ liệu trả về từ GET /api/v1/health, dùng
- * chung cho api/ và controllers/ ở phía frontend.
+ * Type mô tả dữ liệu trả về từ `GET /api/v1/health`.
  *
- * Does NOT:
- * - validate dữ liệu tại runtime (đây chỉ là type compile-time)
- *
- * Reason:
- * Frontend cần biết trước hình dạng response để dùng an toàn trong
- * TypeScript, thay vì dùng `any` cho kết quả gọi API.
+ * Does NOT: validate dữ liệu tại runtime.
  */
 export interface HealthStatus {
   status: "ok";
 }
-
-export interface ApiError {
-  code: string;
-  message: string;
-}
-
-export type ApiResult<T> =
-  | { success: true; data: T }
-  | { success: false; error: ApiError };
