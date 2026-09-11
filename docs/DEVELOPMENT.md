@@ -76,8 +76,21 @@ npm install
 | `npm run typecheck` | Run `tsc --noEmit`. |
 | `npm run build` | Type-check, then produce a production build in `frontend/dist/`. |
 
-For the "Backend: OK" status on the page to appear, the backend must also
-be running (`npm run dev` in `backend/`, in a separate terminal).
+No `npm test` script exists for the frontend — no test framework is
+included by design (see `docs/FRONTEND.md` "What was genuinely
+runtime-tested"). `npm run typecheck`/`npm run build` are the frontend's
+compile-time correctness check.
+
+Open `http://localhost:5173` (or the next free port Vite reports) after
+`npm run dev`. For the backend-status badge in the sidebar to show
+"Backend hoạt động", the backend must also be running (`npm run dev` in
+`backend/`, in a separate terminal) — but the app shell, navigation, and
+every screen's forms still render even if the backend is unreachable;
+only the API calls each screen makes will fail (shown as an alert with
+the backend's own error message, or a safe generic message on a network
+failure — see `docs/FRONTEND.md` "API client boundary"). See
+[`docs/FRONTEND.md`](FRONTEND.md) for the full screen map and
+architecture.
 
 ## Environment setup
 
@@ -103,9 +116,10 @@ OpenUtilityBill/
   backend/     Node.js + TypeScript + Express REST API,
                domain models, Calculation Core, database adapter
                and Repository layer
-  frontend/    Vite + TypeScript + Bootstrap client
+  frontend/    Vite + TypeScript + Bootstrap client — api/, types/,
+               utils/, controllers/, views/ (see docs/FRONTEND.md)
   database/    PostgreSQL schema (migrations/), seed data (seeds/),
                and runtime validation SQL (validation/) — Supabase-hosted
   docs/        Architecture, database access, calculation, API/
-               management API, and learning documentation
+               management API, frontend, and learning documentation
 ```

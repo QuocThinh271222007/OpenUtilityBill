@@ -6,6 +6,74 @@ All notable changes to this project are documented in this file.
 
 ### Added
 
+- Mandatory browser UI: a Vite + TypeScript + Bootstrap single-page app
+  (`frontend/src/`) covering the full mandatory workflow — create/edit
+  rental properties and rooms, set tenant count, enter and inspect
+  monthly electricity/water meter readings, configure electricity
+  (dynamic tier count, no assumption of 6) and water tariffs, create an
+  invoice with full breakdown/legal-total display, supply an actual
+  charged amount and see the legal-vs-actual comparison, and re-open an
+  already-persisted historical invoice (no recalculation). No new
+  runtime dependency — `frontend/package.json` still only has
+  `bootstrap` (CSS) plus `typescript`/`vite`. No React/Vue/Angular/
+  Svelte, no router/state-management/chart/form library.
+  - Hand-written hash router (`controllers/navigation.controller.ts`):
+    `#/dashboard`, `#/properties`, `#/rooms`, `#/readings`,
+    `#/invoices` (also hosts the actual-vs-legal comparison), `#/tariffs`
+    (two tabs, Điện/Nước) — no page reload on navigation.
+  - `api/api-client.ts`'s `apiRequest<T>` is the one function every
+    `api/*.api.ts` module uses: always a relative `/api/v1/...` path
+    (never a hardcoded origin — Vite proxies `/api` in dev), parses the
+    backend's own `{ success, data }` / `{ success: false, error }`
+    contract regardless of HTTP status, and never throws — a network
+    failure becomes a safe frontend-authored `NETWORK_ERROR`.
+  - Every financial/measurement field (`types/*.types.ts`) is typed and
+    handled as `string` end to end — the frontend never computes
+    billing money; `Number(...)`/`parseFloat(...)`/`Math.round(...)`
+    are never applied to a financial value anywhere in the codebase
+    (verified by audit). The one deliberate exception is genuinely
+    integer `INTEGER`-backed fields (`tenantCount`, `tierNumber`,
+    `peoplePerQuotaUnit`, `fallbackTierNumber`), documented as such.
+  - `utils/format.ts`: `formatVndDisplay` (string-only thousands
+    grouping and VNĐ display, never converts through `Number`),
+    `classifyBillingDifference` (sign classification by string shape —
+    `startsWith("-")`/all-zero regex — never by numeric comparison),
+    `monthInputToBillingPeriod`/`billingPeriodToMonthInput` (pure
+    string slicing/concatenation for `<input type="month">` ↔
+    `"YYYY-MM-DD"`, no `Date` object, no local-timezone risk), and
+    `escapeHtml` (used at every point a view interpolates user/API text
+    into a template string).
+  - Dynamic electricity tariff tier editor (`controllers/tariff.controller.ts`):
+    add/remove tier rows purely as DOM elements read back into
+    `ElectricityTariffTierInput[]` on submit — no hard-coded 6-tier
+    assumption. Each row's displayed tier number (recomputed
+    sequentially after every add/remove) is kept deliberately separate
+    from an ever-incrementing, never-reused row id used for the
+    "unlimited" checkbox's `id`/`for` pair, fixing a real duplicate-DOM-id
+    bug found during this task's own manual audit of an add-after-remove
+    sequence.
+  - `TARIFF_IN_USE` on a tariff `PUT` shows a specific, actionable
+    message ("Biểu giá này đã được dùng trong hóa đơn lịch sử. Hãy tạo
+    phiên bản biểu giá mới.") instead of the raw backend text, with no
+    bypass offered; `METER_READING_IN_USE` and every other backend error
+    code show the backend's own message verbatim.
+  - App shell (`views/layout.view.ts`) replaces the previous placeholder
+    `index.html` page: sidebar navigation, page title, a global
+    `aria-live` alert region, and the existing backend-health badge
+    (`GET /api/v1/health`, unchanged check — a failed check only updates
+    that one badge, never blocks the shell or navigation). No Bootstrap
+    JavaScript is loaded — the mobile sidebar toggle and alert dismissal
+    are wired with plain `addEventListener`.
+  - See `docs/FRONTEND.md` for the full architecture, screen map, and
+    an honest account of what was runtime-tested (no browser tool was
+    available this session — see "What was genuinely runtime-tested")
+    versus statically/type-checked.
+
+No production deployment, authentication, or admin UI is included in
+this change.
+
+### Added
+
 - Mandatory management REST API: properties, rooms, meter readings, and
   electricity/water tariff configuration —
   `GET`/`POST /api/v1/properties`, `PATCH /api/v1/properties/:propertyId`;

@@ -103,8 +103,22 @@ resource yet (see `docs/MANAGEMENT_API.md` "No DELETE endpoints"). See
 [`docs/API.md`](docs/API.md) and
 [`docs/MANAGEMENT_API.md`](docs/MANAGEMENT_API.md).
 
-Authentication, roles, an admin UI, and a frontend that consumes this
-API still do not exist — these are separate, later, reviewable tasks.
+The full mandatory browser UI now exists: a Vite + TypeScript +
+Bootstrap single-page app (`frontend/src/`) with a hand-written
+hash-based router (no router library), covering the complete workflow —
+create/edit properties and rooms, set tenant count, enter and inspect
+monthly electricity/water readings, configure electricity (dynamic
+tiers, any count) and water tariffs, create an invoice and see its full
+breakdown, supply an actual charged amount and see the legal-vs-actual
+comparison, and re-open an already-created historical invoice. The
+frontend never computes billing money — every financial/measurement
+value is handled as a `string` end to end, matching the backend's own
+`NUMERIC`-as-string contract, and display-only VND formatting is done
+by string manipulation, never by converting through a JS `number`. See
+[`docs/FRONTEND.md`](docs/FRONTEND.md).
+
+Authentication, roles, an admin UI, and a production deployment still
+do not exist — these are separate, later, reviewable tasks.
 
 ## Repository structure
 
@@ -116,7 +130,12 @@ OpenUtilityBill/
                (backend/src/repositories/), and the composition root
                that wires real Services to real Repositories
                (backend/src/composition/)
-  frontend/    Vite + TypeScript + Bootstrap client
+  frontend/    Vite + TypeScript + Bootstrap client — api/ (REST
+               calls), types/ (wire-contract mirrors), utils/ (pure
+               display/precision helpers), controllers/ (per-screen
+               orchestration), views/ (DOM rendering), and a small
+               hand-written hash router (frontend/src/controllers/
+               navigation.controller.ts)
   database/    PostgreSQL schema (migrations/), seed data (seeds/), and
                runtime validation SQL (validation/)
   docs/        Architecture, domain model, database access, calculation,
@@ -137,6 +156,10 @@ and typecheck commands for both `backend/` and `frontend/`.
 - [`docs/ERROR_HANDLING.md`](docs/ERROR_HANDLING.md) — success/failure
   contract, error codes, fail-fast pipeline.
 - [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) — setup and commands.
+- [`docs/FRONTEND.md`](docs/FRONTEND.md) — frontend architecture,
+  screen/navigation map, the API-client boundary, financial-string
+  rule, month↔billingPeriod conversion, and what was actually
+  runtime-tested.
 - [`docs/DOMAIN_MODEL.md`](docs/DOMAIN_MODEL.md) — business entities,
   relationships, and the historical-snapshot principle.
 - [`docs/DATABASE_DESIGN.md`](docs/DATABASE_DESIGN.md) — schema
@@ -177,8 +200,9 @@ covered by automated tests against the official published test cases
 with read+write support for every domain (RentalProperty, Room,
 MeterReading, ElectricityTariff, WaterTariff, Invoice); a complete
 `CreateInvoiceService`/`GetInvoiceService` pair ties invoice creation/
-readback together transactionally; and the full mandatory REST API
-(invoice workflow plus property/room/meter-reading/tariff management)
-exposes that through real endpoints (see `docs/API.md`,
-`docs/MANAGEMENT_API.md`). DELETE, authentication, and billing UI
-screens are not implemented yet.
+readback together transactionally; the full mandatory REST API (invoice
+workflow plus property/room/meter-reading/tariff management) exposes
+that through real endpoints (see `docs/API.md`, `docs/MANAGEMENT_API.md`);
+and a Vite + TypeScript + Bootstrap browser UI (`docs/FRONTEND.md`)
+consumes that API end to end for the full mandatory workflow. DELETE,
+authentication, and a production deployment are not implemented yet.
