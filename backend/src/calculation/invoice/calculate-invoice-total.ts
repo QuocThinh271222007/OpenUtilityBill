@@ -4,7 +4,7 @@ import { Result, ok, fail } from "../../shared/result";
 import { ZERO, add, compare, parseDecimal, roundHalfUpToInteger, toDecimalString, fromBigInt } from "../shared/exact-number";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Cộng tổng chính xác của thành phần điện và nước thành tổng hoá đơn,
  * rồi làm tròn half-up MỘT LẦN DUY NHẤT cho toàn hoá đơn.
  *
@@ -16,10 +16,10 @@ import { ZERO, add, compare, parseDecimal, roundHalfUpToInteger, toDecimalString
  * Output: Result<InvoiceTotalResult> — exactTotal (tổng chính xác chưa
  * làm tròn) và roundedTotalVnd (đã làm tròn).
  *
- * Failure conditions: electricityExactTotal/waterExactTotal không parse
+ * Điều kiện lỗi: electricityExactTotal/waterExactTotal không parse
  * được thành số thập phân hợp lệ, hoặc âm.
  *
- * Important invariant:
+ * Bất biến quan trọng:
  * CỘNG TRƯỚC, LÀM TRÒN SAU. Không được:
  *   round(electricity) + round(water)
  * mà phải:
@@ -27,12 +27,12 @@ import { ZERO, add, compare, parseDecimal, roundHalfUpToInteger, toDecimalString
  * Hai cách này có thể cho kết quả khác nhau — xem
  * docs/NUMERIC_PRECISION.md.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - tự tính electricity/water — nhận exactTotal đã tính sẵn làm tham
  *   số, chỉ chịu trách nhiệm cộng và làm tròn ở mức hoá đơn.
  * - lưu trữ (persist) bất cứ điều gì — hàm thuần tuý (pure function).
  *
- * Why this module is separate:
+ * Lý do tồn tại:
  * Tách "tính từng thành phần" khỏi "tổng hợp hoá đơn" để quy tắc
  * "không làm tròn trung gian, chỉ làm tròn tổng cuối" có một nơi DUY
  * NHẤT chịu trách nhiệm, không lặp lại rải rác.

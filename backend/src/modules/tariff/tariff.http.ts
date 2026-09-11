@@ -5,7 +5,7 @@ import { ElectricityTariff, ElectricityTariffTier, WaterTariff } from "./tariff.
 import { ElectricityTariffWithTiers } from "../../repositories/electricity-tariff.repository";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Tiện ích ranh giới HTTP CHỈ cho module tariff — chuyển
  * ElectricityTariff/ElectricityTariffTier/WaterTariff thành JSON an
  * toàn cho response. `effectiveFrom`/`effectiveTo` dùng

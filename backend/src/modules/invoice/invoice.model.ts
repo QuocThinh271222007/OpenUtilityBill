@@ -6,12 +6,12 @@ import type {
 } from "../tariff/tariff.model";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Domain types mô tả Invoice (hoá đơn) và InvoiceItem (dòng chi tiết
  * hoá đơn) — kết quả LỊCH SỬ (historical result) của việc tính hoá đơn
  * cho một Room trong một billingPeriod.
  *
- * Represents:
+ * Biểu diễn:
  * Dữ liệu tương ứng với bảng `invoices` và `invoice_items`.
  *
  * Invariants (enforce ở tầng database, xem migration):
@@ -20,19 +20,19 @@ import type {
  * - `calculatedTotal >= 0`.
  * - `actualChargedAmount >= 0` khi có giá trị.
  *
- * ID representation:
+ * Biểu diễn ID:
  * `id` và mọi field kết thúc bằng `...Id` là `string` (BIGINT ở
  * database) — xem ../property/property.model.ts mục "ID representation"
  * và docs/DATABASE_ACCESS.md.
  *
- * Numeric representation:
+ * Biểu diễn số:
  * `calculatedTotal`, `actualChargedAmount`, `quantity`, `unitPrice`,
  * `amount` đều là `string` — cùng quy ước với
  * ../meter-reading/meter-reading.model.ts và ../tariff/tariff.model.ts
  * (cột database NUMERIC, không phải FLOAT/REAL; xem
  * docs/DATABASE_DESIGN.md).
  *
- * Why there is no `differenceAmount` field:
+ * Vì sao không có field `differenceAmount`:
  * Chênh lệch (difference = actualChargedAmount - calculatedTotal) là
  * giá trị HOÀN TOÀN SUY RA ĐƯỢC từ hai field đã có
  * (`calculatedTotal`, `actualChargedAmount`). Lưu thêm một field thứ ba
@@ -43,18 +43,18 @@ import type {
  * duy nhất (single source of truth) là `calculatedTotal` và
  * `actualChargedAmount`; Service/Calculation module (task sau) sẽ tính
  * chênh lệch on-demand mỗi khi cần hiển thị, không lưu lại (xem
- * docs/DATABASE_DESIGN.md mục "Derived values are not persisted").
+ * docs/DATABASE_DESIGN.md mục "Giá trị suy ra không được lưu trữ").
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - tính toán bất kỳ giá trị nào. File này chỉ mô tả hình dạng dữ liệu;
  *   công thức tính (Calculation Core) là một task riêng.
  * - hỗ trợ nhiều phiên bản (revision/versioning) cho cùng một
- *   room/billingPeriod ở giai đoạn này — xem "Invoice revision (future)"
+ *   room/billingPeriod ở giai đoạn này — xem "Sửa lại hoá đơn (tương lai)"
  *   bên dưới.
  * - có Repository/Service/Controller/route thực sự tạo invoice ở task
  *   này (không có CreateInvoice workflow).
  *
- * Why Invoice snapshots configuration instead of referencing "current" data:
+ * Vì sao Invoice lưu snapshot cấu hình thay vì tham chiếu dữ liệu "hiện tại":
  * `Room.tenantCount`, `ElectricityTariff`, `WaterTariff` đều có thể thay
  * đổi SAU KHI invoice đã được tạo (chủ trọ sửa số người ở, cập nhật
  * biểu giá mới, ...). Nếu Invoice chỉ lưu `roomId`/`tariffId` và tra cứu
@@ -67,19 +67,19 @@ import type {
  * liệu CÓ CHỦ ĐÍCH, không phải lỗi chuẩn hoá (xem
  * docs/DATABASE_DESIGN.md mục "Historical snapshot principle").
  *
- * Why one invoice per room/month:
+ * Vì sao mỗi phòng/tháng chỉ có một hoá đơn:
  * Ở phạm vi bắt buộc ban đầu (basic scope), mỗi phòng chỉ cần một hoá
  * đơn cho mỗi tháng. Ràng buộc UNIQUE(room_id, billing_period) ngăn tạo
  * nhầm hai hoá đơn cho cùng kỳ.
  *
- * Invoice revision (future):
+ * Sửa lại hoá đơn (tương lai):
  * Nếu sau này cần sửa/tạo lại hoá đơn cho cùng kỳ (ví dụ phát hiện sai
  * sót sau khi đã tạo), ràng buộc UNIQUE hiện tại sẽ CẦN một migration
  * mới (ví dụ thêm `revision_number` vào khoá UNIQUE, hoặc đánh dấu hoá
  * đơn cũ là "superseded"). Việc này KHÔNG được thiết kế trong task này
  * để tránh overengineering một tính năng chưa có yêu cầu cụ thể.
  *
- * Why this model exists separately from InvoiceItem:
+ * Lý do tồn tại riêng biệt với InvoiceItem:
  * Invoice là "kết quả tổng hợp" (`calculatedTotal`) của một kỳ hoá đơn;
  * InvoiceItem là TỪNG DÒNG giải thích invoice đó được tính như thế nào
  * (bậc 1 bao nhiêu tiền, VAT bao nhiêu, phí môi trường bao nhiêu, ...).

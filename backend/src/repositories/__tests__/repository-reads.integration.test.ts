@@ -7,12 +7,12 @@ import { PostgresElectricityTariffRepository } from "../postgres/postgres-electr
 import { PostgresWaterTariffRepository } from "../postgres/postgres-water-tariff.repository";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Chứng minh, bằng PostgreSQL THẬT, rằng các Repository đọc đúng dữ liệu
  * seed chính thức của kỳ thi (`database/seeds/001_competition_defaults.sql`)
  * — không phải dữ liệu giả lập trong unit test.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - ghi/sửa/xoá bất kỳ dữ liệu nào — CHỈ đọc (read-only), an toàn để
  *   chạy nhiều lần trên cùng một database mà không cần dọn dẹp.
  * - claim PASS nếu không có DATABASE_URL, hoặc nếu migration/seed chưa
@@ -31,8 +31,8 @@ import { PostgresWaterTariffRepository } from "../postgres/postgres-water-tariff
  * `"80000.00"` (2 chữ số thập phân). Đây KHÔNG phải một vấn đề chính
  * xác (precision) — `"0.08"` và `"0.0800"` biểu diễn CÙNG một giá trị
  * chính xác tuyệt đối. Repository CỐ Ý không chuẩn hoá (canonicalize)
- * chuỗi này — xem docs/DATABASE_ACCESS.md mục "NUMERIC string format is
- * not canonicalized". Calculation Core (`parseDecimal`) chấp nhận cả
+ * chuỗi này — xem docs/DATABASE_ACCESS.md mục "Định dạng chuỗi NUMERIC
+ * không được chuẩn hoá". Calculation Core (`parseDecimal`) chấp nhận cả
  * hai dạng như nhau.
  */
 const hasDatabaseUrl = typeof process.env.DATABASE_URL === "string" && process.env.DATABASE_URL.trim().length > 0;

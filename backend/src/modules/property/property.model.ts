@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Domain type mô tả một RentalProperty — một cơ sở cho thuê (ví dụ một
  * dãy trọ, một chung cư mini) mà các Room (phòng) thuộc về.
  *
- * Represents:
+ * Biểu diễn:
  * Dữ liệu tương ứng với bảng `rental_properties` (xem
  * database/migrations/001_initial_domain_schema.sql).
  *
@@ -14,7 +14,7 @@
  *   (BIGINT GENERATED ALWAYS AS IDENTITY).
  * - `name` không được NULL.
  *
- * ID representation:
+ * Biểu diễn ID:
  * `id` là `string`, không phải `number`. Cột database là BIGINT (int8),
  * và JS `number` không biểu diễn an toàn mọi giá trị BIGINT (giới hạn
  * an toàn là 2^53-1). Driver `postgres` (Postgres.js) trả BIGINT dưới
@@ -22,15 +22,15 @@
  * ép về `number` và âm thầm giả định ID "chắc sẽ luôn nhỏ" (xem
  * docs/DATABASE_ACCESS.md mục "BIGINT / ID boundary").
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - chứa thông tin xác thực/chủ sở hữu (authentication, ownership) —
  *   chưa có yêu cầu ở giai đoạn này (xem docs/ARCHITECTURE.md).
  * - chứa danh sách Room trực tiếp (không có field `rooms: Room[]`) —
- *   xem "Why this model exists separately" bên dưới.
+ *   xem "Lý do tồn tại riêng biệt" bên dưới.
  * - có Repository/Service/Controller đi kèm ở task này — đây chỉ là
  *   domain type, chưa có thao tác CRUD thực sự.
  *
- * Why this model exists separately:
+ * Lý do tồn tại riêng biệt:
  * RentalProperty là gốc của quan hệ 1 → N với Room. Tách riêng để Room
  * tham chiếu tới RentalProperty bằng `propertyId` (khóa ngoại) thay vì
  * lồng object, tránh vòng tham chiếu (Property chứa Room chứa

@@ -4,7 +4,7 @@ import { Result, ok, fail } from "../../shared/result";
 import { ZERO, compare, parseDecimal, subtract, toDecimalString } from "../shared/exact-number";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Tính chênh lệch giữa số tiền THỰC TẾ đã thu (actualChargedAmount) và
  * tổng hoá đơn hợp pháp đã làm tròn (legalRoundedTotalVnd).
  *
@@ -16,22 +16,22 @@ import { ZERO, compare, parseDecimal, subtract, toDecimalString } from "../share
  *   0: khách trả đúng.
  *   âm: khách trả ít hơn số tính hợp pháp.
  *
- * Failure conditions: actualChargedAmount/legalRoundedTotalVnd không
+ * Điều kiện lỗi: actualChargedAmount/legalRoundedTotalVnd không
  * parse được, hoặc actualChargedAmount âm (một số tiền đã thu không
  * thể âm).
  *
- * Important invariant:
+ * Bất biến quan trọng:
  * Đây là giá trị SUY RA (derived) — KHÔNG được lưu lại vào
  * invoices.difference_amount hay bất kỳ cột database nào (xem
- * docs/DATABASE_DESIGN.md mục "Derived values are not persisted"). Giá
+ * docs/DATABASE_DESIGN.md mục "Giá trị suy ra không được lưu trữ"). Giá
  * trị này chỉ tồn tại tạm thời khi cần hiển thị/so sánh.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - làm tròn kết quả — cả actualChargedAmount và legalRoundedTotalVnd
  *   đều đã là số nguyên VNĐ, nên hiệu của chúng luôn chính xác, không
  *   cần làm tròn thêm.
  *
- * Why this module is separate:
+ * Lý do tồn tại:
  * "So sánh số tiền đã thu với số tính hợp pháp" là một bước hoàn toàn
  * độc lập với việc tính hoá đơn — có thể xảy ra rất lâu sau khi hoá đơn
  * đã được tạo (khi thực tế thu tiền được ghi nhận), nên tách thành một

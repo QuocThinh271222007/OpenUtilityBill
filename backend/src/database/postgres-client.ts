@@ -5,12 +5,12 @@ import type { Sql } from "postgres";
 import { loadDatabaseConfig } from "../config/database.config";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Tạo và giữ MỘT client Postgres.js cấp ứng dụng (singleton cấp
  * module), dùng lại cho mọi Repository — KHÔNG tạo kết nối mới cho
  * từng lời gọi Repository.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - chứa business logic, câu SQL domain cụ thể (`SELECT ... FROM
  *   rooms ...`), hay bất kỳ hằng số biểu giá nào của kỳ thi — đây CHỈ
  *   là adapter kết nối, không phải nơi đặt query.
@@ -27,7 +27,7 @@ import { loadDatabaseConfig } from "../config/database.config";
  *   custom type parser ở đây trừ khi có bằng chứng hành vi mặc định
  *   thay đổi.
  *
- * Why this module is separate:
+ * Lý do tồn tại:
  * Tách "cách kết nối database" khỏi "câu SQL cụ thể nào được chạy" —
  * Repository implementation import client TỪ ĐÂY, không tự gọi
  * `postgres(...)` riêng lẻ ở nơi khác.

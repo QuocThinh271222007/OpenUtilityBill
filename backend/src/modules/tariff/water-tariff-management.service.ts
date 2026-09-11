@@ -10,13 +10,13 @@ import { WaterTariffRepository } from "../../repositories/water-tariff.repositor
 import { CreateWaterTariffInput, UpdateWaterTariffInput, WaterTariffManagementDependencies } from "./water-tariff-management.types";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Business validation + orchestration cho quản lý `WaterTariff` —
  * `list`/`create`/`update`. Đơn giản hơn ElectricityTariff vì
  * `water_tariffs` là MỘT bảng đơn — không cần Unit of Work (một câu
  * `INSERT`/`UPDATE` đã tự nguyên tử).
  *
- * Failure conditions:
+ * Điều kiện lỗi:
  * - `VALIDATION_ERROR`: hình dạng sai (name rỗng, ngày hiệu lực, giá
  *   ngoài `NUMERIC(14,2)`, tỉ lệ ngoài `NUMERIC(5,4)`/đoạn [0,1], id sai
  *   hình dạng BIGINT khi update).
@@ -28,7 +28,7 @@ import { CreateWaterTariffInput, UpdateWaterTariffInput, WaterTariffManagementDe
  * - `update`: `TARIFF_IN_USE` khi tariff đã được một invoice tham
  *   chiếu.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - chứa hằng số biểu giá nào của kỳ thi.
  * - chứa SQL/Postgres.js import.
  * - implement `delete`.

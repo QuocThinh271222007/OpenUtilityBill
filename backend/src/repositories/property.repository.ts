@@ -4,7 +4,7 @@ import { Result } from "../shared/result";
 import { RentalProperty } from "../modules/property/property.model";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Dữ liệu ĐẦU VÀO để tạo/sửa một RentalProperty — type riêng (không
  * `Omit<RentalProperty, ...>`/`Partial<RentalProperty>`), cùng lý do với
  * `NewInvoice`/`NewInvoiceItem` (xem `invoice.repository.ts`).
@@ -24,19 +24,19 @@ export interface UpdateRentalProperty {
 }
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Hợp đồng đọc/ghi cho `RentalProperty` — được deferred từ task nền
  * tảng database trước đó (không có use case đọc nào cần), nay được
  * implement đầy đủ cho Property Management API
  * (`docs/MANAGEMENT_API.md`).
  *
- * Failure conditions:
+ * Điều kiện lỗi:
  * - `findById`/`update`: `PROPERTY_NOT_FOUND` khi không có property nào
  *   khớp id.
  * - `DATABASE_READ_FAILED`/`DATABASE_WRITE_FAILED` cho lỗi query/ghi
  *   khác.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - implement `delete` — xem docs/MANAGEMENT_API.md mục "No DELETE
  *   endpoints (by design)".
  */

@@ -5,7 +5,7 @@ import { ExactNumber, ZERO, compare, parseDecimal } from "../shared/exact-number
 import { ElectricityTierInput } from "../types/calculation.types";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Kiểm tra và phân tích (parse) một danh sách bậc giá điện — dữ liệu
  * cấu hình DATA-DRIVEN, không giả định số lượng bậc cố định — trước khi
  * đưa vào allocate-electricity-tiers.ts.
@@ -16,7 +16,7 @@ import { ElectricityTierInput } from "../types/calculation.types";
  * Output: Result<ValidatedElectricityTier[]> — danh sách đã parse thành
  * ExactNumber, SẮP XẾP theo tierNumber tăng dần.
  *
- * Failure conditions:
+ * Điều kiện lỗi:
  * - danh sách rỗng.
  * - tierNumber không phải số nguyên dương.
  * - tierNumber trùng lặp.
@@ -26,17 +26,17 @@ import { ElectricityTierInput } from "../types/calculation.types";
  * - không có đúng một bậc "không giới hạn" (thresholdKwh = null).
  * - bậc không giới hạn không phải bậc cuối cùng sau khi sắp xếp.
  *
- * Important invariant:
+ * Bất biến quan trọng:
  * Đầu vào có thể đến KHÔNG theo thứ tự tierNumber — hàm này tự sắp xếp
  * lại một cách xác định (deterministic), không coi đó là lỗi.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - tự "sửa" khi có tierNumber trùng lặp bằng cách chọn một trong hai —
  *   đó là dữ liệu cấu hình mơ hồ, phải FAIL tường minh thay vì âm thầm
  *   giải quyết.
  * - giả định đúng 6 bậc. Test có tariff 3 bậc vẫn phải hợp lệ.
  *
- * Why this module is separate:
+ * Lý do tồn tại:
  * Việc "cấu hình bậc giá có hợp lệ không" là một câu hỏi độc lập với
  * "phân bổ usage vào các bậc như thế nào" — tách riêng để mỗi hàm chỉ
  * có một trách nhiệm, dễ test độc lập.

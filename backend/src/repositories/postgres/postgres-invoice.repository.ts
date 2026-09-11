@@ -9,11 +9,11 @@ import { Invoice, InvoiceItem, InvoiceItemCategory } from "../../modules/invoice
 import { InvoiceRepository, NewInvoice, NewInvoiceItem } from "../invoice.repository";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Implementation Postgres.js của `InvoiceRepository` — nơi DUY NHẤT
  * chứa SQL truy vấn/ghi bảng `invoices` và `invoice_items`.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - fail với NOT_FOUND khi `findByRoomAndPeriod` không có invoice — xem
  *   giải thích trong `../invoice.repository.ts`.
  * - tự mở transaction cho `createInvoice`/`createInvoiceItems` — cả hai
@@ -115,7 +115,7 @@ export class PostgresInvoiceRepository implements InvoiceRepository {
   }
 
   /**
-   * Failure conditions:
+   * Điều kiện lỗi:
    * - `INVOICE_ALREADY_EXISTS` khi vi phạm `UNIQUE(room_id,
    *   billing_period)` (SQLSTATE 23505) — bảo vệ race condition mà
    *   pre-check `findByRoomAndPeriod` của Service KHÔNG đủ để ngăn (hai
@@ -167,7 +167,7 @@ export class PostgresInvoiceRepository implements InvoiceRepository {
    * cần một bulk-insert helper phức tạp chỉ để tối ưu hiệu năng chưa có
    * nhu cầu chứng minh (readable > clever).
    *
-   * Failure conditions:
+   * Điều kiện lỗi:
    * - `DATABASE_WRITE_FAILED` khi bất kỳ câu insert nào thất bại — dừng
    *   ngay tại dòng lỗi đầu tiên (fail-fast), không tiếp tục chèn các
    *   dòng còn lại.

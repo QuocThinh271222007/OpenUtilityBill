@@ -9,7 +9,7 @@ import {
 } from "../../calculation/types/calculation.types";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Xây dựng danh sách `NewInvoiceItem[]` (breakdown giải thích hoá đơn)
  * từ kết quả ĐÃ TÍNH của Calculation Core — hàm THUẦN TUÝ (pure), không
  * tự tính toán tiền, không truy cập database.
@@ -24,7 +24,7 @@ import {
  * định (deterministic) — thứ tự: dòng (các) bậc điện, VAT điện, nước
  * (base), VAT nước, phí môi trường nước.
  *
- * Important invariant:
+ * Bất biến quan trọng:
  * Mọi `amount`/`quantity`/`unitPrice` được COPY NGUYÊN VĂN từ kết quả
  * Calculation Core — KHÔNG làm tròn thêm ở đây. Migration 002 nới rộng
  * `invoice_items.quantity`/`.amount` thành NUMERIC không giới hạn scale
@@ -39,12 +39,12 @@ import {
  * reading đã tính usage, hoặc từ tariff), nên truyền thẳng vào thay vì
  * hàm này tự suy luận lại từ `method`.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - tự quyết định QUOTA_TIERED hay FALLBACK_TIER_FLAT — nhận
  *   `electricityBillingMethod` làm tham số để biết cách đọc
  *   `electricity` (union type, không tự đoán qua field nào có mặt).
  * - validate lại số liệu — dữ liệu đầu vào được giả định ĐÃ hợp lệ (đã
- *   qua Calculation Core, vốn tự validate — xem "Does NOT" của từng hàm
+ *   qua Calculation Core, vốn tự validate — xem "Không chịu trách nhiệm" của từng hàm
  *   calculate*).
  */
 export interface BuildInvoiceItemBreakdownInput {

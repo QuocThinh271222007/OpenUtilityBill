@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Type mô tả `Room` và các body ghi dữ liệu — khớp
  * docs/MANAGEMENT_API.md mục "Rooms".
  *
- * Important invariant:
+ * Bất biến quan trọng:
  * `tenantCount` là số nguyên đếm được (backend cột INTEGER, không phải
  * NUMERIC tài chính) — ĐÂY LÀ TRƯỜNG HỢP DUY NHẤT được phép dùng kiểu
  * `number` cho một giá trị nhập từ form, khác với mọi chỉ số công tơ/

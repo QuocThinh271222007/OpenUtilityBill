@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Type mô tả `MeterReading` và body ghi dữ liệu — khớp
  * docs/MANAGEMENT_API.md mục "Meter readings".
  *
- * Important invariant:
+ * Bất biến quan trọng:
  * `previousReading`/`currentReading`/`meterMaximumValue` LUÔN là
  * `string` (NUMERIC(12,2) ở backend) — KHÔNG BAO GIỜ ép về `number`,
  * kể cả để tính toán tạm thời (xem docs/FRONTEND.md mục "Financial

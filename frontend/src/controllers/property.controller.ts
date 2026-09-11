@@ -7,16 +7,16 @@ import { renderPropertyList, renderPropertyPage, setPropertyFormMode, setPropert
 import type { RentalProperty } from "../types/property.types";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Điều phối trang "Cơ sở" — tải danh sách, xử lý submit thêm/sửa (một
  * form dùng chung, chuyển chế độ qua state module nội bộ
  * `editingPropertyId`).
  *
- * Important invariant:
+ * Bất biến quan trọng:
  * KHÔNG có nút Xóa — xem docs/MANAGEMENT_API.md mục "No DELETE
  * endpoints"; đây là chủ đích, không phải thiếu sót.
  *
- * Does NOT: tự validate business rule (trim/empty-to-null cho address)
+ * Không chịu trách nhiệm: tự validate business rule (trim/empty-to-null cho address)
  * — backend (`PropertyManagementService`) là nơi xác thực có thẩm
  * quyền; frontend chỉ chặn trường hợp rõ ràng nhất (tên rỗng) để tránh
  * một round-trip API vô ích.

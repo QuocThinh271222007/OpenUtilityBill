@@ -11,12 +11,12 @@ import { FallbackElectricityResult, TieredElectricityResult, WaterChargeResult }
 import { InvoiceTotalResult } from "../../calculation/invoice/calculate-invoice-total";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Khai báo type dùng chung của `CreateInvoiceService` — input, output,
  * và các dependency (Repository/UnitOfWork) mà Service cần — tách khỏi
  * `create-invoice.service.ts` để file đó chỉ chứa logic điều phối.
  *
- * Does NOT: chứa logic — chỉ type/interface.
+ * Không chịu trách nhiệm: chứa logic — chỉ type/interface.
  */
 
 /**
@@ -46,7 +46,7 @@ export interface CreateInvoiceInput {
  * union theo `method` để caller biết đọc `result` dưới dạng type nào mà
  * không cần ép kiểu (type cast).
  *
- * Does NOT: lộ `DatabaseExecutor`, Postgres.js row, câu SQL, hay
+ * Không chịu trách nhiệm: lộ `DatabaseExecutor`, Postgres.js row, câu SQL, hay
  * `bigint` — mọi field là JSON-safe (xem
  * backend/src/calculation/__tests__/public-json-safety.test.ts cho
  * nguyên tắc tương tự ở Calculation Core).
@@ -63,7 +63,7 @@ export interface CreateInvoiceResult {
 
   invoiceTotal: InvoiceTotalResult;
 
-  /** null khi `actualChargedAmount` đầu vào là null — xem "Does NOT" của calculate-billing-difference.ts. */
+  /** null khi `actualChargedAmount` đầu vào là null — xem "Không chịu trách nhiệm" của calculate-billing-difference.ts. */
   billingDifference: string | null;
 }
 

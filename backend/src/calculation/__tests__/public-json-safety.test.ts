@@ -21,7 +21,7 @@ import {
 } from "./fixtures/competition-defaults";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Xác nhận rằng KHÔNG có kết quả public nào của Calculation Core rò rỉ
  * `bigint` ra ngoài — mọi giá trị đo lường/tài chính phải là `string`,
  * an toàn để `JSON.stringify` (đúng như hợp đồng công khai đã ghi trong
@@ -31,7 +31,7 @@ import {
  * object — đây chính là bài kiểm tra: nếu không có hàm nào trong test
  * này throw, nghĩa là không có bigint nào lọt ra ngoài.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - kiểm tra lại các giá trị số học (đã có 7 official case + các test
  *   khác). File này CHỈ kiểm tra RANH GIỚI kiểu dữ liệu (type boundary).
  */

@@ -3,7 +3,7 @@
 import { PropertyRepository } from "../../repositories/property.repository";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Type dùng chung của `PropertyManagementService` — tách khỏi
  * `property-management.service.ts` cùng lý do với
  * `create-invoice.types.ts`.

@@ -6,7 +6,7 @@ import { ElectricityTierInput, FallbackElectricityResult } from "../types/calcul
 import { validateElectricityConfig } from "./validate-electricity-config";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Tính hoá đơn điện theo phương pháp FALLBACK_TIER_FLAT — toàn bộ sản
  * lượng tiêu thụ được tính theo MỘT đơn giá duy nhất: đơn giá của bậc
  * có tierNumber = fallbackTierNumber (đọc từ cấu hình tariff).
@@ -18,23 +18,23 @@ import { validateElectricityConfig } from "./validate-electricity-config";
  *
  * Output: Result<FallbackElectricityResult>.
  *
- * Failure conditions:
+ * Điều kiện lỗi:
  * - usageKwh/vatRate không hợp lệ.
  * - cấu hình tiers không hợp lệ (dùng chung validate-electricity-config.ts
  *   để đảm bảo tính nhất quán với phương pháp QUOTA_TIERED).
  * - không tìm thấy bậc nào có tierNumber = fallbackTierNumber ->
  *   FALLBACK_TIER_NOT_FOUND.
  *
- * Important invariant:
+ * Bất biến quan trọng:
  * KHÔNG dùng chỉ số mảng cố định (ví dụ tiers[2]) và KHÔNG hard-code số
  * bậc fallback (ví dụ số 3). fallbackTierNumber luôn là tham số đầu
  * vào; bậc được TÌM bằng tierNumber, không phải vị trí trong mảng.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - dùng quotaFactor hay ngưỡng bậc — phương pháp fallback tính thẳng
  *   usage × đơn giá bậc fallback, không phân bổ theo bậc thang.
  *
- * Why this module is separate:
+ * Lý do tồn tại:
  * FALLBACK_TIER_FLAT và QUOTA_TIERED là hai công thức tính tiền điện
  * hoàn toàn khác nhau (dù dùng chung một tập bậc giá để tra cứu đơn
  * giá) — tách thành hai hàm riêng thay vì một hàm với nhánh if/else để

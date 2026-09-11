@@ -4,7 +4,7 @@ import { ExactNumber, ZERO, compare, min, multiply, subtract } from "../shared/e
 import { ValidatedElectricityTier } from "./validate-electricity-config";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Phân bổ (allocate) tổng sản lượng điện tiêu thụ (usage) vào từng bậc
  * giá, theo thứ tự bậc thang, sau khi ngưỡng mỗi bậc đã được điều chỉnh
  * theo quotaFactor.
@@ -15,14 +15,14 @@ import { ValidatedElectricityTier } from "./validate-electricity-config";
  *
  * Output: mảng AllocatedTier — chỉ gồm các bậc THỰC SỰ có usage > 0.
  *
- * Important invariant:
+ * Bất biến quan trọng:
  * Dùng VÒNG LẶP (iterative), KHÔNG dùng đệ quy — các bậc giá là một
  * dãy tuyến tính hữu hạn, không phải cấu trúc cây/đồ thị cần đệ quy để
  * duyệt (cùng nguyên tắc với docs/LEARNING_NOTES.md mục "Vì sao chưa
  * dùng đệ quy"). Ngưỡng mỗi bậc bị giới hạn KHÔNG được làm tròn khi
  * nhân với quotaFactor (ví dụ 50 × 1.25 = 62.5, giữ nguyên).
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - tự validate tiers — hàm này giả định tham số `tiers` đã qua
  *   validate-electricity-config.ts (đây là ranh giới có chủ đích: một
  *   hàm kiểm tra cấu hình, một hàm phân bổ dữ liệu đã biết hợp lệ).
@@ -30,7 +30,7 @@ import { ValidatedElectricityTier } from "./validate-electricity-config";
  *   quantity × unitPrice giữ nguyên độ chính xác, việc làm tròn chỉ xảy
  *   ra một lần ở tổng hoá đơn cuối cùng.
  *
- * Why this module is separate:
+ * Lý do tồn tại:
  * Thuật toán phân bổ bậc thang là phần dễ sai nhất của bài toán (ranh
  * giới min/max, dừng đúng lúc, bậc cuối nhận toàn bộ phần còn lại) —
  * tách riêng để có thể unit-test thuật toán này với nhiều usage/quota

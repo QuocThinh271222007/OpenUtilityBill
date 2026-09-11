@@ -16,13 +16,13 @@ import {
 } from "./electricity-tariff-management.types";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Business validation + orchestration cho quản lý cấu hình
  * ElectricityTariff (parent + tiers, một AGGREGATE) — `list`/`create`/
  * `update`. Xem docs/MANAGEMENT_API.md mục "Electricity tariff
  * aggregate transaction" cho sơ đồ đầy đủ.
  *
- * Failure conditions:
+ * Điều kiện lỗi:
  * - `VALIDATION_ERROR`: hình dạng sai (name rỗng, ngày hiệu lực,
  *   electricityVatRate ngoài `NUMERIC(5,4)`/đoạn [0,1],
  *   peoplePerQuotaUnit/fallbackTierNumber không phải số nguyên dương,
@@ -53,7 +53,7 @@ import {
  * thao tác đó qua `electricityTariffRepository` (chỉ dùng cho đọc) —
  * xem `electricity-tariff-management.types.ts`.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - hard-code số lượng bậc hay bất kỳ hằng số biểu giá nào của kỳ thi.
  * - chứa SQL/Postgres.js import.
  * - implement `delete`.

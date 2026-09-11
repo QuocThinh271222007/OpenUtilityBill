@@ -18,7 +18,7 @@ export interface NewWaterTariff {
 export type UpdateWaterTariff = NewWaterTariff;
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Hợp đồng cho việc tìm WaterTariff đang có hiệu lực tại một
  * billingPeriod (đọc, dùng bởi CreateInvoiceService — cùng lý do
  * `AMBIGUOUS_TARIFF_CONFIGURATION` như
@@ -29,7 +29,7 @@ export type UpdateWaterTariff = NewWaterTariff;
  * có bảng con như tiers) — `create`/`update` không cần Unit of Work
  * riêng, một câu `INSERT`/`UPDATE` đã tự nguyên tử.
  *
- * Failure conditions:
+ * Điều kiện lỗi:
  * - `TARIFF_NOT_FOUND` / `AMBIGUOUS_TARIFF_CONFIGURATION` (đọc theo
  *   billingPeriod).
  * - `create`: `TARIFF_ALREADY_EXISTS` khi vi phạm `UNIQUE(name,
@@ -37,7 +37,7 @@ export type UpdateWaterTariff = NewWaterTariff;
  * - `update`: `TARIFF_NOT_FOUND` khi id không tồn tại.
  * - `DATABASE_READ_FAILED`/`DATABASE_WRITE_FAILED` cho lỗi khác.
  *
- * Does NOT: implement `delete`.
+ * Không chịu trách nhiệm: implement `delete`.
  */
 export interface WaterTariffRepository {
   findApplicableTariffForPeriod(billingPeriod: Date): Promise<Result<WaterTariff>>;

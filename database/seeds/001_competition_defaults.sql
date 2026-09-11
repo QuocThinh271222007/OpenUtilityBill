@@ -4,7 +4,7 @@
 -- Competition default configuration seed
 -- ============================================================
 --
--- Responsibility:
+-- Trách nhiệm:
 -- Nạp cấu hình biểu giá điện/nước MẶC ĐỊNH do đề thi cung cấp, vào các
 -- bảng electricity_tariffs, electricity_tariff_tiers, water_tariffs đã
 -- tạo bởi database/migrations/001_initial_domain_schema.sql.
@@ -14,7 +14,7 @@
 -- thế sau này qua giao diện quản trị (admin configuration, task sau),
 -- không cần sửa Calculation Core hay schema.
 --
--- Does NOT:
+-- Không chịu trách nhiệm:
 -- - chứa công thức tính toán (không có phép nhân/cộng ở đây, chỉ có
 --   INSERT dữ liệu thô).
 --

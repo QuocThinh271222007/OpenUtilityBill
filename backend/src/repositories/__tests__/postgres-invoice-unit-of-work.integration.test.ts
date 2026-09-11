@@ -8,7 +8,7 @@ import { PostgresInvoiceUnitOfWork } from "../postgres/postgres-invoice-unit-of-
 import type { NewInvoice, NewInvoiceItem } from "../invoice.repository";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Chứng minh, bằng PostgreSQL THẬT, rằng `PostgresInvoiceUnitOfWork` +
  * `PostgresInvoiceRepository` ghi invoice/invoice_items ĐÚNG NHƯ một
  * transaction thật sự: commit toàn bộ khi thành công, rollback TOÀN BỘ
@@ -16,7 +16,7 @@ import type { NewInvoice, NewInvoiceItem } from "../invoice.repository";
  * bại — không có invoice hay invoice_item mồ côi trong cả hai trường
  * hợp.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - chạm tới dữ liệu không liên quan — mọi fixture dùng tiền tố tên
  *   DUY NHẤT `VALIDATION_CREATE_INVOICE_*` kèm timestamp, dọn dẹp tường
  *   minh trong `finally`.

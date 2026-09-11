@@ -5,7 +5,7 @@ import { ExactNumber, ONE, ZERO, add, compare, fromBigInt, multiply, parseDecima
 import { WaterChargeResult } from "../types/calculation.types";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Tính hoá đơn nước theo một trong hai phương pháp cấu hình:
  * PER_CUBIC_METER (theo m3 tiêu thụ) hoặc PER_PERSON (theo số người ở).
  *
@@ -16,24 +16,24 @@ import { WaterChargeResult } from "../types/calculation.types";
  *
  * Output: Result<WaterChargeResult>.
  *
- * Failure conditions:
+ * Điều kiện lỗi:
  * - method không phải PER_CUBIC_METER/PER_PERSON.
  * - PER_CUBIC_METER thiếu waterUsageM3, hoặc waterUsageM3 âm/không hợp lệ.
  * - PER_PERSON có tenantCount âm/không phải số nguyên.
  * - vatRate hoặc environmentalFeeRate không hợp lệ, ngoài [0, 1], hoặc
  *   đơn giá âm.
  *
- * Important invariant:
+ * Bất biến quan trọng:
  * Phí môi trường tính từ `base` (tiền nước trước thuế), TUYỆT ĐỐI KHÔNG
  * phải từ (base + VAT). Đây là điểm dễ nhầm nhất của công thức — xem
  * ví dụ bằng số trong docs/CALCULATION_CORE.md.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - cộng dồn (base + VAT) trước khi tính phí môi trường.
  * - làm tròn base/VAT/phí môi trường trước tổng cuối — chỉ
  *   roundedTotalVnd được làm tròn.
  *
- * Why this module is separate:
+ * Lý do tồn tại:
  * Tính nước độc lập hoàn toàn với tính điện (khác input, khác công
  * thức) — không có lý do gộp chung, và việc tách giúp mỗi hàm nhỏ, dễ
  * test theo từng phương pháp (PER_CUBIC_METER / PER_PERSON) riêng biệt.
@@ -108,7 +108,7 @@ export function calculateWaterCharge(input: WaterChargeInput): Result<WaterCharg
 
   const vatAmount = multiply(base, vatRateResult.data);
   // Phí môi trường tính từ `base`, KHÔNG phải (base + vatAmount) — xem
-  // "Important invariant" ở đầu file.
+  // "Bất biến quan trọng" ở đầu file.
   const environmentalFeeAmount = multiply(base, feeRateResult.data);
   const exactTotal = add(add(base, vatAmount), environmentalFeeAmount);
   const roundedTotalVnd = roundHalfUpToInteger(exactTotal);

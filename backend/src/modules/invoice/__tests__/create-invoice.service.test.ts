@@ -20,7 +20,7 @@ import {
 import { Result } from "../../../shared/result";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Test orchestration của `CreateInvoiceService` bằng fake Repository/
  * UnitOfWork (node:test + node:assert/strict, KHÔNG PostgreSQL thật,
  * KHÔNG mocking library) — xem `fakes.ts`.
@@ -169,7 +169,7 @@ test("CreateInvoiceService: happy path QUOTA_TIERED + PER_CUBIC_METER", async ()
   assert.equal(result.success, true);
   if (!result.success) return;
 
-  // correct repos called (electricity + water, in that order)
+  // gọi đúng repository (điện + nước, đúng thứ tự đó)
   assert.deepEqual(
     meterReadingRepository.calls.map((c) => c.utilityType),
     ["ELECTRICITY", "WATER"]
@@ -232,7 +232,7 @@ test("CreateInvoiceService: happy path FALLBACK_TIER_FLAT + PER_PERSON", async (
   assert.equal(result.success, true);
   if (!result.success) return;
 
-  // water reading is NOT requested
+  // KHÔNG được tra water reading
   assert.deepEqual(
     meterReadingRepository.calls.map((c) => c.utilityType),
     ["ELECTRICITY"]
@@ -456,7 +456,7 @@ test("CreateInvoiceService: createInvoiceItems thất bại sau khi createInvoic
   assert.equal(invoiceRepository.createInvoiceCalls.length, 1);
 });
 
-// ---- actualChargedAmount scale corrective (NUMERIC(14,2) persistence contract) ----
+// ---- Sửa lỗi scale actualChargedAmount (hợp đồng lưu trữ NUMERIC(14,2)) ----
 
 test("CreateInvoiceService: actualChargedAmount với hơn 2 chữ số thập phân -> VALIDATION_ERROR TRƯỚC roomRepository.findById, không đọc/ghi gì", async () => {
   const { service, roomRepository, invoiceRepository } = buildService({

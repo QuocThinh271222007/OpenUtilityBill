@@ -9,17 +9,17 @@ import type { RentalProperty } from "../types/property.types";
 import type { Room } from "../types/room.types";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Điều phối trang "Phòng" — tải danh sách cơ sở (cho select trong form
  * VÀ bộ lọc danh sách), tải danh sách phòng (tôn trọng bộ lọc cơ sở
  * hiện tại), xử lý submit thêm/sửa.
  *
- * Important invariant:
+ * Bất biến quan trọng:
  * `propertyId` KHÔNG BAO GIỜ được gửi khi sửa (`updateRoom` chỉ nhận
  * `name`/`tenantCount`) — khớp `UpdateRoomBody` (propertyId immutable
  * trên PATCH, xem docs/MANAGEMENT_API.md).
  *
- * Does NOT: có nút Xóa — cùng lý do với property.controller.ts.
+ * Không chịu trách nhiệm: có nút Xóa — cùng lý do với property.controller.ts.
  */
 let editingRoomId: string | null = null;
 let cachedProperties: RentalProperty[] = [];

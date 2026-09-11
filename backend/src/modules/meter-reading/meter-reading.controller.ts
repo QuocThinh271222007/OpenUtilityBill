@@ -10,12 +10,12 @@ import { CreateMeterReadingInput, UpdateMeterReadingInput } from "./meter-readin
 import { serializeMeterReading } from "./meter-reading.http";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Nhận HTTP request cho `GET/POST /api/v1/meter-readings`,
  * `PUT /api/v1/meter-readings/:readingId`. Cùng pattern với các
  * Controller khác — xem `invoice.controller.ts` cho lý do đầy đủ.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - kiểm tra tổ hợp previous/current/max hợp lệ (rollover, ...) — đó là
  *   `calculateMeterUsage` bên trong `MeterReadingManagementService`.
  *   Controller chỉ kiểm tra HÌNH DẠNG JS nguyên thuỷ và parse

@@ -12,13 +12,13 @@ import { CreateWaterTariffInput, UpdateWaterTariffInput } from "./water-tariff-m
 import { serializeElectricityTariffWithTiers, serializeWaterTariff } from "./tariff.http";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Nhận HTTP request cho `GET/POST /api/v1/tariffs/electricity`,
  * `PUT /api/v1/tariffs/electricity/:tariffId`, và tương ứng cho
  * `/api/v1/tariffs/water`. Cùng pattern dependency-injection với các
  * Controller khác trong dự án.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - validate cấu trúc tier, tỉ lệ VAT, chồng lấn khoảng hiệu lực, hay
  *   tham chiếu lịch sử — tất cả thuộc
  *   `ElectricityTariffManagementService`/`WaterTariffManagementService`.

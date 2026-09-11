@@ -4,12 +4,12 @@ import { Invoice, InvoiceItem } from "./invoice.model";
 import { InvoiceRepository } from "../../repositories/invoice.repository";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Khai báo type dùng chung của `GetInvoiceService` — input, output, và
  * dependency — tách khỏi `get-invoice.service.ts` cùng lý do với
  * `create-invoice.types.ts`.
  *
- * Does NOT: chứa logic — chỉ type/interface.
+ * Không chịu trách nhiệm: chứa logic — chỉ type/interface.
  */
 export interface GetInvoiceInput {
   roomId: string;
@@ -19,7 +19,7 @@ export interface GetInvoiceInput {
 /**
  * `billingDifference` được TÍNH LẠI on-demand từ hai giá trị đã lưu
  * (`invoice.calculatedTotal`, `invoice.actualChargedAmount`) — KHÔNG
- * tính lại điện/nước. Xem `get-invoice.service.ts` "Does NOT".
+ * tính lại điện/nước. Xem `get-invoice.service.ts` "Không chịu trách nhiệm".
  */
 export interface GetInvoiceResult {
   invoice: Invoice;

@@ -4,14 +4,14 @@
 -- Validation data cleanup (safety net)
 -- ============================================================
 --
--- Responsibility:
+-- Trách nhiệm:
 -- Xoá MỌI dòng dữ liệu do 001_domain_success_validation.sql,
 -- 002_domain_constraint_validation.sql, hoặc
 -- 004_invoice_item_precision_validation.sql có thể vô tình để lại —
 -- chỉ nhận diện bằng tiền tố tên "VALIDATION_SUCCESS_",
 -- "VALIDATION_CONSTRAINT_", hoặc "VALIDATION_PRECISION_".
 --
--- Does NOT:
+-- Không chịu trách nhiệm:
 -- - xoá bất kỳ dòng nào KHÔNG khớp chính xác các tiền tố trên. Không có
 --   câu lệnh nào trong file này chạm tới dữ liệu tên
 --   "Competition Default ..." (dữ liệu seed chính thức của kỳ thi).

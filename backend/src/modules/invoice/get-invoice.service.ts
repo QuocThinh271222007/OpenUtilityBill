@@ -6,14 +6,14 @@ import { isFirstDayOfMonthUtc, isPositiveIntegerId } from "./invoice-input-valid
 import { GetInvoiceDependencies, GetInvoiceInput, GetInvoiceResult } from "./get-invoice.types";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Đọc lại một Invoice ĐÃ TỒN TẠI (lịch sử) cùng breakdown của nó, cho
  * `GET /api/v1/invoices?roomId=...&billingPeriod=...` (Route/Controller
  * — backend/src/modules/invoice/invoice.controller.ts).
  *
  * Input/Output: xem `get-invoice.types.ts`.
  *
- * Failure conditions:
+ * Điều kiện lỗi:
  * - `VALIDATION_ERROR`: roomId/billingPeriod không hợp lệ hình dạng.
  * - `INVOICE_NOT_FOUND`: không có invoice nào cho (roomId, billingPeriod).
  * - `DATABASE_READ_FAILED`: một trong hai lần đọc Repository thất bại.
@@ -33,7 +33,7 @@ import { GetInvoiceDependencies, GetInvoiceInput, GetInvoiceResult } from "./get
  * docs/CREATE_INVOICE_WORKFLOW.md mục "Room snapshot" và
  * `../invoice/invoice.model.ts` mục "Why Invoice snapshots configuration".
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - tính lại breakdown — `items` là dữ liệu ĐÃ LƯU, đọc nguyên văn qua
  *   `findItemsByInvoiceId` (đã `ORDER BY display_order ASC`).
  * - chứa SQL/Postgres.js import — chỉ phụ thuộc `InvoiceRepository`.

@@ -5,7 +5,7 @@ import { PostgresPropertyRepository } from "../repositories/postgres/postgres-pr
 import { PropertyManagementService } from "../modules/property/property-management.service";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Composition root cho property module — lắp ráp
  * `PropertyManagementService` THẬT (Postgres). Cùng nguyên tắc LAZY với
  * `invoice.composition.ts`: `getDatabaseClient()` chỉ được gọi BÊN

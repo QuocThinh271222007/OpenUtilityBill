@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Kiểm tra một `Date` (đã parse) có phải ngày đầu tiên của tháng hay
  * không — DÙNG CHUNG bởi mọi Service nhận `billingPeriod` làm đầu vào
  * (invoice, meter-reading), như một lớp kiểm tra PHÒNG THỦ thứ hai độc
@@ -10,7 +10,7 @@
  * validate đúng, để Service vẫn an toàn nếu được gọi từ nơi khác ngoài
  * HTTP trong tương lai.
  *
- * Why `getUTCDate()`, not `getDate()`:
+ * Vì sao dùng `getUTCDate()`, không phải `getDate()`:
  * `getDate()` dùng múi giờ LOCAL của máy chủ, có thể trả sai ngày tuỳ
  * cấu hình hệ thống — xem docs/DATABASE_ACCESS.md mục "DATE boundary".
  */

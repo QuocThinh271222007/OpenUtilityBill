@@ -4,7 +4,7 @@ import { Result } from "../shared/result";
 import { InvoiceRepository } from "./invoice.repository";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Trừu tượng hoá "chạy các thao tác ghi InvoiceRepository trong MỘT
  * transaction" mà `CreateInvoiceService` (backend/src/modules/invoice/)
  * có thể phụ thuộc vào — KHÔNG cần biết Postgres.js, `DatabaseExecutor`,
@@ -17,7 +17,7 @@ import { InvoiceRepository } from "./invoice.repository";
  * công; `Result` thất bại khi `work` tự báo lỗi hoặc khi bản thân
  * transaction thất bại.
  *
- * Why this interface exists (thay vì Service tự gọi runInTransaction):
+ * Lý do tồn tại (thay vì Service tự gọi runInTransaction):
  * Nếu `CreateInvoiceService` tự import `runInTransaction`/
  * `DatabaseExecutor`/`PostgresInvoiceRepository` để tự dựng transaction,
  * Service sẽ phụ thuộc trực tiếp vào chi tiết cài đặt persistence
@@ -28,7 +28,7 @@ import { InvoiceRepository } from "./invoice.repository";
  * nhau trong cùng work, không hỗ trợ nested transaction, ...) vì
  * CreateInvoice là nhu cầu ghi duy nhất hiện có.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - biết gì về Postgres.js/SQL — implementation cụ thể (Postgres) nằm ở
  *   `postgres/postgres-invoice-unit-of-work.ts`.
  * - cho phép `work` tự chọn executor nào khác ngoài `InvoiceRepository`

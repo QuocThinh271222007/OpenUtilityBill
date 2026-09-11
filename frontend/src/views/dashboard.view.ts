@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Render trang Tổng quan — số liệu tóm tắt (chỉ những gì API thực sự
  * cung cấp: số cơ sở, số phòng) và các nút thao tác nhanh.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - tự tính hay suy đoán số liệu API không cung cấp (không có biểu đồ,
  *   không có thống kê doanh thu, ... xem docs/FRONTEND.md mục "Out of
  *   scope").

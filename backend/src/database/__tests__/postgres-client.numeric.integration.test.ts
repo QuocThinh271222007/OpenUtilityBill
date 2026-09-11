@@ -5,13 +5,13 @@ import assert from "node:assert/strict";
 import { closeDatabaseClient, getDatabaseClient } from "../postgres-client";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Chứng minh, bằng PostgreSQL THẬT, rằng NUMERIC và BIGINT đi qua
  * `getDatabaseClient()` (Postgres.js) mà KHÔNG bị ép về JS `number` —
  * đúng hợp đồng chính xác tuyệt đối của dự án (xem
  * docs/DATABASE_ACCESS.md mục "NUMERIC/BIGINT precision boundary").
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - cần một database THẬT để repository unit test khác chạy được — chỉ
  *   file NÀY (và các test tích hợp khác trong `__tests__/`) cần
  *   `DATABASE_URL`. Tự động SKIP (không FAIL) khi biến đó không có,

@@ -5,11 +5,11 @@ import { renderEmptyState } from "./shared.view";
 import type { RentalProperty } from "../types/property.types";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Render trang "Cơ sở" — form thêm/sửa (dùng chung MỘT form, chuyển
  * chế độ qua `setPropertyFormMode`) và bảng danh sách.
  *
- * Does NOT: gọi API, quyết định khi nào submit — Controller lo việc đó.
+ * Không chịu trách nhiệm: gọi API, quyết định khi nào submit — Controller lo việc đó.
  */
 export function renderPropertyPage(container: HTMLElement): void {
   container.innerHTML = `

@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: MIT
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Kiểm tra hai khoảng hiệu lực (`effectiveFrom`/`effectiveTo`, `null`
  * `effectiveTo` = không giới hạn tương lai) có CHỒNG LẤN hay không —
  * DÙNG CHUNG giữa `ElectricityTariffManagementService` và
  * `WaterTariffManagementService` (hai bảng độc lập, cùng quy tắc).
  *
- * Definition:
+ * Định nghĩa:
  *   A bắt đầu trước/bằng lúc B kết thúc
  *   VÀ
  *   B bắt đầu trước/bằng lúc A kết thúc
  *
- * Why this exists (application-level, không phải exclusion constraint):
+ * Lý do tồn tại (application-level, không phải exclusion constraint):
  * Schema hiện tại (migration 001) KHÔNG có ràng buộc loại trừ
  * (`EXCLUDE` constraint) cho khoảng effective_from/effective_to — thêm
  * một ràng buộc như vậy cần một migration mới, ngoài phạm vi task này
@@ -23,7 +23,7 @@
  * trước khi có kiểm tra này, hoặc chèn trực tiếp qua SQL) vẫn rơi vào
  * tình huống mơ hồ.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - dùng SERIALIZABLE isolation hay advisory lock để chặn race
  *   condition giữa lúc kiểm tra và lúc ghi — task này KHÔNG giới thiệu
  *   cơ chế concurrency mới; kiểm tra chồng lấn là một tiện ích quản trị

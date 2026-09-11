@@ -7,11 +7,11 @@ import { renderDashboard } from "../views/dashboard.view";
 import { renderLoading, showGlobalAlert } from "../views/shared.view";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Điều phối trang Tổng quan — gọi GET /api/v1/properties và
  * GET /api/v1/rooms song song, rồi render số liệu tóm tắt.
  *
- * Does NOT: gọi fetch trực tiếp, thao tác DOM trực tiếp ngoài
+ * Không chịu trách nhiệm: gọi fetch trực tiếp, thao tác DOM trực tiếp ngoài
  * container do layout.view.ts cấp.
  */
 export async function renderDashboardPage(): Promise<void> {

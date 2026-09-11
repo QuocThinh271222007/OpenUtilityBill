@@ -4,7 +4,7 @@ import { isExactDecimalWithinScale } from "../../shared/validation/decimal-scale
 import { ONE, ZERO, compare, parseDecimal } from "../../calculation/shared/exact-number";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Kiểm tra một chuỗi thập phân có phải một TỈ LỆ hợp lệ (`electricity
  * VatRate`, `water.vatRate`, `water.environmentalFeeRate`) hay không —
  * vừa `NUMERIC(5, 4)` (tối đa 1 chữ số nguyên, 4 chữ số thập phân) VÀ
@@ -20,7 +20,7 @@ import { ONE, ZERO, compare, parseDecimal } from "../../calculation/shared/exact
  * DUY NHẤT dự án dùng để so sánh số thập phân dạng chuỗi — tái sử dụng
  * thay vì viết lại một phép so sánh số thứ hai.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - gọi bất kỳ hàm calculate*Electricity/Water nào của Calculation Core
  *   — chỉ dùng các hàm SO SÁNH SỐ nguyên thuỷ (parseDecimal/compare),
  *   không dựng một kịch bản tính hoá đơn giả chỉ để validate một tỉ lệ.

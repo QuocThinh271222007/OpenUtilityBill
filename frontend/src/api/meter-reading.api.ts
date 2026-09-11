@@ -4,7 +4,7 @@ import { apiRequest } from "./api-client";
 import type { ApiResult } from "../types/api.types";
 import type { MeterReading, MeterReadingBody } from "../types/meter-reading.types";
 
-/** Responsibility: gọi REST API cho `MeterReading`. Does NOT: thao tác DOM, kiểm tra rollover/hợp lệ (đó là việc của backend). */
+/** Trách nhiệm: gọi REST API cho `MeterReading`. Không chịu trách nhiệm: thao tác DOM, kiểm tra rollover/hợp lệ (đó là việc của backend). */
 export function fetchMeterReadings(roomId: string, billingPeriod?: string): Promise<ApiResult<MeterReading[]>> {
   const params = new URLSearchParams({ roomId });
   if (billingPeriod) {

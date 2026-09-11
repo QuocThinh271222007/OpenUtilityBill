@@ -3,7 +3,7 @@
 import { Result, ok, fail } from "../result";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Parse/format ngày dạng "YYYY-MM-DD" ở ranh giới HTTP — dùng CHUNG bởi
  * mọi module có field ngày dạng này (invoice `billingPeriod`,
  * meter-reading `billingPeriod`, tariff `effectiveFrom`/`effectiveTo`).
@@ -20,7 +20,7 @@ import { Result, ok, fail } from "../result";
  *   `billingPeriod` (invoice, meter-reading), khớp CHECK
  *   `EXTRACT(DAY FROM billing_period) = 1` ở migration 001.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - chấp nhận timestamp JS tuỳ ý (`Date.parse` nói chung) — CHỈ đúng
  *   hình dạng "YYYY-MM-DD", không giờ/múi giờ, để loại bỏ mơ hồ múi giờ
  *   ở ranh giới HTTP (xem docs/DATABASE_ACCESS.md mục "DATE boundary").

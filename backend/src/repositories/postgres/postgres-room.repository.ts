@@ -8,7 +8,7 @@ import { Room } from "../../modules/room/room.model";
 import { NewRoom, RoomRepository, UpdateRoom } from "../room.repository";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Implementation Postgres.js của `RoomRepository` — nơi DUY NHẤT trong
  * dự án được phép chứa câu SQL truy vấn bảng `rooms`.
  *
@@ -18,7 +18,7 @@ import { NewRoom, RoomRepository, UpdateRoom } from "../room.repository";
  * (Service layer tương lai) quyết định dùng executor nào, để có thể
  * tham gia một transaction dùng chung khi cần.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - implement CRUD đầy đủ — chỉ `findById`, thao tác duy nhất có nhu
  *   cầu thực sự ở giai đoạn này.
  * - lộ raw row của Postgres.js ra ngoài — `mapRoomRow` là bước ánh xạ

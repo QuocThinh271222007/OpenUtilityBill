@@ -4,20 +4,20 @@ import { Request, Response } from "express";
 import { getHealthStatus } from "./health.service";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Nhận HTTP request cho health endpoint và chuyển kết quả từ Service
  * (Result contract) thành HTTP response JSON.
  *
- * Expected input: Express Request (không dùng params/body/query).
- * Expected output: HTTP response JSON theo success/error contract
+ * Đầu vào: Express Request (không dùng params/body/query).
+ * Đầu ra: HTTP response JSON theo success/error contract
  *   được mô tả trong docs/ERROR_HANDLING.md.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - chứa business logic (thuộc về health.service.ts)
  * - truy cập database trực tiếp
  * - chứa raw SQL
  *
- * Reason:
+ * Lý do:
  * Controller chỉ quản lý ranh giới HTTP, để business logic có thể
  * được kiểm thử độc lập với Express (xem docs/ARCHITECTURE.md).
  */

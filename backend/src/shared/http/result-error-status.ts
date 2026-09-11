@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Ánh xạ error code (`Result` thất bại) -> HTTP status — DÙNG CHUNG bởi
  * mọi module HTTP (invoice, property, room, meter-reading, tariff).
  * Tách khỏi `backend/src/modules/invoice/invoice.http.ts` (nơi bảng này
@@ -13,12 +13,12 @@
  * không nằm trong bảng (không mong đợi xảy ra qua bất kỳ endpoint nào)
  * -> 500, KHÔNG đoán một mã 4xx cho một tình huống chưa biết.
  *
- * Important invariant:
+ * Bất biến quan trọng:
  * Toàn bộ mã lỗi/status của `invoice.http.ts` (task REST API trước) giữ
  * NGUYÊN giá trị ở đây — bảng này chỉ MỞ RỘNG thêm mã mới cho property/
  * room/meter-reading/tariff, không đổi hành vi cũ.
  *
- * Does NOT: chứa message hay logic khác — chỉ code -> status.
+ * Không chịu trách nhiệm: chứa message hay logic khác — chỉ code -> status.
  */
 const STATUS_BY_ERROR_CODE: Readonly<Record<string, number>> = {
   // ---- 400: input shape/validation ----

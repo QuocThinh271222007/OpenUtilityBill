@@ -6,11 +6,11 @@ import { renderEmptyState } from "./shared.view";
 import type { MeterReading } from "../types/meter-reading.types";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Render trang "Ghi chỉ số" — bộ chọn cơ sở/phòng/kỳ lọc, form thêm/
  * sửa MỘT chỉ số (điện HOẶC nước, không gộp), và bảng lịch sử.
  *
- * Does NOT: gọi API, kiểm tra rollover/hợp lệ số liệu (backend là nơi
+ * Không chịu trách nhiệm: gọi API, kiểm tra rollover/hợp lệ số liệu (backend là nơi
  * xác thực duy nhất qua calculateMeterUsage — xem
  * docs/MANAGEMENT_API.md mục "Rollover / reading-combination validity").
  */

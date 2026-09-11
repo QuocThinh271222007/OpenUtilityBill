@@ -5,19 +5,19 @@ import { renderEmptyState } from "./shared.view";
 import type { ElectricityTariffTier, ElectricityTariffWithTiers, WaterTariff } from "../types/tariff.types";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Render trang "Biểu giá" — hai tab (Điện/Nước, chuyển bằng DOM
  * show/hide thuần, KHÔNG dùng Bootstrap JS — xem docs/FRONTEND.md mục
  * "Bootstrap JavaScript"), danh sách phiên bản biểu giá điện kèm bảng
  * bậc động, form tạo/sửa với TRÌNH SOẠN BẬC ĐỘNG (thêm/xoá dòng bậc),
  * và form biểu giá nước đơn giản hơn (không có bậc).
  *
- * Important invariant:
+ * Bất biến quan trọng:
  * KHÔNG giả định số bậc cố định — `renderElectricityTariffList` render
  * ĐÚNG số bậc mà mỗi phiên bản tariff thực có (xem docs/MANAGEMENT_API.md
  * mục "Dynamic tiers").
  *
- * Does NOT: gọi API, validate cấu hình bậc/tỉ lệ — backend là nơi xác
+ * Không chịu trách nhiệm: gọi API, validate cấu hình bậc/tỉ lệ — backend là nơi xác
  * thực có thẩm quyền duy nhất.
  */
 export function renderTariffPage(container: HTMLElement): void {

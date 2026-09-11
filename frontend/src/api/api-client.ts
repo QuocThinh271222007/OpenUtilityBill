@@ -5,7 +5,7 @@ import type { ApiResult } from "../types/api.types";
 const API_V1_PREFIX = "/api/v1";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Một hàm gọi HTTP DUY NHẤT dùng chung cho mọi module `api/*.api.ts` —
  * gửi request tới backend qua đường dẫn TƯƠNG ĐỐI (`/api/v1/...`, Vite
  * dev server đã proxy sang backend thật, xem `vite.config.ts`), và trả
@@ -22,13 +22,13 @@ const API_V1_PREFIX = "/api/v1";
  * contract"), nên hàm này CHỈ parse JSON và trả nguyên vẹn, không tự
  * quyết định thành công/thất bại dựa trên `response.ok`.
  *
- * Failure conditions:
+ * Điều kiện lỗi:
  * - Lỗi mạng, backend không phản hồi, hoặc body không parse được JSON
  *   -> `{ success: false, error: { code: "NETWORK_ERROR", message: "..." } }`
  *   — một lỗi AN TOÀN phía frontend, không bao giờ lộ stack trace hay
  *   chi tiết kỹ thuật cho người dùng.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - hard-code origin (`http://localhost:3000`) — luôn dùng đường dẫn
  *   tương đối, để môi trường dev (Vite proxy) và một bản build production
  *   (được phục vụ cùng origin với backend) đều hoạt động không cần sửa

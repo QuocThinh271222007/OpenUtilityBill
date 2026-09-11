@@ -10,7 +10,7 @@ import { GetInvoiceInput, GetInvoiceResult } from "../get-invoice.types";
 import { Invoice, InvoiceItem } from "../invoice.model";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Test Controller (`invoice.controller.ts`) bằng fake `Request`/
  * `Response` (object thuần tuý, không Express server thật) + fake
  * Service (node:test + node:assert/strict, KHÔNG supertest/Jest/
@@ -19,7 +19,7 @@ import { Invoice, InvoiceItem } from "../invoice.model";
  * network) được chứng minh riêng bởi
  * `invoice.api.integration.test.ts`, gated bởi `DATABASE_URL`.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - cần một Service THẬT — mỗi test tự cấu hình fake Service trả về
  *   đúng `Result` mong muốn (`ok(...)`/`fail(...)`), độc lập với
  *   CreateInvoiceService/GetInvoiceService thật.

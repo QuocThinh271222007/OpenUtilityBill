@@ -6,7 +6,7 @@ import { closeDatabaseClient, getDatabaseClient } from "../../database/postgres-
 import { PostgresPropertyRepository } from "../postgres/postgres-property.repository";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Chứng minh, bằng PostgreSQL THẬT, chu trình create -> update -> read
  * của `PostgresPropertyRepository`. SKIP (không fail) khi không có
  * DATABASE_URL — xem quy ước chung ở

@@ -10,11 +10,11 @@ import { NewMeterReading } from "../../repositories/meter-reading.repository";
 import { CreateMeterReadingInput, MeterReadingManagementDependencies, UpdateMeterReadingInput } from "./meter-reading-management.types";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Business validation + orchestration cho quản lý `MeterReading` —
  * `list`/`create`/`update`.
  *
- * Failure conditions:
+ * Điều kiện lỗi:
  * - `VALIDATION_ERROR`: hình dạng sai (roomId, billingPeriod,
  *   utilityType, hoặc chuỗi thập phân không vừa `NUMERIC(12, 2)`).
  * - `INVALID_METER_READING`/`INVALID_METER_MAXIMUM`/
@@ -46,7 +46,7 @@ import { CreateMeterReadingInput, MeterReadingManagementDependencies, UpdateMete
  * hoá đơn đã tạo sẽ khiến bằng chứng lịch sử của hoá đơn đó không còn
  * khớp với dữ liệu gốc — xem docs/MANAGEMENT_API.md.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - chứa SQL/Postgres.js import.
  * - implement `delete`.
  */

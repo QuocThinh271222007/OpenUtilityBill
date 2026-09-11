@@ -7,25 +7,25 @@ import { NewRentalProperty, UpdateRentalProperty } from "../../repositories/prop
 import { CreatePropertyInput, PropertyManagementDependencies, UpdatePropertyInput } from "./property-management.types";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Business validation + orchestration cho quản lý `RentalProperty` —
  * `list`/`create`/`update`. Đây là Service đầu tiên KHÔNG có bước tính
  * toán tài chính nào (property không có field NUMERIC) — chỉ validate
  * hình dạng/nội dung input rồi gọi Repository.
  *
- * Failure conditions:
+ * Điều kiện lỗi:
  * - `create`/`update`: `VALIDATION_ERROR` khi `name` rỗng sau khi trim,
  *   hoặc PATCH không có field nào.
  * - `update`: `VALIDATION_ERROR` khi `id` không đúng hình dạng BIGINT;
  *   `PROPERTY_NOT_FOUND` propagate từ Repository khi không có property.
  *
- * Important invariant:
+ * Bất biến quan trọng:
  * `name` luôn được trim TRƯỚC khi lưu; `address` cũng được trim, và một
  * chuỗi rỗng sau khi trim CHUẨN HOÁ thành `null` (một địa chỉ rỗng
  * không có ý nghĩa khác `null`) — xem "Why" ở `normalizeAddress` bên
  * dưới.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - chứa SQL/Postgres.js import — chỉ phụ thuộc `PropertyRepository`
  *   interface.
  * - implement `delete` — xem docs/MANAGEMENT_API.md.

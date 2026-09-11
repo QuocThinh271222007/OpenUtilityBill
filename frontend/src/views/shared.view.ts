@@ -3,14 +3,14 @@
 import { escapeHtml } from "../utils/format";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Các hàm render DÙNG CHUNG bởi mọi screen: vùng cảnh báo toàn cục
  * (`#app-alert-region`, do `views/layout.view.ts` tạo), trạng thái
  * "đang tải", trạng thái rỗng, và render `<option>` cho các `<select>`
  * dùng lặp lại (cơ sở, phòng) ở nhiều screen (room, meter-reading,
  * invoice).
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - gọi API hay quyết định NỘI DUNG cảnh báo — Controller quyết định
  *   khi nào gọi, với message gì; file này chỉ render.
  */

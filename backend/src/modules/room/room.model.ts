@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Domain type mô tả một Room (phòng trọ) — đơn vị thực sự được tính
  * hoá đơn điện/nước. Mỗi Room thuộc về đúng một RentalProperty.
  *
- * Represents:
+ * Biểu diễn:
  * Dữ liệu tương ứng với bảng `rooms`.
  *
  * Invariants (enforce ở tầng database):
@@ -16,12 +16,12 @@
  *   name)) — KHÔNG phải duy nhất toàn hệ thống. Hai property khác nhau
  *   vẫn có thể cùng có một phòng tên "101".
  *
- * ID representation:
+ * Biểu diễn ID:
  * `id`, `propertyId` là `string` (BIGINT ở database) — xem
  * ../property/property.model.ts mục "ID representation" và
  * docs/DATABASE_ACCESS.md.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - tự đảm bảo hoá đơn cũ không đổi khi `tenantCount` thay đổi sau này.
  *   Việc đó là trách nhiệm của `Invoice.tenantCountUsed` (xem
  *   ../invoice/invoice.model.ts và docs/DATABASE_DESIGN.md mục
@@ -30,7 +30,7 @@
  *   change) — chưa cần ở giai đoạn này.
  * - có Repository/Service/Controller đi kèm ở task này.
  *
- * Why this model exists separately:
+ * Lý do tồn tại riêng biệt:
  * Room là điểm neo (anchor) mà MeterReading và Invoice tham chiếu tới
  * qua `roomId`. Tách Room khỏi RentalProperty giữ cho mỗi entity chỉ có
  * một trách nhiệm rõ ràng, và cho phép Room được truy vấn/thao tác độc

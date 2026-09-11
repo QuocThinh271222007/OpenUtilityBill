@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Domain type mô tả một MeterReading — chỉ số công tơ điện hoặc nước
  * của một Room trong một kỳ hoá đơn (billing period) cụ thể.
  *
- * Represents:
+ * Biểu diễn:
  * Dữ liệu tương ứng với bảng `meter_readings`.
  *
  * Invariants (enforce ở tầng database, xem migration):
@@ -25,12 +25,12 @@
  *   để một tháng luôn ứng với đúng một giá trị `billingPeriod`, dễ
  *   truy vấn theo tháng (`WHERE billing_period = '2026-09-01'`).
  *
- * ID representation:
+ * Biểu diễn ID:
  * `id`, `roomId` là `string` (BIGINT ở database) — xem
  * ../property/property.model.ts mục "ID representation" và
  * docs/DATABASE_ACCESS.md.
  *
- * Numeric representation:
+ * Biểu diễn số:
  * `previousReading`, `currentReading`, `meterMaximumValue` được khai
  * báo là `string`, không phải `number`, vì các cột tương ứng ở database
  * là PostgreSQL NUMERIC (không phải FLOAT/REAL — xem
@@ -43,13 +43,13 @@
  * docs/DATABASE_DESIGN.md mục "Database NUMERIC vs. runtime
  * calculation representation").
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - tính usage (currentReading - previousReading) hay xử lý rollover.
  *   Đó là việc của Calculation Core (task sau).
  * - biết gì về tariff hay giá tiền.
  * - có Repository/Service/Controller đi kèm ở task này.
  *
- * Why this model exists separately:
+ * Lý do tồn tại riêng biệt:
  * Điện và nước có chu kỳ đọc số giống nhau (theo tháng, theo phòng)
  * nhưng là hai loại dữ liệu độc lập. Thay vì tạo hai bảng riêng
  * (electricity_readings, water_readings) hoặc nhồi cả hai loại chỉ số

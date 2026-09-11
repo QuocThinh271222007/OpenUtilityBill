@@ -7,11 +7,11 @@ import { NewRoom, UpdateRoom } from "../../repositories/room.repository";
 import { CreateRoomInput, RoomManagementDependencies, UpdateRoomInput } from "./room-management.types";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Business validation + orchestration cho quản lý `Room` — `list`/
  * `create`/`update`.
  *
- * Failure conditions:
+ * Điều kiện lỗi:
  * - `VALIDATION_ERROR`: `propertyId`/`id` sai hình dạng BIGINT, `name`
  *   rỗng sau trim, `tenantCount` không phải số nguyên `>= 0`, hoặc PATCH
  *   không có field nào.
@@ -24,7 +24,7 @@ import { CreateRoomInput, RoomManagementDependencies, UpdateRoomInput } from "./
  *   đã đủ mạnh cho race condition này, không cần một pre-check bổ sung
  *   như invoice's `findByRoomAndPeriod`).
  *
- * Important invariant:
+ * Bất biến quan trọng:
  * `Room.tenantCount` là trạng thái HIỆN TẠI — sửa nó qua `update`
  * KHÔNG BAO GIỜ sửa `Invoice.tenantCountUsed` của các hoá đơn đã tạo
  * trước đó (snapshot bất biến, xem
@@ -32,7 +32,7 @@ import { CreateRoomInput, RoomManagementDependencies, UpdateRoomInput } from "./
  * configuration"). Service này không đọc/ghi bảng `invoices` — bất biến
  * này đúng ĐƠN GIẢN vì không có code nào ở đây làm điều ngược lại.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - cho phép đổi `propertyId` qua `update` — xem `UpdateRoomInput`.
  * - chứa SQL/Postgres.js import.
  */

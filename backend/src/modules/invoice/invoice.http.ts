@@ -7,7 +7,7 @@ import { CreateInvoiceResult } from "./create-invoice.types";
 import { GetInvoiceResult } from "./get-invoice.types";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Tiện ích ranh giới HTTP CHỈ cho module invoice — parse `billingPeriod`
  * dạng "YYYY-MM-DD" từ request và chuyển domain object (Invoice/
  * InvoiceItem/CreateInvoiceResult/GetInvoiceResult) thành JSON an toàn
@@ -22,7 +22,7 @@ import { GetInvoiceResult } from "./get-invoice.types";
  * `parseBillingPeriodWireFormat` như một wrapper mỏng quanh
  * `parseFirstOfMonthWireFormat` (giữ NGUYÊN tên/hành vi cũ).
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - import Express `Request`/`Response` — mọi hàm ở đây nhận/trả dữ
  *   liệu thuần tuý, không phụ thuộc trực tiếp framework HTTP, dễ test
  *   độc lập.
@@ -41,8 +41,8 @@ export function parseBillingPeriodWireFormat(value: unknown): Result<Date> {
  * `billingPeriod` thành "YYYY-MM-DD", `createdAt` thành timestamp
  * ISO-8601 đầy đủ. Mọi field khác (id, các `...Id`, số tiền) vốn đã là
  * `string` — giữ nguyên, KHÔNG canonicalize (xem
- * docs/DATABASE_ACCESS.md mục "NUMERIC string format is not
- * canonicalized").
+ * docs/DATABASE_ACCESS.md mục "Định dạng chuỗi NUMERIC không được
+ * chuẩn hoá").
  */
 export function serializeInvoice(invoice: Invoice) {
   return {

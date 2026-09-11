@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * "Đây có phải lỗi vi phạm UNIQUE constraint (SQLSTATE 23505) không?" —
  * kiểm tra CẤU TRÚC (structural), không import type `PostgresError` của
  * thư viện `postgres`. DÙNG CHUNG bởi mọi Repository cần dịch một vi
@@ -16,7 +16,7 @@
  * ký tự 'C' -> `code`) và `node_modules/postgres/types/index.d.ts`
  * (`PostgresError.code: string`).
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - phân biệt VI PHẠM CONSTRAINT NÀO — mỗi Repository gọi hàm này biết
  *   rõ (từ ngữ cảnh gọi INSERT/UPDATE nào) đó là constraint nào, nên tự
  *   chọn domain error code phù hợp (ví dụ `INVOICE_ALREADY_EXISTS`,

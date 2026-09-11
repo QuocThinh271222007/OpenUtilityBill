@@ -5,7 +5,7 @@ import { createCreatePropertyController, createListPropertiesController, createU
 import { getPropertyManagementService } from "../../composition/property.composition";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Khai báo route HTTP cho module property (`GET`/`POST /properties`,
  * `PATCH /properties/:propertyId`, mounted dưới `/api/v1` bởi `app.ts`).
  *

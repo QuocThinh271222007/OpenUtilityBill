@@ -7,7 +7,7 @@ import { InvoiceRepository } from "../invoice.repository";
 import { PostgresInvoiceRepository } from "./postgres-invoice.repository";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Implementation Postgres.js của `InvoiceUnitOfWork` — nơi DUY NHẤT nối
  * `runInTransaction` (cơ chế transaction chung, database/transaction.ts)
  * với `PostgresInvoiceRepository` (SQL cụ thể của bảng invoices/
@@ -16,7 +16,7 @@ import { PostgresInvoiceRepository } from "./postgres-invoice.repository";
  * Input/Output: xem `../invoice-unit-of-work.ts` — hợp đồng giống hệt,
  * file này CHỈ hiện thực hoá nó bằng Postgres.js.
  *
- * Important invariant:
+ * Bất biến quan trọng:
  * `work` LUÔN nhận một `PostgresInvoiceRepository` mới, được dựng bằng
  * ĐÚNG transaction context (`tx`) mà `runInTransaction` cấp — không
  * phải client toàn cục — nên `createInvoice` và `createInvoiceItems` gọi
@@ -24,7 +24,7 @@ import { PostgresInvoiceRepository } from "./postgres-invoice.repository";
  * atomicity (invoice + toàn bộ invoice_items cùng commit hoặc cùng
  * rollback, xem docs/TRANSACTIONS.md).
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - chứa business logic (đó là CreateInvoiceService) hay SQL domain (đó
  *   là PostgresInvoiceRepository) — file này CHỈ lắp ráp hai phần đã có
  *   sẵn.

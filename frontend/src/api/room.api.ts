@@ -4,7 +4,7 @@ import { apiRequest } from "./api-client";
 import type { ApiResult } from "../types/api.types";
 import type { CreateRoomBody, Room, UpdateRoomBody } from "../types/room.types";
 
-/** Responsibility: gọi REST API cho `Room`. Does NOT: thao tác DOM, quyết định hiển thị gì. */
+/** Trách nhiệm: gọi REST API cho `Room`. Không chịu trách nhiệm: thao tác DOM, quyết định hiển thị gì. */
 export function fetchRooms(propertyId?: string): Promise<ApiResult<Room[]>> {
   const query = propertyId ? `?propertyId=${encodeURIComponent(propertyId)}` : "";
   return apiRequest<Room[]>(`/rooms${query}`);

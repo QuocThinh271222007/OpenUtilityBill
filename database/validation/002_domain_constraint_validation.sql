@@ -4,16 +4,16 @@
 -- Domain/database constraint validation
 -- ============================================================
 --
--- !!! RUN ONE NUMBERED TEST BLOCK AT A TIME IN SUPABASE SQL EDITOR !!!
--- Do NOT paste and run this entire file in one execution.
+-- !!! CHẠY TỪNG KHỐI TEST ĐÁNH SỐ MỘT TRONG SUPABASE SQL EDITOR !!!
+-- KHÔNG paste và chạy toàn bộ file này trong một lần thực thi.
 --
--- Responsibility:
+-- Trách nhiệm:
 -- Chứng minh, bằng PostgreSQL THẬT, rằng mỗi CHECK/UNIQUE/FK constraint
 -- trong migration THỰC SỰ từ chối dữ liệu không hợp lệ — mỗi khối D1-D18
 -- dưới đây cố ý gây ra MỘT lỗi PostgreSQL cụ thể và ghi rõ lỗi đó là
 -- lỗi gì.
 --
--- Does NOT:
+-- Không chịu trách nhiệm:
 -- - implement Calculation Core, CRUD, Repository, hay business logic.
 -- - dùng PL/pgSQL, stored procedure, hay một "test framework" tự chế.
 -- - sửa đổi dữ liệu seed chính thức (Competition Default ...) — mọi

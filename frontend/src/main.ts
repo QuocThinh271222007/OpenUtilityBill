@@ -13,13 +13,13 @@ import { renderInvoiceManagementPage } from "./controllers/invoice.controller";
 import { renderTariffManagementPage } from "./controllers/tariff.controller";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Entry point phía trình duyệt — dựng khung ứng dụng (app shell), đăng
  * ký toàn bộ route thật sự tồn tại, khởi động router, và kiểm tra
  * trạng thái backend. Đây là nơi DUY NHẤT "wiring" các module lại với
  * nhau.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - chứa logic gọi API hay render (những việc đó nằm ở controllers/,
  *   api/, views/).
  */

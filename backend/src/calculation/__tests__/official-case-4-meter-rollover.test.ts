@@ -11,7 +11,7 @@ import {
 } from "./fixtures/competition-defaults";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Kiểm chứng Official test case 4 — trường hợp DUY NHẤT cần GHÉP hai
  * module (calculateMeterUsage + calculateTieredElectricity) lại với
  * nhau, vì đây là ranh giới thực tế giữa "đọc chỉ số công tơ" và "tính

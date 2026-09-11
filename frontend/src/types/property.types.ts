@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Type mô tả `RentalProperty` và các body ghi dữ liệu — khớp CHÍNH XÁC
  * hợp đồng HTTP mô tả ở docs/MANAGEMENT_API.md mục "Properties".
  *
- * Important invariant:
+ * Bất biến quan trọng:
  * `id` là chuỗi (BIGINT ở backend), KHÔNG BAO GIỜ là `number` — xem
  * docs/API.md mục "Conventions used throughout".
  *
- * Does NOT: validate dữ liệu tại runtime.
+ * Không chịu trách nhiệm: validate dữ liệu tại runtime.
  */
 export interface RentalProperty {
   id: string;

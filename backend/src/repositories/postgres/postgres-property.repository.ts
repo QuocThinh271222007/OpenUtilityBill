@@ -7,11 +7,11 @@ import { RentalProperty } from "../../modules/property/property.model";
 import { NewRentalProperty, PropertyRepository, UpdateRentalProperty } from "../property.repository";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Implementation Postgres.js của `PropertyRepository` — nơi DUY NHẤT
  * chứa SQL truy vấn/ghi bảng `rental_properties`.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - dùng `sql.unsafe` hay ghép chuỗi SQL — mọi giá trị tham số hoá qua
  *   `${...}`.
  * - dùng một câu `UPDATE` động ghép tên cột từ input — `update()` dùng

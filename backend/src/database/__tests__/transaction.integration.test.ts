@@ -7,7 +7,7 @@ import { closeDatabaseClient, getDatabaseClient } from "../postgres-client";
 import { fail } from "../../shared/result";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Chứng minh, bằng PostgreSQL THẬT, rằng `runInTransaction`:
  *   1. insert dữ liệu tạm bên trong transaction;
  *   2. một bước sau đó cố ý thất bại (`work()` trả về Result thất bại);
@@ -18,7 +18,7 @@ import { fail } from "../../shared/result";
  * COMMIT thật sự (dữ liệu tồn tại sau khi hàm trả về) — để phân biệt rõ
  * hai nhánh, không chỉ test riêng rollback.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - chạm tới dữ liệu không liên quan. Mọi hàng test dùng tiền tố tên
  *   DUY NHẤT `VALIDATION_REPOSITORY_TX_` kèm timestamp, dọn dẹp tường
  *   minh trong `finally` kể cả khi assertion thất bại giữa chừng.

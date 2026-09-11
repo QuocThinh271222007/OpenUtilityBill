@@ -9,7 +9,7 @@ import { CreatePropertyInput, UpdatePropertyInput } from "./property-management.
 import { serializeProperty } from "./property.http";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Nhận HTTP request cho `GET/POST /api/v1/properties`,
  * `PATCH /api/v1/properties/:propertyId`, chuyển sang
  * `CreatePropertyInput`/`UpdatePropertyInput`, gọi
@@ -18,7 +18,7 @@ import { serializeProperty } from "./property.http";
  * gọi SAU khi validate) như `invoice.controller.ts` — xem file đó cho
  * lý do đầy đủ.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - chứa business validation (trim/empty-to-null cho name/address) —
  *   đó là việc của `PropertyManagementService`. Controller chỉ kiểm tra
  *   HÌNH DẠNG JS nguyên thuỷ (string/null/undefined).

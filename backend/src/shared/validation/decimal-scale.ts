@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Kiểm tra một chuỗi thập phân có VỪA MỘT SCALE CỐ ĐỊNH (số chữ số phần
  * nguyên/thập phân tối đa) hay không, KHÔNG BAO GIỜ ép về JS `number`
  * (`Number()`/`parseFloat()`) — dùng chung bởi mọi giá trị sẽ được lưu
@@ -9,7 +9,7 @@
  * tier threshold `NUMERIC(12,2)`, tier/tariff giá `NUMERIC(14,2)`, tỉ lệ
  * VAT/phí `NUMERIC(5,4)`, ...).
  *
- * Why this exists:
+ * Lý do tồn tại:
  * PostgreSQL âm thầm LÀM TRÒN một giá trị NUMERIC khi lưu nếu nó có
  * nhiều chữ số thập phân hơn scale đã khai báo của cột — một giá trị đã
  * qua bước tính toán/hiển thị ở tầng ứng dụng nhưng KHÔNG khớp scale sẽ
@@ -19,7 +19,7 @@
  * Kiểm tra này chặn giá trị không vừa TRƯỚC khi ghi, thay vì để
  * PostgreSQL âm thầm làm tròn.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - chấp nhận số âm — mọi giá trị dùng hàm này trong dự án (chỉ số công
  *   tơ, đơn giá, ngưỡng bậc) đều không âm theo CHECK constraint tương
  *   ứng ở migration 001. Nếu một giá trị cần cho phép âm trong tương

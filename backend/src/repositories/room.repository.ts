@@ -9,7 +9,8 @@ import { Room } from "../modules/room/room.model";
  *
  * `UpdateRoom` CỐ Ý không có `propertyId` — di chuyển room giữa các
  * property mang ý nghĩa lịch sử không cần thiết cho phạm vi kỳ thi (xem
- * docs/MANAGEMENT_API.md mục "propertyId is immutable on PATCH").
+ * docs/MANAGEMENT_API.md mục "PATCH /api/v1/rooms/:roomId" — propertyId
+ * không đổi được trên PATCH).
  */
 export interface NewRoom {
   propertyId: string;
@@ -23,12 +24,12 @@ export interface UpdateRoom {
 }
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Hợp đồng (interface) cho việc đọc/ghi dữ liệu `Room` — ranh giới
  * persistence mà Service layer phụ thuộc vào, KHÔNG phụ thuộc trực tiếp
  * vào Postgres.js hay bất kỳ implementation cụ thể nào.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - chứa SQL — implementation cụ thể (Postgres.js) nằm ở
  *   `postgres/postgres-room.repository.ts`.
  * - implement `delete` — xem docs/MANAGEMENT_API.md.
@@ -40,7 +41,7 @@ export interface UpdateRoom {
  * - `DATABASE_READ_FAILED`/`DATABASE_WRITE_FAILED` cho lỗi query/ghi
  *   khác.
  *
- * Why this module is separate:
+ * Lý do tồn tại:
  * Interface tách khỏi implementation để Service layer (và test của nó)
  * có thể phụ thuộc vào hợp đồng này mà không cần một PostgreSQL thật —
  * một implementation giả (fake) có thể thay thế

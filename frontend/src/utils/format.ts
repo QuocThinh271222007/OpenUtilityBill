@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Các hàm THUẦN TUÝ (pure — không DOM, không I/O) xử lý chuỗi cho toàn
  * frontend: escape HTML, định dạng hiển thị tiền VNĐ, chuyển đổi
  * tháng<->billingPeriod, và phân loại dấu của một chuỗi số (để tô màu
@@ -14,7 +14,7 @@
  * CHUỖI (string), giữ nguyên độ chính xác tuyệt đối mà backend đã trả
  * về (xem docs/FRONTEND.md mục "Financial string rule").
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - tính toán bất kỳ giá trị tài chính nào (cộng/trừ/nhân/chia) — chỉ
  *   ĐỊNH DẠNG HIỂN THỊ những giá trị backend đã tính sẵn.
  */
@@ -66,7 +66,7 @@ function groupThousands(digits: string): string {
  * thể có tới 2 chữ số lẻ) được GIỮ LẠI, ngăn cách bằng dấu phẩy theo
  * quy ước Việt Nam — không bị cắt bớt, không mất thông tin.
  *
- * Does NOT: chuyển giá trị qua `Number` ở bất kỳ bước nào — chỉ tách
+ * Không chịu trách nhiệm: chuyển giá trị qua `Number` ở bất kỳ bước nào — chỉ tách
  * chuỗi tại dấu "." và nhóm lại.
  */
 export function formatVndDisplay(value: string): string {

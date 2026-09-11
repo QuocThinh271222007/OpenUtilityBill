@@ -3,14 +3,14 @@
 import app from "./app";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Entry point của tiến trình backend: đọc cấu hình cổng từ biến môi
  * trường và bắt đầu lắng nghe HTTP request.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - cấu hình Express middleware/route (việc đó thuộc về app.ts)
  *
- * Reason:
+ * Lý do:
  * server.ts là ranh giới network của ứng dụng; tách khỏi app.ts để
  * app.ts giữ được tính "pure" (không phụ thuộc việc có mở cổng thật
  * hay không) và dễ test hơn.

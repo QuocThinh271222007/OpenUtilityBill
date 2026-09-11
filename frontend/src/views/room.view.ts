@@ -5,12 +5,12 @@ import { renderEmptyState } from "./shared.view";
 import type { Room } from "../types/room.types";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Render trang "Phòng" — form thêm/sửa (propertyId chỉ chọn được khi
  * TẠO MỚI, bị khoá khi sửa — xem `setRoomFormMode`), bộ lọc theo cơ sở,
  * và bảng danh sách.
  *
- * Does NOT: gọi API — Controller lo việc đó.
+ * Không chịu trách nhiệm: gọi API — Controller lo việc đó.
  */
 export function renderRoomPage(container: HTMLElement): void {
   container.innerHTML = `

@@ -4,7 +4,7 @@ import { closeMobileSidebar, setActiveNavItem, setPageTitle } from "../views/lay
 import { clearGlobalAlerts } from "../views/shared.view";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Một bộ định tuyến (router) phía trình duyệt CỰC NHỎ, dựa trên
  * `location.hash` — KHÔNG dùng thư viện router nào (xem docs/FRONTEND.md
  * mục "No router dependency"). Ánh xạ `#/dashboard`, `#/properties`,
@@ -16,12 +16,12 @@ import { clearGlobalAlerts } from "../views/shared.view";
  * bộ route thật sự tồn tại. `initNavigation()` gắn listener và render
  * route ban đầu.
  *
- * Important invariant:
+ * Bất biến quan trọng:
  * Route không khớp bất kỳ `hash` nào đã đăng ký (bao gồm hash rỗng lúc
  * tải trang lần đầu) sẽ fallback về `DEFAULT_ROUTE` — không bao giờ để
  * trang trắng.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - tự parse tham số động trong hash (ví dụ `#/invoices/123`) — mọi
  *   route hiện tại là đường dẫn TĨNH; các screen tự giữ trạng thái lựa
  *   chọn (property/room/kỳ) qua state module nội bộ của Controller đó,

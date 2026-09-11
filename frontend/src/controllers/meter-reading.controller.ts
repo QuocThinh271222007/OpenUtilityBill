@@ -18,12 +18,12 @@ import type { MeterReading, MeterReadingBody, UtilityType } from "../types/meter
 import type { Room } from "../types/room.types";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Điều phối trang "Ghi chỉ số" — luồng bắt buộc: chọn cơ sở -> chọn
  * phòng -> (tuỳ chọn) lọc theo kỳ -> xem lịch sử -> thêm/sửa MỘT chỉ số
  * điện HOẶC nước.
  *
- * Important invariant:
+ * Bất biến quan trọng:
  * Sau bước shape-check tối thiểu ở đây (không rỗng), tính hợp lệ THẬT
  * của tổ hợp previous/current/max (âm, vượt max, rollover, ...) hoàn
  * toàn do backend quyết định (`calculateMeterUsage`) — frontend KHÔNG
@@ -32,7 +32,7 @@ import type { Room } from "../types/room.types";
  * có cách nào bỏ qua (xem docs/MANAGEMENT_API.md mục "Historical
  * reference protection").
  *
- * Does NOT: có nút Xóa.
+ * Không chịu trách nhiệm: có nút Xóa.
  */
 let selectedPropertyId: string | null = null;
 let selectedRoomId: string | null = null;

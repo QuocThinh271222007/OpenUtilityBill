@@ -11,7 +11,7 @@ import { CreateInvoiceService } from "../modules/invoice/create-invoice.service"
 import { GetInvoiceService } from "../modules/invoice/get-invoice.service";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * "Composition root" cho invoice module — nơi DUY NHẤT lắp ráp
  * `CreateInvoiceService`/`GetInvoiceService` THẬT (Postgres) từ các
  * Repository/UnitOfWork Postgres cụ thể, để Route/Controller
@@ -27,11 +27,11 @@ import { GetInvoiceService } from "../modules/invoice/get-invoice.service";
  * `DATABASE_URL` — phá vỡ `GET /api/v1/health` (không cần database)
  * trong MỌI môi trường không có `DATABASE_URL`, kể cả chạy test không
  * đụng tới database (xem `backend/src/database/postgres-client.ts` mục
- * "Why this module is separate" — `getDatabaseClient()` fail-fast bằng
+ * "Lý do tồn tại" — `getDatabaseClient()` fail-fast bằng
  * throw, không phải `Result`, đúng cho lỗi cấu hình khi khởi động,
  * nhưng SAI thời điểm nếu bị gọi chỉ vì import một route file).
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - chứa business logic hay SQL — chỉ lắp ráp (wiring).
  * - cache/singleton hoá Service instance — chi phí tạo lại vài
  *   Repository object mỗi request là không đáng kể so với một round-trip

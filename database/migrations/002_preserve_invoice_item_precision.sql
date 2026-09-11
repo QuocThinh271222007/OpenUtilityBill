@@ -4,13 +4,13 @@
 -- Preserve exact invoice-item intermediate precision
 -- ============================================================
 --
--- Responsibility:
+-- Trách nhiệm:
 -- Nới rộng invoice_items.quantity và invoice_items.amount từ
 -- NUMERIC(p, s) có scale cố định sang NUMERIC không giới hạn scale, để
 -- database KHÔNG BAO GIỜ làm tròn giá trị chính xác mà Calculation Core
 -- đã tính (xem backend/src/calculation/, docs/NUMERIC_PRECISION.md).
 --
--- Does NOT:
+-- Không chịu trách nhiệm:
 -- - sửa database/migrations/001_initial_domain_schema.sql. Migration đó
 --   đã được chứng minh chạy được trên PostgreSQL thật (xem
 --   database/validation/); đây là migration TIẾP THEO, không phải viết

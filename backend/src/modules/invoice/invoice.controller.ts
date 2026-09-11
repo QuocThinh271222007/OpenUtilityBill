@@ -13,7 +13,7 @@ import {
 } from "./invoice.http";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Nhận HTTP request cho `POST /api/v1/invoices` và
  * `GET /api/v1/invoices`, chuyển sang `CreateInvoiceInput`/
  * `GetInvoiceInput`, gọi Service tương ứng, và chuyển `Result` thành
@@ -35,7 +35,7 @@ import {
  * input KHÔNG cần database. Vì vậy `getService()` chỉ được gọi ngay
  * trước khi thực sự cần cho `service.execute(...)`.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - tính điện/nước, truy vấn SQL, hay tự dựng transaction context —
  *   mọi việc đó thuộc Service/Repository. File này CHỈ trích xuất field
  *   nguyên thuỷ từ request, gọi Service, và ánh xạ Result -> response.

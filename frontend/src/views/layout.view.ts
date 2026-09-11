@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Dựng khung ứng dụng (app shell) MỘT LẦN vào `#app`: sidebar điều
  * hướng, tiêu đề trang, vùng cảnh báo toàn cục, vùng nội dung chính, và
  * trạng thái kết nối backend. Cung cấp các hàm cập nhật từng phần của
  * khung này cho `controllers/navigation.controller.ts` gọi khi chuyển
  * trang.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - quyết định route nào đang active hay tự chuyển trang — đó là việc
  *   của `controllers/navigation.controller.ts`. File này chỉ CUNG CẤP
  *   HTML và các hàm cập nhật DOM, không tự lắng nghe `hashchange`.
@@ -50,7 +50,7 @@ export function renderAppShell(): void {
       </aside>
       <div class="app-main">
         <header class="app-header">
-          <button type="button" class="btn btn-outline-secondary app-nav-toggle d-lg-none" id="app-nav-toggle">Menu</button>
+          <button type="button" class="btn btn-outline-secondary app-nav-toggle d-lg-none" id="app-nav-toggle">Điều hướng</button>
           <h1 class="app-page-title" id="app-page-title">Tổng quan</h1>
         </header>
         <div class="app-alert-region" id="app-alert-region" aria-live="polite"></div>

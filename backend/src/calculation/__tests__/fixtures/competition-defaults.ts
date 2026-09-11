@@ -3,13 +3,13 @@
 import { ElectricityTierInput } from "../../types/calculation.types";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Cung cấp dữ liệu cấu hình MẶC ĐỊNH CỦA KỲ THI (electricity_vat_rate,
  * people_per_quota_unit, fallback_tier_number, 6 bậc giá điện, cấu hình
  * nước) — CHỈ dùng để test, khớp với
  * database/seeds/001_competition_defaults.sql.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - được import bởi bất kỳ module NÀO trong backend/src/calculation/
  *   ngoài __tests__/. Các hằng số ở đây (1984, 0.08, 8500, ...) TUYỆT
  *   ĐỐI KHÔNG được xuất hiện trong Calculation Core sản xuất — đó chính
@@ -17,7 +17,7 @@ import { ElectricityTierInput } from "../../types/calculation.types";
  *   các giá trị này qua tham số hàm, không bao giờ hard-code chúng (xem
  *   docs/CALCULATION_CORE.md mục "Configuration-driven").
  *
- * Why this file is separate (test-only):
+ * Lý do tồn tại (chỉ dùng cho test):
  * Tách biệt "dữ liệu của kỳ thi hiện tại" khỏi "công thức tính toán
  * tổng quát" — nếu kỳ thi đổi biểu giá, chỉ file test fixture này (và
  * database/seeds/001_competition_defaults.sql) cần cập nhật, không phải

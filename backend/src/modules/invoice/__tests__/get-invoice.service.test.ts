@@ -7,7 +7,7 @@ import { Invoice, InvoiceItem } from "../invoice.model";
 import { createFakeInvoiceRepository } from "./fakes";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Test `GetInvoiceService` bằng fake `InvoiceRepository` (xem
  * `fakes.ts`) — KHÔNG PostgreSQL thật, KHÔNG tính lại điện/nước (chỉ
  * đọc dữ liệu đã lưu + trừ để ra billingDifference).

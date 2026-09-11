@@ -3,14 +3,14 @@
 import { Response } from "express";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Tiện ích Controller nhỏ, DÙNG CHUNG bởi mọi module HTTP (invoice,
  * property, room, meter-reading, tariff) — kiểm tra request body có
  * đúng hình dạng "object JSON thuần" hay không, và hai response helper
  * lặp lại giống hệt nhau ở mọi Controller (400 VALIDATION_ERROR, 500
  * INTERNAL_ERROR cho lỗi không mong đợi).
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - quyết định NỘI DUNG validate (đó là việc riêng của từng Controller/
  *   Service) — chỉ cung cấp hình dạng response CHUNG.
  * - bắt lỗi thay Controller — mỗi Controller vẫn tự try/catch quanh

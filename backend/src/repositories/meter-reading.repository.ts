@@ -25,15 +25,15 @@ export interface NewMeterReading {
 export type UpdateMeterReading = NewMeterReading;
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Hợp đồng cho việc đọc/ghi `MeterReading`. `findByRoomPeriodAndUtility`
  * đọc theo khoá tự nhiên của bảng (room, billing_period, utility_type)
  * — khớp `UNIQUE(room_id, billing_period, utility_type)` trong migration
  * 001.
  *
- * Does NOT: chứa SQL — xem `postgres/postgres-meter-reading.repository.ts`.
+ * Không chịu trách nhiệm: chứa SQL — xem `postgres/postgres-meter-reading.repository.ts`.
  *
- * Failure conditions:
+ * Điều kiện lỗi:
  * - `findById`/`findByRoomPeriodAndUtility`/`update`:
  *   `METER_READING_NOT_FOUND` khi không có reading nào khớp.
  * - `create`/`update`: `METER_READING_ALREADY_EXISTS` khi vi phạm

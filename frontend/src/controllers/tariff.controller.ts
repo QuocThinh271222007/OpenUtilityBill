@@ -24,13 +24,13 @@ import {
 import type { ElectricityTariffBody, ElectricityTariffTierInput, ElectricityTariffWithTiers, WaterTariff, WaterTariffBody } from "../types/tariff.types";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Điều phối trang "Biểu giá" — hai tab độc lập (Điện/Nước). Phần điện
  * bao gồm TRÌNH SOẠN BẬC ĐỘNG (thêm/xoá dòng ở form, KHÔNG gọi API xoá
  * — chỉ là thao tác trên form, xem docs/MANAGEMENT_API.md mục "Dynamic
  * tiers").
  *
- * Important invariant:
+ * Bất biến quan trọng:
  * KHÔNG hard-code số bậc — trình soạn khởi tạo với MỘT dòng trống, cho
  * phép thêm/xoá tuỳ ý. `tierNumber` hiển thị được tự động đánh số lại
  * tuần tự sau mỗi lần thêm/xoá (chỉ để hiển thị — backend xác thực cấu
@@ -41,7 +41,7 @@ import type { ElectricityTariffBody, ElectricityTariffTierInput, ElectricityTari
  * hiển thị message CỤ THỂ theo yêu cầu (không phải message thô của
  * backend) — xem `tariffErrorMessage`.
  *
- * Does NOT: implement công thức tính bậc thang/quota nào — chỉ thu
+ * Không chịu trách nhiệm: implement công thức tính bậc thang/quota nào — chỉ thu
  * thập input và gọi API.
  */
 let editingElectricityTariffId: string | null = null;

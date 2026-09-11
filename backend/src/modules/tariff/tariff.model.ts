@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Domain types mô tả cấu hình biểu giá điện và nước: ElectricityTariff,
  * ElectricityTariffTier, WaterTariff. Đây là DỮ LIỆU CẤU HÌNH
  * (configuration), KHÔNG phải công thức tính toán.
  *
- * Represents:
+ * Biểu diễn:
  * Dữ liệu tương ứng với các bảng `electricity_tariffs`,
  * `electricity_tariff_tiers`, `water_tariffs`.
  *
@@ -22,12 +22,12 @@
  *   KHÔNG theo quy ước này — đó là đơn giá tiền, không có giới hạn trên
  *   tự nhiên (xem docs/DATABASE_DESIGN.md).
  *
- * ID representation:
+ * Biểu diễn ID:
  * `id`, `tariffId` là `string` (BIGINT ở database) — xem
  * ../property/property.model.ts mục "ID representation" và
  * docs/DATABASE_ACCESS.md.
  *
- * Numeric representation:
+ * Biểu diễn số:
  * `electricityVatRate`, `unitPrice`, `thresholdKwh`, `pricePerCubicMeter`,
  * `pricePerPerson`, `vatRate`, `environmentalFeeRate` đều là `string`,
  * vì cột database tương ứng là NUMERIC — cùng quy ước với
@@ -36,7 +36,7 @@
  * `tierNumber` là số nguyên đếm được (count), không phải giá trị tài
  * chính/đo lường cần độ chính xác thập phân, nên giữ kiểu `number`.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - implement công thức phân bổ bậc thang (tier allocation) hay tính
  *   VAT/phí — đó là việc của Calculation Core (task sau). File này CHỈ
  *   mô tả hình dạng dữ liệu cấu hình.
@@ -46,20 +46,20 @@
  *   schema).
  * - có Repository/Service/Controller đi kèm ở task này.
  *
- * Why ElectricityTariff and ElectricityTariffTier are separate models:
+ * Vì sao ElectricityTariff và ElectricityTariffTier là hai model riêng biệt:
  * Nếu dùng các cột `tier1_price`, `tier2_price`, ..., số bậc sẽ bị cố
  * định cứng trong schema — muốn đổi số bậc phải ALTER TABLE. Tách
  * ElectricityTariffTier thành bảng riêng (một hàng = một bậc) cho phép
  * số bậc thay đổi hoàn toàn bằng dữ liệu (INSERT/DELETE một hàng),
  * không cần sửa code hay schema.
  *
- * Why ElectricityTariff.peoplePerQuotaUnit và .fallbackTierNumber tồn tại:
+ * Vì sao ElectricityTariff.peoplePerQuotaUnit và .fallbackTierNumber tồn tại:
  * Quy tắc "số người / 4 = số định mức" và "phương pháp fallback dùng giá
  * bậc 3" là quy định của kỳ thi HIỆN TẠI, không phải hằng số vĩnh viễn
  * của chương trình. Lưu chúng như cấu hình cho phép thay đổi mà không
  * cần sửa Calculation Core sau này (xem docs/DATABASE_DESIGN.md).
  *
- * Why WaterTariff gộp cả hai phương pháp trong một bảng:
+ * Vì sao WaterTariff gộp cả hai phương pháp trong một bảng:
  * PER_CUBIC_METER và PER_PERSON là hai cách tính giá nước của CÙNG một
  * phiên bản cấu hình (cùng effectiveFrom/effectiveTo, cùng VAT, cùng
  * phí môi trường) — không phải hai hệ thống độc lập, nên gộp trong một

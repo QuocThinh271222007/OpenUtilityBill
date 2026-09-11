@@ -16,7 +16,7 @@ import { CreateInvoiceDependencies, CreateInvoiceInput, CreateInvoiceResult } fr
 import { isFirstDayOfMonthUtc, isPositiveIntegerId, isValidActualChargedAmountScale } from "./invoice-input-validation";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Orchestrator (Service) cho workflow CreateInvoice — nối Repository
  * (đọc Room/MeterReading/Tariff/Invoice), Calculation Core (điện/nước/
  * tổng hoá đơn), và persistence (InvoiceUnitOfWork) thành MỘT quy trình
@@ -40,7 +40,7 @@ import { isFirstDayOfMonthUtc, isPositiveIntegerId, isValidActualChargedAmountSc
  * `invoiceUnitOfWork.run(...)` được gọi — transaction chỉ bao bọc đúng
  * hai câu ghi (`createInvoice`, `createInvoiceItems`), không giữ mở
  * trong lúc tính toán CPU hay chờ các câu đọc khác (xem
- * database/transaction.ts mục "Does NOT").
+ * database/transaction.ts mục "Không chịu trách nhiệm").
  *
  * Important invariant — snapshot số người ở:
  * `room.tenantCount` được đọc ĐÚNG MỘT LẦN và dùng lại cho MỌI nơi cần
@@ -49,7 +49,7 @@ import { isFirstDayOfMonthUtc, isPositiveIntegerId, isValidActualChargedAmountSc
  * trình tính toán VÀ giá trị được lưu (xem
  * `../invoice/invoice.model.ts` mục "Why Invoice snapshots configuration").
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - chứa câu SQL nào (không `sql\`...\``, không `sql.unsafe`).
  * - tự tính điện/nước bằng phép toán JS number — mọi phép tính đi qua
  *   Calculation Core (xem docs/NUMERIC_PRECISION.md).
@@ -117,25 +117,26 @@ export class CreateInvoiceService {
   constructor(private readonly deps: CreateInvoiceDependencies) {}
 
   async execute(input: CreateInvoiceInput): Promise<Result<CreateInvoiceResult>> {
-    // 1. Validate input
+    // 1. Kiểm tra input
     const validatedResult = validateCreateInvoiceInput(input);
     if (!validatedResult.success) {
       return validatedResult;
     }
     const { electricityBillingMethod, waterBillingMethod } = validatedResult.data;
 
-    // ---- Read phase (fail-fast; no writes below succeed until every read does) ----
+    // ---- Giai đoạn đọc (fail-fast; không có bước ghi nào bên dưới chạy trước khi mọi bước đọc thành công) ----
 
-    // 2. Load Room
+    // 2. Đọc Room
     const roomResult = await this.deps.roomRepository.findById(input.roomId);
     if (!roomResult.success) {
       return roomResult;
     }
     const room = roomResult.data;
 
-    // 3. Duplicate pre-check. NOT sufficient alone against concurrent
-    // requests — see PostgresInvoiceRepository.createInvoice's SQLSTATE
-    // 23505 handling for the real race-condition guard.
+    // 3. Kiểm tra trùng lặp trước (pre-check). KHÔNG đủ một mình để
+    // chặn race condition đồng thời — xem cách
+    // PostgresInvoiceRepository.createInvoice xử lý SQLSTATE 23505 để
+    // biết chốt chặn thật cho race condition.
     const existingInvoiceResult = await this.deps.invoiceRepository.findByRoomAndPeriod(input.roomId, input.billingPeriod);
     if (!existingInvoiceResult.success) {
       return existingInvoiceResult;
@@ -147,7 +148,7 @@ export class CreateInvoiceService {
       );
     }
 
-    // 4. Electricity MeterReading — always required.
+    // 4. Electricity MeterReading — luôn bắt buộc.
     const electricityReadingResult = await this.deps.meterReadingRepository.findByRoomPeriodAndUtility(
       input.roomId,
       input.billingPeriod,
@@ -158,8 +159,9 @@ export class CreateInvoiceService {
     }
     const electricityReading = electricityReadingResult.data;
 
-    // 5/6. Water MeterReading — required only for PER_CUBIC_METER; for
-    // PER_PERSON no reading is requested at all (see class doc "Does NOT").
+    // 5/6. Water MeterReading — chỉ bắt buộc với PER_CUBIC_METER; với
+    // PER_PERSON hoàn toàn không cần tra reading nào (xem "Không chịu
+    // trách nhiệm" ở đầu file).
     let waterReading: MeterReading | null = null;
     if (waterBillingMethod === "PER_CUBIC_METER") {
       const waterReadingResult = await this.deps.meterReadingRepository.findByRoomPeriodAndUtility(
@@ -173,7 +175,7 @@ export class CreateInvoiceService {
       waterReading = waterReadingResult.data;
     }
 
-    // 7. Applicable ElectricityTariff + ordered tiers.
+    // 7. ElectricityTariff đang có hiệu lực + các tier đã sắp xếp.
     const electricityTariffResult = await this.deps.electricityTariffRepository.findApplicableTariffForPeriod(
       input.billingPeriod
     );
@@ -182,16 +184,17 @@ export class CreateInvoiceService {
     }
     const { tariff: electricityTariff, tiers: electricityTiers } = electricityTariffResult.data;
 
-    // 8. Applicable WaterTariff.
+    // 8. WaterTariff đang có hiệu lực.
     const waterTariffResult = await this.deps.waterTariffRepository.findApplicableTariffForPeriod(input.billingPeriod);
     if (!waterTariffResult.success) {
       return waterTariffResult;
     }
     const waterTariff = waterTariffResult.data;
 
-    // ---- Calculation phase (Calculation Core only; no repository calls below) ----
+    // ---- Giai đoạn tính toán (chỉ dùng Calculation Core; không còn lời gọi repository nào bên dưới) ----
 
-    // 9. Electricity usage — rollover handled entirely by Calculation Core.
+    // 9. Sản lượng điện tiêu thụ — rollover được Calculation Core xử lý
+    // hoàn toàn.
     const electricityUsageResult = calculateMeterUsage({
       previousReading: electricityReading.previousReading,
       currentReading: electricityReading.currentReading,
@@ -207,8 +210,8 @@ export class CreateInvoiceService {
       unitPrice: tier.unitPrice,
     }));
 
-    // 10. Electricity method dispatch — no price constants here, all
-    // configuration comes from `electricityTariff`/`tierInputs`.
+    // 10. Rẽ nhánh theo electricityBillingMethod — không có hằng số giá
+    // nào ở đây, toàn bộ cấu hình lấy từ `electricityTariff`/`tierInputs`.
     let electricityData: TieredElectricityResult | FallbackElectricityResult;
     if (electricityBillingMethod === "QUOTA_TIERED") {
       const tieredResult = calculateTieredElectricity({
@@ -235,7 +238,7 @@ export class CreateInvoiceService {
       electricityData = fallbackResult.data;
     }
 
-    // 11. Water usage/calculation.
+    // 11. Sản lượng/tính toán tiền nước.
     let waterUsageM3: string | null = null;
     let waterQuantity: string;
     let waterUnitName: "m3" | "person";
@@ -283,8 +286,9 @@ export class CreateInvoiceService {
       return waterResult;
     }
 
-    // 12. Final invoice total — sum EXACT components first, round once
-    // (never electricity.roundedTotalVnd + water.roundedTotalVnd).
+    // 12. Tổng hoá đơn cuối cùng — cộng các thành phần CHÍNH XÁC trước,
+    // làm tròn đúng một lần (KHÔNG BAO GIỜ cộng
+    // electricity.roundedTotalVnd + water.roundedTotalVnd).
     const invoiceTotalResult = calculateInvoiceTotal({
       electricityExactTotal: electricityData.exactTotal,
       waterExactTotal: waterResult.data.exactTotal,
@@ -294,7 +298,8 @@ export class CreateInvoiceService {
     }
     const invoiceTotal = invoiceTotalResult.data;
 
-    // 13. Actual charged amount / billing difference — derived, never persisted.
+    // 13. Số tiền thực thu / chênh lệch hợp pháp-thực thu — chỉ tính ra,
+    // không bao giờ được lưu trực tiếp.
     let billingDifference: string | null = null;
     if (input.actualChargedAmount !== null) {
       const billingDifferenceResult = calculateBillingDifference({
@@ -307,7 +312,7 @@ export class CreateInvoiceService {
       billingDifference = billingDifferenceResult.data;
     }
 
-    // 14. Build invoice + invoice_items persistence input.
+    // 14. Dựng dữ liệu đầu vào để lưu invoice + invoice_items.
     const items = buildInvoiceItemBreakdown({
       electricityBillingMethod,
       electricity: electricityData,
@@ -331,10 +336,11 @@ export class CreateInvoiceService {
       actualChargedAmount: input.actualChargedAmount,
     };
 
-    // ---- Write phase (transactional; the ONLY place a write happens) ----
+    // ---- Giai đoạn ghi (transactional; NƠI DUY NHẤT có thao tác ghi) ----
 
-    // 15-18. Insert invoice, then invoice_items, inside ONE transaction.
-    // A failed Result at either step rolls back both — no partial invoice.
+    // 15-18. Insert invoice, rồi insert invoice_items, trong CÙNG MỘT
+    // transaction. Một Result thất bại ở bước nào cũng rollback cả hai —
+    // không có invoice tạo dở dang.
     const writeResult = await this.deps.invoiceUnitOfWork.run(async (invoiceRepository) => {
       const createdInvoiceResult = await invoiceRepository.createInvoice(newInvoice);
       if (!createdInvoiceResult.success) {
@@ -352,7 +358,7 @@ export class CreateInvoiceService {
       return writeResult;
     }
 
-    // 19. Return persisted result + calculated breakdown.
+    // 19. Trả về kết quả đã lưu + breakdown đã tính.
     return ok({
       invoice: writeResult.data.invoice,
       items: writeResult.data.items,

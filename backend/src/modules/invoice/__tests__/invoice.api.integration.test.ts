@@ -8,21 +8,21 @@ import app from "../../../app";
 import { closeDatabaseClient, getDatabaseClient } from "../../../database/postgres-client";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Chứng minh, bằng PostgreSQL THẬT và Express THẬT (không giả lập
  * Request/Response — round-trip HTTP thật qua một server ephemeral), rằng
  * `POST /api/v1/invoices` tạo hoá đơn thành công và `GET /api/v1/invoices`
  * đọc lại ĐÚNG hoá đơn/breakdown vừa tạo.
  *
- * Why a real ephemeral HTTP server (không supertest):
+ * Vì sao dùng một HTTP server ephemeral thật (không supertest):
  * `node:http`/`fetch` đã có sẵn trong Node.js runtime (không phải
- * dependency mới — xem "Why this file is separate" bên dưới). `app.listen(0)`
+ * dependency mới — xem "Lý do tồn tại" bên dưới). `app.listen(0)`
  * cấp một cổng ngẫu nhiên còn trống; `fetch` (built-in từ Node 18+) gọi
  * request HTTP THẬT tới server đó — đây là cách nhẹ nhất để có một
  * round-trip HTTP thật mà không thêm thư viện test mới (supertest bị
  * cấm rõ ràng ở task này).
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - chạm tới dữ liệu không liên quan — mọi fixture dùng tiền tố tên
  *   DUY NHẤT `VALIDATION_INVOICE_API_*` kèm timestamp, dọn dẹp tường
  *   minh trong `finally`.
@@ -164,7 +164,7 @@ test(
       );
       assert.equal(getBody.data.billingDifference, "6.12");
 
-      // Duplicate POST for the same (roomId, billingPeriod) -> 409, no second invoice created.
+      // POST trùng cùng (roomId, billingPeriod) -> 409, không tạo thêm invoice thứ hai.
       const duplicateResponse = await fetch(`${baseUrl}/invoices`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

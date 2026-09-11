@@ -5,7 +5,7 @@ import { getDatabaseClient } from "./postgres-client";
 import type { DatabaseExecutor } from "./database.types";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Cung cấp MỘT ranh giới transaction rõ ràng mà một Service/Orchestrator
  * tương lai có thể dùng — "chạy các thao tác ghi Repository này trong
  * MỘT transaction" — mà không cần biết cú pháp `sql.begin()` của
@@ -19,14 +19,14 @@ import type { DatabaseExecutor } from "./database.types";
  * transaction thất bại (mất kết nối, vi phạm constraint không được
  * `work` bắt trước, ...).
  *
- * Important invariant:
+ * Bất biến quan trọng:
  * MỌI Repository call bên trong `work` PHẢI dùng đúng `DatabaseExecutor`
  * được truyền vào (tham số của `work`), KHÔNG được tự ý gọi
  * `getDatabaseClient()` (client toàn cục) cho một số câu lệnh — làm vậy
  * sẽ khiến những câu lệnh đó chạy NGOÀI transaction, phá vỡ tính
  * atomicity mà hàm này tồn tại để đảm bảo.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - chứa logic nghiệp vụ (ví dụ CreateInvoice). File này CHỈ là CƠ CHẾ
  *   transaction — WORKFLOW cụ thể dùng cơ chế này là việc của Service
  *   layer (task sau).
@@ -37,7 +37,7 @@ import type { DatabaseExecutor } from "./database.types";
  *   — `work` chỉ nên chứa các lệnh ghi Repository, không chứa phép tính
  *   hoá đơn.
  *
- * Why this module is separate:
+ * Lý do tồn tại:
  * Tách "cơ chế transaction dùng lại được" khỏi "quy trình nghiệp vụ cụ
  * thể nào cần nó" — cho phép test cơ chế rollback độc lập với bất kỳ
  * workflow nghiệp vụ nào (xem `__tests__/transaction.integration.test.ts`).

@@ -10,7 +10,7 @@ import { PostgresMeterReadingRepository } from "../postgres/postgres-meter-readi
  * tự `billing_period DESC, utility_type ASC, id ASC`), và UNIQUE(room_id,
  * billing_period, utility_type) THẬT -> METER_READING_ALREADY_EXISTS.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - dựng fixture invoice đầy đủ để chứng minh `isReferencedByInvoice`
  *   trên dữ liệu thật — câu SQL đó đơn giản và đã được unit-test với
  *   executor giả (xem postgres-meter-reading.repository.test.ts); luồng

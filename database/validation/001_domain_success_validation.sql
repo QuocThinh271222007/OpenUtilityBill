@@ -4,7 +4,7 @@
 -- Domain/database success validation
 -- ============================================================
 --
--- Responsibility:
+-- Trách nhiệm:
 -- Chứng minh, bằng PostgreSQL THẬT, rằng:
 --   1. migration đã tạo đúng 8 bảng domain;
 --   2. seed đã tạo đúng dữ liệu mặc định của kỳ thi;
@@ -12,7 +12,7 @@
 --      database chấp nhận đúng như thiết kế;
 --   4. một transaction bị ROLLBACK sẽ không để lại dấu vết nào.
 --
--- Does NOT:
+-- Không chịu trách nhiệm:
 -- - chứa BẤT KỲ câu lệnh nào được kỳ vọng gây lỗi. File này CHỈ gồm các
 --   câu lệnh PASS — xem database/validation/002_domain_constraint_validation.sql
 --   cho các phép kiểm tra constraint (nơi lỗi PostgreSQL LÀ kết quả

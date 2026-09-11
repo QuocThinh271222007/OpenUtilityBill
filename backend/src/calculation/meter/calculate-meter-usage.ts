@@ -13,7 +13,7 @@ import {
 } from "../shared/exact-number";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Tính sản lượng tiêu thụ (usage) từ hai chỉ số công tơ (previous,
  * current), xử lý cả trường hợp công tơ "quay vòng" (rollover) khi
  * current < previous.
@@ -24,7 +24,7 @@ import {
  *
  * Output: Result<string> — usage dạng chuỗi thập phân chuẩn hoá.
  *
- * Failure conditions:
+ * Điều kiện lỗi:
  * - previousReading/currentReading/meterMaximumValue không parse được
  *   thành số thập phân hợp lệ.
  * - previousReading hoặc currentReading âm.
@@ -33,11 +33,11 @@ import {
  * - current < previous NHƯNG không có meterMaximumValue — không đủ
  *   thông tin để biết công tơ đã quay vòng bao nhiêu lần.
  *
- * Important invariant:
+ * Bất biến quan trọng:
  * Không dùng floating-point ở bất kỳ bước nào — mọi phép trừ/cộng dùng
  * ExactNumber (xem shared/exact-number.ts).
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - tin tưởng rằng dữ liệu đã được PostgreSQL kiểm tra trước
  *   (previous_reading/current_reading/meter_maximum_value đã có CHECK
  *   constraint ở database/migrations/001_initial_domain_schema.sql).
@@ -47,7 +47,7 @@ import {
  * - suy luận số lần rollover nếu current < previous mà không có
  *   meterMaximumValue — trả lỗi rõ ràng thay vì đoán.
  *
- * Why this module is separate:
+ * Lý do tồn tại:
  * Việc tính usage (bao gồm cả logic rollover) là một bước độc lập, có
  * thể unit-test riêng, TRƯỚC KHI usage đó được đưa vào công thức tính
  * tiền điện — tách để mỗi phần chỉ chịu trách nhiệm một việc rõ ràng.
@@ -90,7 +90,7 @@ export function calculateMeterUsage(input: MeterUsageInput): Result<string> {
     maximum = maximumResult.data;
 
     // Kiểm tra phòng thủ — database đã có CHECK tương tự, nhưng
-    // Calculation Core không giả định điều đó đã chạy (xem "Does NOT").
+    // Calculation Core không giả định điều đó đã chạy (xem "Không chịu trách nhiệm").
     if (compare(previous, maximum) > 0) {
       return fail("INVALID_METER_READING", "previousReading vượt quá meterMaximumValue.");
     }

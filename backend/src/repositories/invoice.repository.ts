@@ -5,7 +5,7 @@ import { Invoice, InvoiceItem, InvoiceItemCategory } from "../modules/invoice/in
 import { ElectricityBillingMethod, WaterBillingMethod } from "../modules/tariff/tariff.model";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Dữ liệu ĐẦU VÀO để tạo một Invoice mới — CỐ Ý là một type riêng, KHÔNG
  * dùng `Omit<Invoice, "id" | "createdAt">`/`Partial<Invoice>`, để hợp
  * đồng ghi dữ liệu tường minh, dễ đọc độc lập với hình dạng của
@@ -50,7 +50,7 @@ export interface NewInvoiceItem {
 }
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Hợp đồng đọc VÀ ghi cho `Invoice`/`InvoiceItem` — ranh giới persistence
  * mà `CreateInvoiceService` (backend/src/modules/invoice/) phụ thuộc
  * vào, không phụ thuộc trực tiếp Postgres.js.
@@ -67,7 +67,7 @@ export interface NewInvoiceItem {
  * toán — thiếu chúng nghĩa là không thể tiếp tục, nên "không tìm thấy"
  * ở đó đúng là một lỗi (`ROOM_NOT_FOUND`, ...).
  *
- * Failure conditions:
+ * Điều kiện lỗi:
  * - `findByRoomAndPeriod`: `DATABASE_READ_FAILED` khi bản thân query
  *   thất bại.
  * - `createInvoice`: `INVOICE_ALREADY_EXISTS` khi một invoice cho cùng
@@ -82,7 +82,7 @@ export interface NewInvoiceItem {
  *   mảng rỗng vẫn là một kết quả THÀNH CÔNG hợp lệ về mặt kiểu dữ liệu,
  *   không phải lỗi).
  *
- * Important invariant:
+ * Bất biến quan trọng:
  * `createInvoice`/`createInvoiceItems` KHÔNG tự mở transaction riêng —
  * cả hai chạy bằng đúng `DatabaseExecutor` được truyền vào constructor
  * của implementation, để invoice + invoice_items có thể nằm chung MỘT
@@ -90,7 +90,7 @@ export interface NewInvoiceItem {
  * `../repositories/invoice-unit-of-work.ts`) kiểm soát. Gọi hai method
  * này ngoài một transaction sẽ mất tính nguyên tử (atomicity).
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - tự quyết định khi nào mở/đóng transaction — xem
  *   `invoice-unit-of-work.ts`.
  */

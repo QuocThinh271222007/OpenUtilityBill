@@ -8,7 +8,7 @@ import { calculateQuotaFactorExact } from "./calculate-quota-factor";
 import { validateElectricityConfig } from "./validate-electricity-config";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Tính hoá đơn điện theo phương pháp QUOTA_TIERED (bậc thang, điều
  * chỉnh theo quota số người ở) — điều phối toàn bộ pipeline: quota →
  * validate cấu hình → phân bổ bậc → subtotal → VAT → tổng chính xác →
@@ -20,23 +20,23 @@ import { validateElectricityConfig } from "./validate-electricity-config";
  * Output: Result<TieredElectricityResult> — mọi giá trị đo lường/tài
  * chính là chuỗi thập phân chuẩn hoá (xem calculation.types.ts).
  *
- * Failure conditions: xem các fail() bên dưới — usageKwh không hợp lệ,
+ * Điều kiện lỗi: xem các fail() bên dưới — usageKwh không hợp lệ,
  * quotaFactor thất bại (tenantCount/peoplePerQuotaUnit không hợp lệ),
  * vatRate không hợp lệ, cấu hình tiers không hợp lệ.
  *
- * Important invariant:
+ * Bất biến quan trọng:
  * KHÔNG làm tròn ở bất kỳ bước trung gian nào (usage, quotaFactor,
  * ngưỡng bậc đã điều chỉnh, từng amount, subtotal, VAT). CHỈ làm tròn
  * một lần duy nhất — roundedTotalVnd — ở bước cuối cùng.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - hard-code số lượng bậc hay bất kỳ đơn giá/ngưỡng cụ thể nào của kỳ
  *   thi. Toàn bộ đến từ tham số `tiers` (xem
  *   backend/src/calculation/__tests__/fixtures/competition-defaults.ts
  *   cho dữ liệu test).
  * - truy cập database/Express — nhận toàn bộ dữ liệu qua tham số hàm.
  *
- * Why this module is separate:
+ * Lý do tồn tại:
  * Đây là điểm điều phối (orchestration) của phương pháp QUOTA_TIERED —
  * gọi các hàm nhỏ hơn (quota, validate, allocate) theo đúng thứ tự,
  * nhưng bản thân không chứa công thức bậc thang hay logic validate chi

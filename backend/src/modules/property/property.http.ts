@@ -3,13 +3,13 @@
 import { RentalProperty } from "./property.model";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Tiện ích ranh giới HTTP CHỈ cho module property — chuyển
  * `RentalProperty` thành JSON an toàn cho response. Việc parse ngày
  * (không có field ngày nào trong request property) và ánh xạ error code
  * dùng trực tiếp `backend/src/shared/http/` — không cần lặp lại ở đây.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - import Express `Request`/`Response`.
  * - chứa business logic.
  */

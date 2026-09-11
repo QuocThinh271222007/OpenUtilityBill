@@ -5,7 +5,7 @@ import { createGetInvoiceController, createPostInvoiceController } from "./invoi
 import { getCreateInvoiceService, getGetInvoiceService } from "../../composition/invoice.composition";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Khai báo route HTTP cho module invoice (`POST /invoices`,
  * `GET /invoices`, mounted dưới `/api/v1` bởi `app.ts`) và gắn Controller
  * tương ứng, lắp Service THẬT (Postgres) qua
@@ -21,7 +21,7 @@ import { getCreateInvoiceService, getGetInvoiceService } from "../../composition
  * mọi request — kể cả một request sai hình dạng lẽ ra phải trả 400 —
  * sẽ phụ thuộc `DATABASE_URL` sẵn sàng trước khi validate chạy.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - xử lý logic của request (đó là việc của Controller/Service).
  */
 const invoiceRoutes = Router();

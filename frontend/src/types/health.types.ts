@@ -3,10 +3,10 @@
 export type { ApiError, ApiResult } from "./api.types";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Type mô tả dữ liệu trả về từ `GET /api/v1/health`.
  *
- * Does NOT: validate dữ liệu tại runtime.
+ * Không chịu trách nhiệm: validate dữ liệu tại runtime.
  */
 export interface HealthStatus {
   status: "ok";

@@ -15,12 +15,12 @@ import {
 } from "../electricity-tariff.repository";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Implementation Postgres.js của `ElectricityTariffRepository` — nơi
  * DUY NHẤT chứa SQL truy vấn/ghi `electricity_tariffs` và
  * `electricity_tariff_tiers`.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - tự ý chọn một tariff khi có nhiều hơn một hàng khớp điều kiện hiệu
  *   lực — xem `AMBIGUOUS_TARIFF_CONFIGURATION` trong
  *   `../electricity-tariff.repository.ts`.

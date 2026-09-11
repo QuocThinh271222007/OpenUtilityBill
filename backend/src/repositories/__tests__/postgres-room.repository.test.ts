@@ -6,7 +6,7 @@ import { PostgresRoomRepository, __testing } from "../postgres/postgres-room.rep
 import type { DatabaseExecutor } from "../../database/database.types";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Unit test cho row mapping và error semantics của
  * `PostgresRoomRepository` — KHÔNG cần một PostgreSQL thật.
  *

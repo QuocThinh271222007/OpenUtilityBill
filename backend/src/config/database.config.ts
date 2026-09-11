@@ -3,7 +3,7 @@
 import { Result, ok, fail } from "../shared/result";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Đọc và xác thực `DATABASE_URL` từ biến môi trường — theo nguyên tắc
  * fail-fast: phát hiện cấu hình thiếu ngay khi khởi động, không chờ tới
  * khi một câu query thực sự chạy mới báo lỗi mơ hồ.
@@ -13,11 +13,11 @@ import { Result, ok, fail } from "../shared/result";
  *
  * Output: `Result<DatabaseConfig>`.
  *
- * Failure conditions:
+ * Điều kiện lỗi:
  * - `DATABASE_URL` không tồn tại (`undefined`).
  * - `DATABASE_URL` rỗng sau khi `trim()`.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - kết nối database — đó là việc của `database/postgres-client.ts`.
  * - là một config framework tổng quát. Chỉ đọc đúng MỘT biến môi
  *   trường mà task này cần; không suy đoán thêm các biến khác (pool
@@ -26,7 +26,7 @@ import { Result, ok, fail } from "../shared/result";
  *   — thông điệp chỉ nói "thiếu/rỗng", không bao giờ lặp lại nội dung
  *   biến môi trường.
  *
- * Why this module is separate:
+ * Lý do tồn tại:
  * Tách "đọc và xác thực cấu hình" khỏi "dùng cấu hình đó để mở kết nối"
  * — cho phép test logic đọc cấu hình độc lập, không cần một database
  * thật hay một Postgres.js client thật.

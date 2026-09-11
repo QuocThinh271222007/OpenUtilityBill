@@ -9,7 +9,7 @@ import { NewWaterTariff, UpdateWaterTariff, WaterTariffRepository } from "../wat
 import { TariffEffectivePeriod } from "../tariff-shared.types";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Implementation Postgres.js của `WaterTariffRepository` — nơi DUY
  * NHẤT chứa SQL truy vấn/ghi `water_tariffs`. Cùng lý do
  * `AMBIGUOUS_TARIFF_CONFIGURATION` như

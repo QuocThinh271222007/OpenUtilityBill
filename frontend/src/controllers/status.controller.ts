@@ -4,15 +4,15 @@ import { fetchHealth } from "../api/health.api";
 import { renderBackendOffline, renderBackendOnline } from "../views/status.view";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Điều phối luồng kiểm tra trạng thái backend: gọi api/health.api.ts,
  * rồi gọi View phù hợp (views/status.view.ts) theo kết quả.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - gọi fetch trực tiếp
  * - thao tác DOM trực tiếp
  *
- * Reason:
+ * Lý do:
  * Controller là nơi duy nhất biết "làm gì tiếp theo" dựa trên kết quả
  * API, giữ cho api/ và views/ không phụ thuộc lẫn nhau — cùng ranh
  * giới Route → Controller → Service được mô tả ở phía backend, áp

@@ -8,11 +8,11 @@ import { MeterReading, UtilityType } from "../../modules/meter-reading/meter-rea
 import { MeterReadingRepository, NewMeterReading, UpdateMeterReading } from "../meter-reading.repository";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Implementation Postgres.js của `MeterReadingRepository` — nơi DUY
  * NHẤT chứa SQL truy vấn bảng `meter_readings`.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - ép `previous_reading`/`current_reading`/`meter_maximum_value` về
  *   `number`. Cột database là NUMERIC — giữ nguyên `string` xuyên suốt,
  *   đúng hợp đồng của `MeterReading` domain model (xem

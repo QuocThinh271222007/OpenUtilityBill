@@ -5,19 +5,19 @@ import { electricityMethodDisplayLabel, invoiceItemCategoryDisplayLabel, waterMe
 import type { Invoice, InvoiceItem } from "../types/invoice.types";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Render trang "Hóa đơn" — form tạo hóa đơn, và kết quả (hoá đơn vừa
  * tạo HOẶC hoá đơn đã lưu đọc lại qua GET, đối chiếu thực thu/hợp
  * pháp).
  *
- * Important invariant:
+ * Bất biến quan trọng:
  * MỌI số tiền hiển thị (`item.amount`, `invoice.calculatedTotal`,
  * `invoice.actualChargedAmount`, `billingDifference`) đến TRỰC TIẾP từ
  * API, KHÔNG được tính lại/suy ra bằng phép toán JS ở đây — xem
  * docs/FRONTEND.md mục "Financial string rule". Bảng breakdown dùng
  * NGUYÊN VĂN `item.amount`, KHÔNG dựng lại từ quantity × unitPrice.
  *
- * Does NOT: gọi API, quyết định khi nào submit.
+ * Không chịu trách nhiệm: gọi API, quyết định khi nào submit.
  */
 export function renderInvoicePage(container: HTMLElement): void {
   container.innerHTML = `

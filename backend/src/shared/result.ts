@@ -1,23 +1,23 @@
 // SPDX-License-Identifier: MIT
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Định nghĩa hợp đồng (contract) chung cho kết quả trả về của mọi
  * business logic trong backend: Service, business module, Repository.
  *
- * Expected input:
+ * Đầu vào:
  * Không áp dụng — đây là type definition và hai hàm dựng kết quả,
  * không phải một luồng xử lý nghiệp vụ.
  *
- * Expected output:
+ * Đầu ra:
  * `Result<T>` mô tả đúng hai khả năng: thành công (success = true,
  * kèm data) hoặc thất bại (success = false, kèm error code + message).
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - định nghĩa các error code cụ thể cho từng domain (room, tariff, ...)
  * - implement một class hierarchy phức tạp cho lỗi
  *
- * Reason:
+ * Lý do:
  * Dự án chủ động tránh dùng `return false` cho lỗi có ý nghĩa, vì
  * `false` không mang theo lý do thất bại. `Result<T>` buộc caller phải
  * kiểm tra `success` trước khi truy cập `data`, giúp lỗi được xử lý

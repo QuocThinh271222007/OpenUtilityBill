@@ -9,14 +9,14 @@ import { CreateRoomInput, UpdateRoomInput } from "./room-management.types";
 import { serializeRoom } from "./room.http";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Nhận HTTP request cho `GET/POST /api/v1/rooms`,
  * `PATCH /api/v1/rooms/:roomId`. Cùng pattern với
  * `property.controller.ts`/`invoice.controller.ts` — xem các file đó
  * cho lý do đầy đủ (dependency injection qua `getService`, gọi SAU khi
  * validate).
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - validate propertyId tồn tại, tên trùng, hay tenantCount hợp lệ —
  *   chỉ kiểm tra HÌNH DẠNG JS nguyên thuỷ (string/number). Business
  *   rules thuộc `RoomManagementService`.

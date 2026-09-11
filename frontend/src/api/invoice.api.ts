@@ -4,7 +4,7 @@ import { apiRequest } from "./api-client";
 import type { ApiResult } from "../types/api.types";
 import type { CreateInvoiceBody, CreateInvoiceResult, GetInvoiceResult } from "../types/invoice.types";
 
-/** Responsibility: gọi REST API cho hóa đơn. Does NOT: tính toán điện/nước, thao tác DOM — backend là nguồn sự thật duy nhất cho mọi số tiền. */
+/** Trách nhiệm: gọi REST API cho hóa đơn. Không chịu trách nhiệm: tính toán điện/nước, thao tác DOM — backend là nguồn sự thật duy nhất cho mọi số tiền. */
 export function createInvoice(body: CreateInvoiceBody): Promise<ApiResult<CreateInvoiceResult>> {
   return apiRequest<CreateInvoiceResult>("/invoices", { method: "POST", body: JSON.stringify(body) });
 }

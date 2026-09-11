@@ -3,12 +3,12 @@
 import type { Sql, TransactionSql } from "postgres";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Khai báo type dùng chung giữa `postgres-client.ts`, `transaction.ts`,
  * và mọi Repository implementation — để các nơi đó không phải tự import
  * trực tiếp type của thư viện `postgres` rải rác khắp nơi.
  *
- * Does NOT: chứa logic — chỉ type alias.
+ * Không chịu trách nhiệm: chứa logic — chỉ type alias.
  */
 
 /**

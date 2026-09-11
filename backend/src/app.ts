@@ -9,14 +9,14 @@ import meterReadingRoutes from "./modules/meter-reading/meter-reading.routes";
 import tariffRoutes from "./modules/tariff/tariff.routes";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Cấu hình Express application: middleware dùng chung, versioned API
  * prefix (/api/v1), và mount route của từng module.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - gọi app.listen() (việc đó thuộc về server.ts)
  *
- * Reason:
+ * Lý do:
  * Tách app.ts khỏi server.ts giúp Express app có thể được import và
  * kiểm thử (vd. với supertest) mà không cần mở cổng mạng thật. Đây là
  * ranh giới bắt buộc theo docs/ARCHITECTURE.md.

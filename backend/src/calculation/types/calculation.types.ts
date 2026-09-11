@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Khai báo các type dữ liệu dùng chung giữa nhiều module tính toán
  * (electricity, water) — hình dạng input/output của Calculation Core.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - import type từ backend/src/modules/* (domain model của tầng
  *   database). Calculation Core cố tình có bộ type RIÊNG, độc lập với
  *   domain model, dù hai bên mô tả khái niệm tương tự — để Calculation
@@ -14,7 +14,7 @@
  * - chứa hằng số biểu giá nào (không có 1984, 0.08, ...). Mọi giá trị
  *   đều là type, không phải data.
  *
- * Numeric contract:
+ * Hợp đồng số:
  * Mọi field đo lường/tài chính (kWh, m3, giá, tỉ lệ) là `string` —
  * chuỗi thập phân chuẩn hoá — không bao giờ `number` hay BigInt. Xem
  * shared/exact-number.ts và docs/NUMERIC_PRECISION.md.

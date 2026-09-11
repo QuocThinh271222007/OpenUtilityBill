@@ -4,7 +4,7 @@ import { isPositiveIntegerId } from "../../shared/validation/id";
 import { isExactDecimalWithinScale } from "../../shared/validation/decimal-scale";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Các hàm kiểm tra (predicate) dùng CHUNG giữa `CreateInvoiceService` và
  * `GetInvoiceService` — tách riêng để không định nghĩa lại cùng một quy
  * tắc ở hai nơi (roomId, billingPeriod đều được cả hai Service nhận làm
@@ -12,7 +12,7 @@ import { isExactDecimalWithinScale } from "../../shared/validation/decimal-scale
  * `shared/validation/id.ts` (dùng chung với property/room/meter-reading/
  * tariff) để code hiện tại import từ đây không cần sửa.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - chứa logic đọc/ghi database hay Calculation Core — chỉ kiểm tra
  *   HÌNH DẠNG (shape) của giá trị đầu vào, thuần hàm (pure), không I/O.
  */
@@ -26,8 +26,8 @@ export { isFirstDayOfMonthUtc } from "../../shared/validation/date";
  * .actual_charged_amount NUMERIC(14, 2)` ở migration 001 (14 chữ số
  * tổng, 2 dành cho phần thập phân -> tối đa 12 chữ số nguyên).
  *
- * Why this exists (corrective — xem docs/CREATE_INVOICE_WORKFLOW.md mục
- * "actualChargedAmount scale corrective"):
+ * Lý do tồn tại (corrective — xem docs/CREATE_INVOICE_WORKFLOW.md mục
+ * "Sửa lỗi scale actualChargedAmount"):
  * `calculateBillingDifference` (Calculation Core) chấp nhận BẤT KỲ
  * chuỗi thập phân hợp lệ nào, kể cả một chuỗi có nhiều hơn 2 chữ số
  * thập phân (ví dụ "367000.123456") — điều đó đúng cho MỘT PHÉP TÍNH
@@ -40,7 +40,7 @@ export { isFirstDayOfMonthUtc } from "../../shared/validation/date";
  * không vừa scale 2 TRƯỚC khi tính toán/ghi, thay vì để PostgreSQL âm
  * thầm làm tròn sau đó.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - dùng `Number()`/`parseFloat()` — chỉ kiểm tra HÌNH DẠNG chuỗi bằng
  *   regex, không ép kiểu số.
  * - áp dụng cho `invoice.calculatedTotal` — giá trị đó LUÔN là số

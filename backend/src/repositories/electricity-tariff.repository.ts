@@ -37,7 +37,7 @@ export interface NewElectricityTariffTier {
 export type { TariffEffectivePeriod };
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Hợp đồng cho việc tìm ElectricityTariff ĐANG CÓ HIỆU LỰC tại một
  * billingPeriod cụ thể (đọc, dùng bởi CreateInvoiceService), VÀ (nay mở
  * rộng cho Electricity Tariff Management API) đọc/ghi đầy đủ — list tất
@@ -48,7 +48,7 @@ export type { TariffEffectivePeriod };
  *   effective_from <= billingPeriod
  *   AND (effective_to IS NULL OR effective_to >= billingPeriod)
  *
- * Failure conditions:
+ * Điều kiện lỗi:
  * - `findApplicableTariffForPeriod`: `TARIFF_NOT_FOUND` khi không có
  *   tariff nào khớp điều kiện hiệu lực;
  *   `AMBIGUOUS_TARIFF_CONFIGURATION` khi CÓ NHIỀU HƠN MỘT tariff cùng
@@ -64,13 +64,13 @@ export type { TariffEffectivePeriod };
  * - `updateTariffParent`: `TARIFF_NOT_FOUND` khi id không tồn tại.
  * - `DATABASE_READ_FAILED`/`DATABASE_WRITE_FAILED` cho lỗi khác.
  *
- * Important invariant:
+ * Bất biến quan trọng:
  * `createTariff`/`replaceTiers`/`updateTariffParent` KHÔNG tự mở
  * transaction — chạy bằng `DatabaseExecutor` được truyền vào constructor
  * của implementation, để parent + tiers nằm chung MỘT transaction do
  * caller (`ElectricityTariffUnitOfWork`) kiểm soát.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - hard-code số lượng bậc hay bất kỳ hằng số biểu giá nào của kỳ thi.
  * - implement `delete`.
  */
@@ -88,7 +88,7 @@ export interface ElectricityTariffRepository {
 
   createTariff(input: NewElectricityTariff): Promise<Result<ElectricityTariff>>;
 
-  /** Xoá TOÀN BỘ tier cũ của `tariffId` rồi chèn `tiers` — gọi bên trong transaction, xem "Important invariant". */
+  /** Xoá TOÀN BỘ tier cũ của `tariffId` rồi chèn `tiers` — gọi bên trong transaction, xem "Bất biến quan trọng". */
   replaceTiers(tariffId: string, tiers: NewElectricityTariffTier[]): Promise<Result<ElectricityTariffTier[]>>;
 
   updateTariffParent(id: string, input: UpdateElectricityTariffParent): Promise<Result<ElectricityTariff>>;

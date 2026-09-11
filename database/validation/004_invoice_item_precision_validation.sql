@@ -4,13 +4,13 @@
 -- Invoice item precision validation
 -- ============================================================
 --
--- Responsibility:
+-- Trách nhiệm:
 -- Chứng minh, bằng PostgreSQL THẬT, rằng sau
 -- database/migrations/002_preserve_invoice_item_precision.sql,
 -- invoice_items.quantity và invoice_items.amount lưu giữ CHÍNH XÁC
 -- nhiều hơn 2 chữ số thập phân — không bị database âm thầm làm tròn.
 --
--- Does NOT:
+-- Không chịu trách nhiệm:
 -- - giả lập một phép tính hoá đơn THẬT. quantity/amount dùng ở đây là
 --   giá trị MINH HOẠ được chọn trực tiếp để có nhiều chữ số thập phân
 --   (không phải kết quả một công thức tariff thật) — mục đích DUY NHẤT

@@ -3,7 +3,7 @@
 import { Result, ok, fail } from "../../shared/result";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Biểu diễn số thập phân CHÍNH XÁC TUYỆT ĐỐI dưới dạng phân số
  * (numerator/denominator), dùng BigInt cho cả tử số và mẫu số. Đây là
  * nền tảng số học cho toàn bộ Calculation Core — thay thế hoàn toàn
@@ -12,7 +12,7 @@ import { Result, ok, fail } from "../../shared/result";
  * Input: chuỗi thập phân (ví dụ "62.5", "0.08", "1984") ở ranh giới vào.
  * Output: chuỗi thập phân chuẩn hoá ở ranh giới ra (`toDecimalString`).
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - triển khai một thư viện toán học tổng quát (không sin/cos/log/luỹ
  *   thừa/ma trận). Đây chỉ là công cụ số học cho hoá đơn.
  * - lộ BigInt ra ngoài Calculation Core. `ExactNumber` là chi tiết cài
@@ -33,7 +33,7 @@ import { Result, ok, fail } from "../../shared/result";
  *   ra được nữa từ dữ liệu nghiệp vụ hợp lệ, không phải một đường xử lý
  *   lỗi đang được trông đợi.
  *
- * Why this module is separate:
+ * Lý do tồn tại:
  * Mọi module tính toán khác (meter, electricity, water, invoice) đều
  * phụ thuộc vào các phép toán ở đây. Tách riêng để logic số học chính
  * xác được viết, đọc, và unit-test MỘT LẦN duy nhất, không lặp lại rải
@@ -92,7 +92,7 @@ const DECIMAL_PATTERN = /^(-?)(\d+)(?:\.(\d+))?$/;
  * Đọc một chuỗi thập phân THÔNG THƯỜNG (ví dụ "50", "-12.3", "0.08")
  * thành ExactNumber chính xác tuyệt đối.
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - đi qua `Number(...)`/`parseFloat(...)` trước khi tạo phân số — làm
  *   vậy sẽ tái nhiễm sai số dấu phẩy động TRƯỚC cả khi bước vào biểu
  *   diễn chính xác, phá hỏng mục đích của toàn bộ module này. Chuỗi
@@ -201,7 +201,7 @@ export function isFiniteDecimalDenominator(value: bigint): boolean {
  * "19944.0" hay "19944.").
  *
  * Throws (không phải Result) khi phân số không có biểu diễn thập phân
- * hữu hạn — xem giải thích "Does NOT" ở đầu file. Đây là một assertion
+ * hữu hạn — xem giải thích "Không chịu trách nhiệm" ở đầu file. Đây là một assertion
  * nội bộ (lỗi lập trình/cấu hình nằm ngoài phạm vi hỗ trợ), không phải
  * một lỗi nghiệp vụ mong đợi cần Result — mọi đường dẫn có khả năng gặp
  * trường hợp này (calculateQuotaFactor) đã tự bắt và chuyển thành
@@ -254,7 +254,7 @@ export function toDecimalString(value: ExactNumber): string {
  * đã mang sai số từ các bước trước) trước khi làm tròn, đi ngược lại
  * toàn bộ mục đích của Calculation Core.
  *
- * Does NOT: hỗ trợ giá trị âm. Mọi số tiền trong dự án này không bao
+ * Không chịu trách nhiệm: hỗ trợ giá trị âm. Mọi số tiền trong dự án này không bao
  * giờ âm (usage, giá, thuế, phí đều >= 0); hàm throw nếu vi phạm giả
  * định này — đây là lỗi lập trình nội bộ cần sửa code, không phải một
  * input nghiệp vụ hợp lệ cần Result.

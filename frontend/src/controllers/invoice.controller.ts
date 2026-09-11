@@ -17,19 +17,19 @@ import type { CreateInvoiceBody } from "../types/invoice.types";
 import type { Room } from "../types/room.types";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Điều phối trang "Hóa đơn" — MÀN HÌNH DEMO QUAN TRỌNG NHẤT: tạo hóa
  * đơn mới (POST), xử lý trường hợp đã tồn tại (409
  * INVOICE_ALREADY_EXISTS -> đề nghị tải hóa đơn đã lưu), và đọc lại một
  * hóa đơn LỊCH SỬ (GET, không tính lại) — xem docs/CREATE_INVOICE_WORKFLOW.md.
  *
- * Important invariant:
+ * Bất biến quan trọng:
  * KHÔNG BAO GIỜ tính toán số tiền ở đây — chỉ gửi input, hiển thị kết
  * quả `CreateInvoiceResult`/`GetInvoiceResult` NGUYÊN VẸN từ backend
  * (xem docs/FRONTEND.md mục "Financial string rule"). `actualChargedAmount`
  * trống -> gửi `null`, KHÔNG BAO GIỜ gửi chuỗi rỗng `""`.
  *
- * Does NOT: gọi lại Calculation Core, dựng lại breakdown từ
+ * Không chịu trách nhiệm: gọi lại Calculation Core, dựng lại breakdown từ
  * quantity × unitPrice.
  */
 let selectedRoomId: string | null = null;

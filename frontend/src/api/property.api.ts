@@ -4,7 +4,7 @@ import { apiRequest } from "./api-client";
 import type { ApiResult } from "../types/api.types";
 import type { CreatePropertyBody, RentalProperty, UpdatePropertyBody } from "../types/property.types";
 
-/** Responsibility: gọi REST API cho `RentalProperty`. Does NOT: thao tác DOM, quyết định hiển thị gì (việc của Controller/View). */
+/** Trách nhiệm: gọi REST API cho `RentalProperty`. Không chịu trách nhiệm: thao tác DOM, quyết định hiển thị gì (việc của Controller/View). */
 export function fetchProperties(): Promise<ApiResult<RentalProperty[]>> {
   return apiRequest<RentalProperty[]>("/properties");
 }

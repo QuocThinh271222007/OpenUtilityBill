@@ -4,15 +4,15 @@ import { apiRequest } from "./api-client";
 import type { ApiResult, HealthStatus } from "../types/health.types";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Gọi REST API GET /api/v1/health và trả về kết quả thô theo
  * ApiResult contract (chưa xử lý hiển thị).
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - thao tác DOM
  * - quyết định hiển thị gì cho người dùng (việc đó thuộc về View)
  *
- * Reason:
+ * Lý do:
  * Tách lời gọi API khỏi việc hiển thị giúp có thể đổi UI, hoặc viết
  * test cho phần gọi mạng, mà không cần sửa logic hiển thị.
  */

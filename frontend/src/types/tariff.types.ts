@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Type mô tả cấu hình biểu giá điện/nước và body ghi dữ liệu — khớp
  * docs/MANAGEMENT_API.md mục "Electricity tariffs"/"Water tariffs".
  *
- * Important invariant:
+ * Bất biến quan trọng:
  * `electricityVatRate`/`thresholdKwh`/`unitPrice`/`pricePerCubicMeter`/
  * `pricePerPerson`/`vatRate`/`environmentalFeeRate` LUÔN là `string`
  * (NUMERIC ở backend). `peoplePerQuotaUnit`/`fallbackTierNumber`/

@@ -4,7 +4,7 @@ import { Result, ok, fail } from "../../shared/result";
 import { ExactNumber, divide, fromBigInt, isFiniteDecimalDenominator, toDecimalString } from "../shared/exact-number";
 
 /**
- * Responsibility:
+ * Trách nhiệm:
  * Tính quotaFactor = tenantCount / peoplePerQuotaUnit — tỉ lệ dùng để
  * điều chỉnh ngưỡng bậc thang điện theo số người ở thực tế của phòng.
  *
@@ -23,18 +23,18 @@ import { ExactNumber, divide, fromBigInt, isFiniteDecimalDenominator, toDecimalS
  *
  * Output: quotaFactor, KHÔNG làm tròn (ví dụ "0.25", "1.25").
  *
- * Failure conditions:
+ * Điều kiện lỗi:
  * - tenantCount không phải số nguyên dương.
  * - peoplePerQuotaUnit không phải số nguyên dương.
  * - peoplePerQuotaUnit không đảm bảo thương số hữu hạn ở hệ thập phân
  *   với MỌI tenantCount (xem "Chiến lược cho quota không hữu hạn" bên
  *   dưới).
  *
- * Important invariant:
+ * Bất biến quan trọng:
  * quotaFactor KHÔNG được làm tròn ở đây — việc làm tròn chỉ xảy ra một
  * lần duy nhất, ở tổng hoá đơn cuối cùng (xem docs/NUMERIC_PRECISION.md).
  *
- * Does NOT:
+ * Không chịu trách nhiệm:
  * - áp dụng cho tenantCount = 0. Đề thi không định nghĩa quy tắc tính
  *   quota cho phòng 0 người ở — thay vì tự suy diễn "quotaFactor = 0
  *   nghĩa là không có bậc nào áp dụng" (một quyết định sản phẩm không
@@ -86,7 +86,7 @@ import { ExactNumber, divide, fromBigInt, isFiniteDecimalDenominator, toDecimalS
  * trên peoplePerQuotaUnit — độc lập với tenantCount — cho hành vi NHẤT
  * QUÁN: một cấu hình hợp lệ hoặc luôn hợp lệ, hoặc luôn bị từ chối.
  *
- * Why no string round-trip:
+ * Vì sao không round-trip dưới dạng chuỗi:
  * `calculateTieredElectricity` gọi `calculateQuotaFactorExact` trực
  * tiếp để lấy `ExactNumber`, dùng ngay cho phép nhân với ngưỡng bậc —
  * KHÔNG gọi `calculateQuotaFactor` (bản trả `string`) rồi `parseDecimal`

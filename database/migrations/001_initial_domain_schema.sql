@@ -4,12 +4,12 @@
 -- OpenUtilityBill — Initial domain schema
 -- ============================================================
 --
--- Responsibility:
+-- Trách nhiệm:
 -- Tạo toàn bộ bảng nền tảng (domain foundation) cho OpenUtilityBill:
 -- rental_properties, rooms, meter_readings, electricity_tariffs,
 -- electricity_tariff_tiers, water_tariffs, invoices, invoice_items.
 --
--- Does NOT:
+-- Không chịu trách nhiệm:
 -- - chứa business logic tính toán. Không có trigger hay stored
 --   procedure nào tính hoá đơn ở đây — xem docs/DATABASE_DESIGN.md mục
 --   "Why no triggers/stored procedures yet".
