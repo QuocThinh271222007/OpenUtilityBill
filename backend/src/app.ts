@@ -3,6 +3,10 @@
 import express, { Express } from "express";
 import healthRoutes from "./modules/health/health.routes";
 import invoiceRoutes from "./modules/invoice/invoice.routes";
+import propertyRoutes from "./modules/property/property.routes";
+import roomRoutes from "./modules/room/room.routes";
+import meterReadingRoutes from "./modules/meter-reading/meter-reading.routes";
+import tariffRoutes from "./modules/tariff/tariff.routes";
 
 /**
  * Responsibility:
@@ -24,5 +28,9 @@ app.use(express.json());
 const API_V1_PREFIX = "/api/v1";
 app.use(API_V1_PREFIX, healthRoutes);
 app.use(API_V1_PREFIX, invoiceRoutes);
+app.use(API_V1_PREFIX, propertyRoutes);
+app.use(API_V1_PREFIX, roomRoutes);
+app.use(API_V1_PREFIX, meterReadingRoutes);
+app.use(API_V1_PREFIX, tariffRoutes);
 
 export default app;
