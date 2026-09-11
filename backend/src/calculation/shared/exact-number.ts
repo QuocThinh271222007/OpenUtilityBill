@@ -26,9 +26,12 @@ import { Result, ok, fail } from "../../shared/result";
  *   xem chi tiết trong docs/NUMERIC_PRECISION.md. Toàn bộ dữ liệu hợp
  *   lệ của dự án (giá tiền, tỉ lệ thuế/phí từ PostgreSQL NUMERIC, ngưỡng
  *   bậc thang) đều là số thập phân hữu hạn nên không gặp trường hợp
- *   này; nơi DUY NHẤT có phép chia (calculateQuotaFactor) tự bắt lỗi
- *   này và trả về Result thất bại thay vì để throw lọt ra ngoài — xem
- *   electricity/calculate-quota-factor.ts.
+ *   này; nơi DUY NHẤT có phép chia (calculateQuotaFactor) chủ động
+ *   kiểm tra TRƯỚC bằng `isFiniteDecimalDenominator` (không phải bắt
+ *   throw sau khi đã thử) — xem electricity/calculate-quota-factor.ts.
+ *   `throw` ở đây do đó là một assertion nội bộ thực sự không thể xảy
+ *   ra được nữa từ dữ liệu nghiệp vụ hợp lệ, không phải một đường xử lý
+ *   lỗi đang được trông đợi.
  *
  * Why this module is separate:
  * Mọi module tính toán khác (meter, electricity, water, invoice) đều
@@ -170,6 +173,25 @@ function factorOutTwosAndFives(value: bigint): { twos: number; fives: number; re
     fives++;
   }
   return { twos, fives, remainder };
+}
+
+/**
+ * Kiểm tra một số nguyên dương CÓ THỂ làm mẫu số của một phân số thập
+ * phân hữu hạn hay không — đúng khi và chỉ khi ước nguyên tố của nó chỉ
+ * gồm 2 và/hoặc 5 (ví dụ 1, 2, 4, 5, 8, 10, 16, 20, 25, ...).
+ *
+ * Dùng để xác nhận TRƯỚC một tham số cấu hình (ví dụ
+ * peoplePerQuotaUnit) sẽ LUÔN tạo ra thương số hữu hạn với MỌI tử số
+ * nguyên — không chỉ kiểm tra SAU khi đã chia một tử số cụ thể. Xem
+ * electricity/calculate-quota-factor.ts, nơi hàm này được dùng để biến
+ * "thử rồi bắt lỗi nếu không hữu hạn" thành một ràng buộc tường minh,
+ * độc lập với tenantCount.
+ */
+export function isFiniteDecimalDenominator(value: bigint): boolean {
+  if (value <= 0n) {
+    return false;
+  }
+  return factorOutTwosAndFives(value).remainder === 1n;
 }
 
 /**

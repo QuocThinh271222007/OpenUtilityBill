@@ -4,7 +4,7 @@ import { Result, ok, fail } from "../../shared/result";
 import { ONE, ZERO, add, compare, multiply, parseDecimal, roundHalfUpToInteger, toDecimalString, fromBigInt } from "../shared/exact-number";
 import { ElectricityTierInput, TieredElectricityResult } from "../types/calculation.types";
 import { allocateElectricityTiers } from "./allocate-electricity-tiers";
-import { calculateQuotaFactor } from "./calculate-quota-factor";
+import { calculateQuotaFactorExact } from "./calculate-quota-factor";
 import { validateElectricityConfig } from "./validate-electricity-config";
 
 /**
@@ -60,19 +60,19 @@ export function calculateTieredElectricity(input: TieredElectricityInput): Resul
     return fail("INVALID_METER_READING", "usageKwh không được âm.");
   }
 
-  const quotaFactorResult = calculateQuotaFactor({
+  // Lấy quotaFactor dưới dạng ExactNumber TRỰC TIẾP — không đi qua
+  // chuỗi thập phân rồi parse lại. Chuỗi chỉ cần thiết ở ranh giới công
+  // khai (trường quotaFactor trong kết quả trả về bên dưới), không phải
+  // giữa hai bước tính toán nội bộ liền kề nhau (xem "Why no string
+  // round-trip" trong calculate-quota-factor.ts).
+  const quotaFactorResult = calculateQuotaFactorExact({
     tenantCount: input.tenantCount,
     peoplePerQuotaUnit: input.peoplePerQuotaUnit,
   });
   if (!quotaFactorResult.success) {
     return quotaFactorResult;
   }
-  // An toàn parse lại: calculateQuotaFactor đã tự chứng minh chuỗi này
-  // là số thập phân hữu hạn hợp lệ (nếu không, nó đã fail ở trên).
-  const quotaFactor = parseDecimal(quotaFactorResult.data);
-  if (!quotaFactor.success) {
-    return fail("INVALID_DECIMAL", "Lỗi nội bộ: quotaFactor tạo ra không parse lại được.");
-  }
+  const quotaFactor = quotaFactorResult.data;
 
   const vatRateResult = parseDecimal(input.vatRate);
   if (!vatRateResult.success) {
@@ -88,7 +88,7 @@ export function calculateTieredElectricity(input: TieredElectricityInput): Resul
     return validatedTiers;
   }
 
-  const appliedTiers = allocateElectricityTiers(usage, quotaFactor.data, validatedTiers.data);
+  const appliedTiers = allocateElectricityTiers(usage, quotaFactor, validatedTiers.data);
 
   let subtotal = ZERO;
   for (const tier of appliedTiers) {
@@ -101,7 +101,7 @@ export function calculateTieredElectricity(input: TieredElectricityInput): Resul
 
   return ok({
     usageKwh: toDecimalString(usage),
-    quotaFactor: quotaFactorResult.data,
+    quotaFactor: toDecimalString(quotaFactor),
     appliedTiers: appliedTiers.map((tier) => ({
       tierNumber: tier.tierNumber,
       quantityKwh: toDecimalString(tier.quantityKwh),
