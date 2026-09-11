@@ -6,17 +6,17 @@ OpenUtilityBill, hosted on [Supabase](https://supabase.com).
 ## Current status
 
 The initial domain schema, the competition default configuration seed,
-and a runtime validation script exist as SQL files (below). **None has
-been run against a live database from this session** — no `DATABASE_URL`
-or Supabase connection was available in this environment, and this
-project deliberately does not require or install a local
+and a set of runtime validation scripts exist as SQL files (below).
+**None has been run against a live database from this session** — no
+`DATABASE_URL` or Supabase connection was available in this environment,
+and this project deliberately does not require or install a local
 PostgreSQL/Docker setup just to validate SQL (see `docs/TRANSACTIONS.md`
 and the "Runtime validation with Supabase SQL Editor" section below). The
 health endpoint (`GET /api/v1/health`) still does not touch the database.
 No backend Repository or database client exists yet — see
 `docs/ARCHITECTURE.md`.
 
-Running the validation script (manually, in the Supabase SQL Editor) is
+Running the validation scripts (manually, in the Supabase SQL Editor) is
 the way to turn "the schema looks correct" into "PostgreSQL confirmed the
 schema is correct" — see below.
 
@@ -25,11 +25,13 @@ schema is correct" — see below.
 ```
 database/
   migrations/
-    001_initial_domain_schema.sql        Tables, constraints, relationships
+    001_initial_domain_schema.sql          Tables, constraints, relationships
   seeds/
-    001_competition_defaults.sql         Official competition default tariffs
+    001_competition_defaults.sql           Official competition default tariffs
   validation/
-    001_domain_runtime_validation.sql    Runtime proof the constraints work
+    001_domain_success_validation.sql      One run: schema/seed check + valid-data proof
+    002_domain_constraint_validation.sql   One block at a time: constraint rejection proof
+    003_validation_cleanup.sql             Safety net: delete only VALIDATION_* rows
 ```
 
 ## Running these files (once a real Supabase database is available)
@@ -46,10 +48,26 @@ The seed is safe to re-run — see the idempotency notes at the top of
 
 Static SQL review (balanced `BEGIN`/`COMMIT`, correct table creation
 order, etc.) is not the same as proof that PostgreSQL actually accepts
-this schema and enforces its constraints. `database/validation/
-001_domain_runtime_validation.sql` provides that proof by inserting both
-valid and intentionally-invalid rows against a real database and
-recording what PostgreSQL actually does — then rolling all of it back.
+this schema and enforces its constraints. The `database/validation/`
+files provide that proof by inserting both valid and intentionally
+invalid rows against a real database, then rolling all of it back.
+
+Validation is split into two files with two different execution models,
+because they need different treatment in the SQL Editor:
+
+- **`001_domain_success_validation.sql`** contains **zero** intentionally
+  failing statements — safe to paste and run **completely, in one
+  execution**.
+- **`002_domain_constraint_validation.sql`** contains 18 numbered blocks
+  (`D1`–`D18`), each of which **deliberately** triggers one PostgreSQL
+  constraint error to prove that constraint actually rejects bad data.
+  **Run exactly one numbered block per "Run" click — never the whole
+  file at once.** A PostgreSQL client (including, possibly, the Supabase
+  SQL Editor) may stop executing a pasted batch as soon as one statement
+  in it errors — so a later block's cleanup statement might never run if
+  it were all sent together. Each block is self-contained (its own
+  `BEGIN`/setup/`ROLLBACK`) specifically so this isn't a problem: run one,
+  read its result, move to the next.
 
 No local PostgreSQL/Docker setup is required or expected. Steps, using
 the Supabase project's own SQL Editor:
@@ -57,21 +75,55 @@ the Supabase project's own SQL Editor:
 1. Create (or open) the Supabase project for this repository.
 2. Open **SQL Editor** in the Supabase dashboard.
 3. Paste and run `database/migrations/001_initial_domain_schema.sql`.
-   Expect success with no errors.
-4. Paste and run `database/seeds/001_competition_defaults.sql`. Expect
-   success.
-5. Paste and run `database/validation/001_domain_runtime_validation.sql`
-   **in one execution** (one paste, one "Run") — see the file's header
-   comment for why splitting it into separate runs can break the
-   `SAVEPOINT`s it relies on. Read each block's "Kỳ vọng" (expected)
-   comment against the actual result/error PostgreSQL returns.
-6. Optionally, re-run step 4 a second time, then re-run the "B. Seed
-   verification" queries at the top of the validation file to confirm no
-   duplicate seed rows were created.
-7. **Never** paste a real connection string, database password, or
+   Expect: **PASS** (success, no errors).
+4. Paste and run `database/seeds/001_competition_defaults.sql`.
+   Expect: **PASS**.
+5. Paste and run `database/validation/001_domain_success_validation.sql`
+   **completely, in one execution**. Expect: **PASS** on every statement
+   — read each `-- Kỳ vọng:` comment and compare against the actual
+   result. Any error here means an actual problem, not an expected one.
+6. Open `database/validation/002_domain_constraint_validation.sql` and
+   run blocks `D1` through `D18` **one at a time**, in order or in any
+   order — they don't depend on each other. For each block: select just
+   that block's SQL (from its `-- ====` header down to its final
+   `ROLLBACK;`), run it, and compare the error PostgreSQL actually
+   returned against the block's `-- Kỳ vọng: FAIL — ...` comment. **A
+   constraint error here is the test passing, not failing.** Fill in the
+   PASS/FAIL checklist near the top of that file as you go.
+7. Optionally run `database/validation/003_validation_cleanup.sql` as a
+   safety net — it only deletes rows whose name starts with
+   `VALIDATION_SUCCESS_` or `VALIDATION_CONSTRAINT_`, and never touches
+   `Competition Default ...` rows. Under normal conditions (steps 5–6
+   run as documented) it will find nothing to delete, since neither
+   validation file ever issues `COMMIT`.
+8. To prove seed idempotency: run `database/seeds/001_competition_defaults.sql`
+   a second time (expect: **PASS**, no error), then re-run the
+   "B. Competition seed verification" queries in
+   `001_domain_success_validation.sql` — every count must be unchanged
+   (1 electricity tariff, 6 tiers, 1 water tariff), proving the second
+   run created no duplicates.
+9. **Never** paste a real connection string, database password, or
    Supabase service-role/anon key into any file in this repository —
    only run these files directly inside the Supabase SQL Editor, where
    credentials are handled by Supabase itself, not typed into a file.
+
+### Why not one big file with `SAVEPOINT`
+
+An earlier version of this validation used a single file with
+`SAVEPOINT` / `ROLLBACK TO SAVEPOINT` around each intentional error,
+meant to be pasted and run once. `SAVEPOINT` itself is a real and correct
+PostgreSQL feature — it creates a recoverable point inside a transaction,
+so a later `ROLLBACK TO SAVEPOINT` can undo just the work since that
+point. The problem was never `SAVEPOINT`'s semantics: it was that
+`SAVEPOINT` only helps if the SQL client keeps sending the *next*
+statement (the `ROLLBACK TO SAVEPOINT`) after an error — and some SQL
+clients stop executing the rest of a pasted batch as soon as one
+statement in it fails. Relying on that continuation behavior made the
+proof fragile in a way that depended on Supabase SQL Editor's specific
+behavior rather than on PostgreSQL's actual guarantees. Splitting into
+independent, single-purpose blocks (`002_domain_constraint_validation.sql`)
+removes that dependency entirely: each block finishes (successfully or
+not) before the next one is even sent.
 
 ## Design documentation
 

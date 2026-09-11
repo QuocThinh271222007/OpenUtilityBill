@@ -6,6 +6,21 @@ All notable changes to this project are documented in this file.
 
 ### Fixed
 
+- Corrected the Supabase SQL Editor runtime-validation execution model
+  (test infrastructure, not the domain schema). The previous single
+  file (`database/validation/001_domain_runtime_validation.sql`) relied
+  on `SAVEPOINT`/`ROLLBACK TO SAVEPOINT` to recover from intentional
+  constraint errors within one large pasted execution — but a SQL
+  client that stops sending statements after the first error would
+  never reach that `ROLLBACK TO SAVEPOINT`, breaking every test after
+  it. Replaced with `database/validation/001_domain_success_validation.sql`
+  (zero intentional errors, safe to run as one execution) and
+  `database/validation/002_domain_constraint_validation.sql` (18
+  independent, self-contained numbered blocks — `D1`–`D18` — each run
+  separately, with its own setup and cleanup, so no block depends on a
+  previous one having run or on the SQL client continuing after an
+  error). Added `database/validation/003_validation_cleanup.sql` as a
+  safety net that only ever deletes `VALIDATION_*`-prefixed rows.
 - Corrected the competition tariff seed dates: electricity
   `effective_from` now cites the real legal date (2025-05-10, per
   Decision 1279/QĐ-BCT) with `effective_to = 2026-12-31` documented as
