@@ -1,38 +1,23 @@
 // SPDX-License-Identifier: MIT
 
+import { isPositiveIntegerId } from "../../shared/validation/id";
+import { isExactDecimalWithinScale } from "../../shared/validation/decimal-scale";
+
 /**
  * Responsibility:
  * Các hàm kiểm tra (predicate) dùng CHUNG giữa `CreateInvoiceService` và
  * `GetInvoiceService` — tách riêng để không định nghĩa lại cùng một quy
  * tắc ở hai nơi (roomId, billingPeriod đều được cả hai Service nhận làm
- * đầu vào).
+ * đầu vào). `isPositiveIntegerId` được RE-EXPORT từ
+ * `shared/validation/id.ts` (dùng chung với property/room/meter-reading/
+ * tariff) để code hiện tại import từ đây không cần sửa.
  *
  * Does NOT:
  * - chứa logic đọc/ghi database hay Calculation Core — chỉ kiểm tra
  *   HÌNH DẠNG (shape) của giá trị đầu vào, thuần hàm (pure), không I/O.
  */
-
-/**
- * roomId phải là chuỗi biểu diễn một BIGINT dương — KHÔNG BAO GIỜ
- * `Number(roomId)` (BIGINT có thể vượt quá `Number.MAX_SAFE_INTEGER`,
- * xem docs/DATABASE_ACCESS.md mục "BIGINT / ID boundary"). Kiểm tra
- * CHUỖI bằng regex thay vì parse ra số.
- */
-export function isPositiveIntegerId(value: string): boolean {
-  return /^[1-9][0-9]*$/.test(value);
-}
-
-/**
- * `billingPeriod` phải là ngày đầu tiên của tháng (khớp CHECK
- * `EXTRACT(DAY FROM billing_period) = 1` ở migration 001). Dùng
- * `getUTCDate()`, KHÔNG dùng `getDate()` (local time) — tránh sai lệch
- * theo múi giờ máy chủ (xem docs/DATABASE_ACCESS.md mục "DATE boundary
- * — reviewed, not changed"; dự án chưa đổi toàn bộ ranh giới DATE, chỉ
- * tránh method local-time ở nơi có thể).
- */
-export function isFirstDayOfMonthUtc(date: Date): boolean {
-  return !Number.isNaN(date.getTime()) && date.getUTCDate() === 1;
-}
+export { isPositiveIntegerId } from "../../shared/validation/id";
+export { isFirstDayOfMonthUtc } from "../../shared/validation/date";
 
 /**
  * `actualChargedAmount` phải là một chuỗi thập phân KHÔNG ÂM, biểu diễn
@@ -63,8 +48,6 @@ export function isFirstDayOfMonthUtc(date: Date): boolean {
  *   docs/NUMERIC_PRECISION.md), không bao giờ có phần thập phân cần
  *   kiểm tra riêng.
  */
-const ACTUAL_CHARGED_AMOUNT_SCALE_PATTERN = /^\d{1,12}(\.\d{1,2})?$/;
-
 export function isValidActualChargedAmountScale(value: string): boolean {
-  return ACTUAL_CHARGED_AMOUNT_SCALE_PATTERN.test(value);
+  return isExactDecimalWithinScale(value, { maxIntegerDigits: 12, maxFractionalDigits: 2 });
 }

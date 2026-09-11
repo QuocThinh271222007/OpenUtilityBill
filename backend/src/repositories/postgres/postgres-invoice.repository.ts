@@ -2,6 +2,7 @@
 
 import { Result, ok, fail } from "../../shared/result";
 import { logDatabaseError } from "../../database/postgres-client";
+import { isUniqueViolation } from "../../database/unique-violation";
 import type { DatabaseExecutor } from "../../database/database.types";
 import { ElectricityBillingMethod, WaterBillingMethod } from "../../modules/tariff/tariff.model";
 import { Invoice, InvoiceItem, InvoiceItemCategory } from "../../modules/invoice/invoice.model";
@@ -82,23 +83,6 @@ function mapInvoiceItemRow(row: InvoiceItemRow): InvoiceItem {
     description: row.description,
     displayOrder: row.display_order,
   };
-}
-
-/**
- * "Đây có phải lỗi vi phạm UNIQUE constraint (SQLSTATE 23505) không?"
- * — kiểm tra CẤU TRÚC (structural), không import type `PostgresError`
- * của thư viện `postgres`, vì đây là mapping DUY NHẤT dự án cần (invoice
- * trùng `UNIQUE(room_id, billing_period)`) — KHÔNG xây dựng một khung
- * (framework) dịch SQLSTATE tổng quát cho mọi constraint có thể có
- * trong tương lai (xem docs/DATABASE_ACCESS.md mục "Error translation").
- * `code` ở đây LÀ SQLSTATE do PostgreSQL trả về, không phải một field
- * do Postgres.js tự đặt tên tuỳ ý — xem
- * `node_modules/postgres/src/connection.js` (bảng `errorFields`, ánh xạ
- * ký tự 'C' -> `code`) và `node_modules/postgres/types/index.d.ts`
- * (`PostgresError.code: string`).
- */
-function isUniqueViolation(error: unknown): boolean {
-  return typeof error === "object" && error !== null && "code" in error && (error as { code: unknown }).code === "23505";
 }
 
 export class PostgresInvoiceRepository implements InvoiceRepository {

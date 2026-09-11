@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
-import { Result, ok, fail } from "../../shared/result";
+import { Result } from "../../shared/result";
+import { formatDateAsWireDate, parseFirstOfMonthWireFormat } from "../../shared/http/date-wire-format";
 import { Invoice, InvoiceItem } from "./invoice.model";
 import { CreateInvoiceResult } from "./create-invoice.types";
 import { GetInvoiceResult } from "./get-invoice.types";
@@ -8,11 +9,18 @@ import { GetInvoiceResult } from "./get-invoice.types";
 /**
  * Responsibility:
  * Tiện ích ranh giới HTTP CHỈ cho module invoice — parse `billingPeriod`
- * dạng "YYYY-MM-DD" từ request, chuyển domain object (Invoice/
+ * dạng "YYYY-MM-DD" từ request và chuyển domain object (Invoice/
  * InvoiceItem/CreateInvoiceResult/GetInvoiceResult) thành JSON an toàn
- * cho response, và ánh xạ error code (Result) -> HTTP status. Tách khỏi
- * `invoice.controller.ts` để Controller chỉ còn điều phối (gọi Service,
- * gọi các hàm thuần tuý ở đây, ghi response).
+ * cho response. Tách khỏi `invoice.controller.ts` để Controller chỉ còn
+ * điều phối (gọi Service, gọi các hàm thuần tuý ở đây, ghi response).
+ *
+ * Việc parse ngày và ánh xạ error code -> HTTP status dùng CHUNG với
+ * mọi module khác (property/room/meter-reading/tariff) nay sống ở
+ * `backend/src/shared/http/` — file này chỉ RE-EXPORT
+ * `mapResultErrorCodeToHttpStatus`/`formatDateAsWireDate` để code hiện
+ * tại import từ đây (`./invoice.http`) không cần sửa, và định nghĩa lại
+ * `parseBillingPeriodWireFormat` như một wrapper mỏng quanh
+ * `parseFirstOfMonthWireFormat` (giữ NGUYÊN tên/hành vi cũ).
  *
  * Does NOT:
  * - import Express `Request`/`Response` — mọi hàm ở đây nhận/trả dữ
@@ -20,108 +28,12 @@ import { GetInvoiceResult } from "./get-invoice.types";
  *   độc lập.
  * - chứa business logic (không gọi Repository/Calculation Core).
  */
+export { formatDateAsWireDate } from "../../shared/http/date-wire-format";
+export { mapResultErrorCodeToHttpStatus } from "../../shared/http/result-error-status";
 
-const WIRE_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
-
-/**
- * "YYYY-MM-DD" -> UTC-midnight `Date`, khớp hợp đồng hiện có của
- * CreateInvoiceService/GetInvoiceService (`billingPeriod: Date`).
- *
- * Failure conditions (đều trả `VALIDATION_ERROR`):
- * - `value` không phải string.
- * - không đúng hình dạng `YYYY-MM-DD` (ví dụ "2026-9-1", hoặc có phần
- *   giờ/múi giờ như "2026-09-01T10:00:00Z" — API KHÔNG chấp nhận
- *   timestamp JS tuỳ ý, chỉ đúng hình dạng ngày).
- * - không phải một ngày lịch có thật (ví dụ "2026-02-30" — `Date.UTC`
- *   sẽ tự "tràn" sang ngày khác thay vì tự báo lỗi, nên phải so khớp
- *   lại year/month/day sau khi dựng `Date` để bắt trường hợp này).
- * - `day != 1` — billingPeriod luôn là ngày đầu tháng, cùng ràng buộc
- *   với migration 001 `CHECK (EXTRACT(DAY FROM billing_period) = 1)`.
- *
- * Why UTC, not local time:
- * `Date.UTC(...)` loại bỏ hoàn toàn phụ thuộc múi giờ máy chủ ở ranh
- * giới HTTP — xem docs/DATABASE_ACCESS.md mục "DATE boundary — reviewed,
- * not changed" (task này KHÔNG đổi toàn bộ ranh giới DATE của dự án,
- * chỉ đảm bảo điểm vào HTTP mới xây dựng chính xác).
- */
+/** billingPeriod luôn là ngày đầu tháng — xem `parseFirstOfMonthWireFormat` (shared/http/date-wire-format.ts) cho lý do/hành vi đầy đủ. */
 export function parseBillingPeriodWireFormat(value: unknown): Result<Date> {
-  if (typeof value !== "string") {
-    return fail("VALIDATION_ERROR", "billingPeriod là bắt buộc và phải là chuỗi dạng YYYY-MM-DD.");
-  }
-
-  const match = WIRE_DATE_PATTERN.exec(value);
-  if (!match) {
-    return fail("VALIDATION_ERROR", `billingPeriod không đúng định dạng YYYY-MM-DD: "${value}".`);
-  }
-
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-  const date = new Date(Date.UTC(year, month - 1, day));
-
-  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
-    return fail("VALIDATION_ERROR", `billingPeriod không phải một ngày lịch hợp lệ: "${value}".`);
-  }
-  if (day !== 1) {
-    return fail("VALIDATION_ERROR", `billingPeriod phải là ngày đầu tiên của tháng (day = 01): "${value}".`);
-  }
-
-  return ok(date);
-}
-
-/**
- * `Date` (giả định UTC-midnight, đúng quy ước billingPeriod) ->
- * "YYYY-MM-DD". An toàn cho cả Date do Controller tự dựng (từ
- * `parseBillingPeriodWireFormat`) LẪN Date do Postgres.js trả về khi
- * đọc cột DATE — Postgres.js parse giá trị DATE bằng `new Date(x)` trên
- * chuỗi "YYYY-MM-DD" thô từ PostgreSQL, và `new Date("YYYY-MM-DD")` (không
- * có phần giờ) luôn được JS hiểu là UTC-midnight theo đặc tả ISO 8601 —
- * xem `node_modules/postgres/src/types.js` (`date.parse`).
- */
-export function formatDateAsWireDate(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
-
-/**
- * Ánh xạ error code (Result) -> HTTP status. KHÔNG phải một framework
- * SQLSTATE/error tổng quát — chỉ đúng danh sách mã lỗi THỰC SỰ có thể
- * phát sinh từ CreateInvoiceService/GetInvoiceService (Repository +
- * Calculation Core mà hai Service đó gọi tới). Mã lỗi không nằm trong
- * bảng (không mong đợi xảy ra qua hai endpoint này) -> 500, KHÔNG đoán
- * một mã 4xx cho một tình huống chưa biết.
- */
-const STATUS_BY_ERROR_CODE: Readonly<Record<string, number>> = {
-  VALIDATION_ERROR: 400,
-  INVALID_ACTUAL_CHARGED_AMOUNT: 400,
-
-  ROOM_NOT_FOUND: 404,
-  METER_READING_NOT_FOUND: 404,
-  TARIFF_NOT_FOUND: 404,
-  INVOICE_NOT_FOUND: 404,
-
-  INVOICE_ALREADY_EXISTS: 409,
-
-  AMBIGUOUS_TARIFF_CONFIGURATION: 422,
-  TARIFF_CONFIGURATION_INVALID: 422,
-  INVALID_QUOTA: 422,
-  INVALID_TENANT_COUNT: 422,
-  INVALID_METER_READING: 422,
-  INVALID_METER_MAXIMUM: 422,
-  METER_MAXIMUM_REQUIRED: 422,
-  FALLBACK_TIER_NOT_FOUND: 422,
-  INVALID_WATER_METHOD: 422,
-  INVALID_WATER_RATE: 422,
-  INVALID_VAT_RATE: 422,
-  INVALID_DECIMAL: 422,
-
-  DATABASE_READ_FAILED: 500,
-  DATABASE_WRITE_FAILED: 500,
-  TRANSACTION_FAILED: 500,
-  INTERNAL_INVARIANT_VIOLATION: 500,
-};
-
-export function mapResultErrorCodeToHttpStatus(code: string): number {
-  return STATUS_BY_ERROR_CODE[code] ?? 500;
+  return parseFirstOfMonthWireFormat(value);
 }
 
 /**

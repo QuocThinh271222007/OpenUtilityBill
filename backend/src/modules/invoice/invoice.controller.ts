@@ -2,6 +2,7 @@
 
 import { Request, Response } from "express";
 import { Result } from "../../shared/result";
+import { isPlainRequestBody, sendInternalError, sendValidationError } from "../../shared/http/controller-helpers";
 import { CreateInvoiceInput, CreateInvoiceResult } from "./create-invoice.types";
 import { GetInvoiceInput, GetInvoiceResult } from "./get-invoice.types";
 import {
@@ -51,19 +52,6 @@ interface GetInvoiceServiceLike {
   execute(input: GetInvoiceInput): Promise<Result<GetInvoiceResult>>;
 }
 
-function isPlainRequestBody(body: unknown): body is Record<string, unknown> {
-  return typeof body === "object" && body !== null && !Array.isArray(body);
-}
-
-function sendValidationError(res: Response, message: string): void {
-  res.status(400).json({ success: false, error: { code: "VALIDATION_ERROR", message } });
-}
-
-function sendInternalError(context: string, error: unknown, res: Response): void {
-  console.error(`[invoice.controller] ${context} — lỗi không mong đợi:`, error);
-  res.status(500).json({ success: false, error: { code: "INTERNAL_ERROR", message: "Đã xảy ra lỗi không mong đợi." } });
-}
-
 export function createPostInvoiceController(getService: () => CreateInvoiceServiceLike) {
   return async function postInvoice(req: Request, res: Response): Promise<void> {
     try {
@@ -111,7 +99,7 @@ export function createPostInvoiceController(getService: () => CreateInvoiceServi
 
       res.status(201).json({ success: true, data: serializeCreateInvoiceResult(result.data) });
     } catch (error) {
-      sendInternalError("postInvoice", error, res);
+      sendInternalError("invoice.controller.postInvoice", error, res);
     }
   };
 }
@@ -140,7 +128,7 @@ export function createGetInvoiceController(getService: () => GetInvoiceServiceLi
 
       res.status(200).json({ success: true, data: serializeGetInvoiceResult(result.data) });
     } catch (error) {
-      sendInternalError("getInvoice", error, res);
+      sendInternalError("invoice.controller.getInvoice", error, res);
     }
   };
 }
