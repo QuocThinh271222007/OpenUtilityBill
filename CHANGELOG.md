@@ -4,6 +4,54 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Database access foundation: added `postgres` (Postgres.js) as the
+  PostgreSQL client — no ORM/query-builder. `backend/src/database/`:
+  `postgres-client.ts` (single cached application-level client, no
+  custom connection pool), `transaction.ts` (`runInTransaction`, a
+  `Result`-returning wrapper around `sql.begin()` proven to roll back on
+  failure and commit on success), `database.types.ts`. Fail-fast
+  `DATABASE_URL` loading in `backend/src/config/database.config.ts`.
+- Read-only Repository layer (`backend/src/repositories/`): interfaces
+  (`RoomRepository`, `MeterReadingRepository`,
+  `ElectricityTariffRepository`, `WaterTariffRepository`,
+  `InvoiceRepository`) with Postgres implementations under
+  `repositories/postgres/`. Explicit, hand-written row-to-domain-model
+  mapping (no automatic mapping library); parameterized queries only
+  (zero `sql.unsafe` usage); tariff lookup fails clearly
+  (`AMBIGUOUS_TARIFF_CONFIGURATION`) rather than guessing when more than
+  one tariff version matches a billing period, since the schema does not
+  prevent overlapping effective-date ranges. `PropertyRepository` and
+  write operations (invoice creation) are deliberately not implemented —
+  no current use case needs them yet.
+- Verified (source + official docs + a live-database integration test)
+  that Postgres.js returns both `NUMERIC` and `BIGINT` as exact decimal
+  strings by default, with zero custom type configuration — matching
+  the project's precision contract without introducing any risk of
+  floating-point coercion.
+- Changed all domain model ID fields (`RentalProperty.id`, `Room.id`,
+  `Room.propertyId`, and every other `id`/`...Id` field across
+  `backend/src/modules/*/*.model.ts`) from `number` to `string`, since
+  every `id` column is `BIGINT` and a JS `number` cannot safely
+  represent every possible `BIGINT` value. This matches Postgres.js's
+  own default `BIGINT` handling, so no conversion happens in the
+  Repository layer. Non-identity `INTEGER` columns (`tenantCount`,
+  `tierNumber`, etc.) are unaffected.
+- `docs/DATABASE_ACCESS.md`: Postgres.js vs. ORM, the Repository
+  boundary, parameterized queries, connection lifecycle, transactions,
+  the `NUMERIC`/`BIGINT` precision boundary, error translation, and what
+  must vs. must not be treated as secret.
+- Unit tests (no live database required) for config loading, row
+  mapping, and error-semantics for every Repository; integration tests
+  (`*.integration.test.ts`) for `NUMERIC`/`BIGINT` round-tripping,
+  transaction rollback/commit, and repository reads against seeded data
+  — these `skip` (not fail) when `DATABASE_URL` is unset.
+
+No CRUD, `CreateInvoiceService`, REST billing endpoints, or frontend
+work are included in this change — see `docs/DATABASE_ACCESS.md`
+"Deliberately deferred".
+
 ### Fixed
 
 - Closed a precision mismatch between Calculation Core and the database:

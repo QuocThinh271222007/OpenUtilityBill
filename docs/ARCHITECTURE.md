@@ -102,11 +102,18 @@ Route            (backend/src/modules/<module>/<module>.routes.ts)
 Controller       (backend/src/modules/<module>/<module>.controller.ts)
  ↓
 Service / Orchestrator   (backend/src/modules/<module>/<module>.service.ts)
- ├── Business Module (future: calculation core, pure functions)
- └── Repository (future)
+ ├── Calculation Core (implemented, pure functions — backend/src/calculation/)
+ └── Repository (implemented for reads — backend/src/repositories/)
           ↓
        PostgreSQL (Supabase)
 ```
+
+Note: the Route → Controller → Service chain above is still the intended
+shape for a future domain endpoint (e.g. rooms, invoices) — no such
+Controller/Service exists yet for those domains. Calculation Core and
+the Repository layer are implemented and independently tested; they are
+not yet wired to a Controller/Service, since no CRUD/API task has run
+yet (see `docs/CALCULATION_CORE.md`, `docs/DATABASE_ACCESS.md`).
 
 Concrete example implemented in this foundation — the health check:
 
@@ -157,12 +164,19 @@ Service layer.
 ## 6. Database boundary
 
 - The database is PostgreSQL, hosted by Supabase.
-- Access is direct SQL (no ORM) — see `docs/LEARNING_NOTES.md` for why.
-- All database access is isolated behind Repository modules
-  (`backend/src/modules/<module>/<module>.repository.ts`, added when a
-  module actually needs persistence). Controllers and Services never
-  import a database client directly.
-- No schema is defined yet — see `database/README.md`.
+- Access is direct SQL via the **Postgres.js** client (no ORM) — see
+  `docs/LEARNING_NOTES.md` and `docs/DATABASE_ACCESS.md` for why.
+- All database access is isolated behind Repository interfaces
+  (`backend/src/repositories/*.repository.ts`) with Postgres
+  implementations under `backend/src/repositories/postgres/`. Controllers
+  and Services never import Postgres.js directly, and Calculation Core
+  never imports database code at all.
+- The connection adapter (`backend/src/database/postgres-client.ts`) and
+  the transaction boundary (`backend/src/database/transaction.ts`) are
+  the only places a Postgres.js client is created — see
+  `docs/DATABASE_ACCESS.md`.
+- Schema: `database/migrations/001_initial_domain_schema.sql` and
+  `002_preserve_invoice_item_precision.sql` — see `database/README.md`.
 
 ## 7. Why modules are intentionally small
 

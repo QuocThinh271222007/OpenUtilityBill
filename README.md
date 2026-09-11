@@ -45,7 +45,7 @@ Full details: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 | Frontend | HTML5, TypeScript, Vite, Bootstrap |
 | Backend | Node.js, TypeScript, Express |
 | API | REST, JSON, versioned under `/api/v1` |
-| Database | PostgreSQL, hosted by Supabase (direct SQL, no ORM) |
+| Database | PostgreSQL, hosted by Supabase (direct SQL via Postgres.js, no ORM) |
 | Source control | Git, Conventional Commits |
 
 See [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) for the exact
@@ -73,20 +73,31 @@ every financial value, with no database or HTTP dependency. See
 [`docs/CALCULATION_CORE.md`](docs/CALCULATION_CORE.md) and
 [`docs/NUMERIC_PRECISION.md`](docs/NUMERIC_PRECISION.md).
 
-CRUD (Controllers/Services/Repositories), a live Supabase connection
-from the backend, invoice persistence, and billing UI screens still do
-not exist — these are separate, later, reviewable tasks.
+A persistence foundation now exists: a Postgres.js database adapter and
+transaction boundary (`backend/src/database/`), and read-only Repository
+implementations for `Room`, `MeterReading`, `ElectricityTariff` (with its
+tiers), `WaterTariff`, and `Invoice` existence checks
+(`backend/src/repositories/`) — all parameterized SQL, no ORM, `NUMERIC`
+and `BIGINT` preserved as exact strings end to end. See
+[`docs/DATABASE_ACCESS.md`](docs/DATABASE_ACCESS.md).
+
+Full CRUD, a `CreateInvoice` workflow, REST billing endpoints, and
+billing UI screens still do not exist — these are separate, later,
+reviewable tasks. No route or Controller calls the database yet.
 
 ## Repository structure
 
 ```
 OpenUtilityBill/
   backend/     Node.js + TypeScript + Express REST API, domain models,
-               Calculation Core (backend/src/calculation/)
+               Calculation Core (backend/src/calculation/), database
+               adapter (backend/src/database/), and Repository layer
+               (backend/src/repositories/)
   frontend/    Vite + TypeScript + Bootstrap client
-  database/    PostgreSQL schema (migrations/) and seed data (seeds/)
-  docs/        Architecture, domain model, database, calculation, and
-               learning docs
+  database/    PostgreSQL schema (migrations/), seed data (seeds/), and
+               runtime validation SQL (validation/)
+  docs/        Architecture, domain model, database access, calculation,
+               and learning docs
 ```
 
 ## Quick start
@@ -113,6 +124,9 @@ and typecheck commands for both `backend/` and `frontend/`.
   calculation pipeline, module responsibilities, fail-fast design.
 - [`docs/NUMERIC_PRECISION.md`](docs/NUMERIC_PRECISION.md) — why exact
   `BigInt`-based rational arithmetic is used instead of floating-point.
+- [`docs/DATABASE_ACCESS.md`](docs/DATABASE_ACCESS.md) — Postgres.js,
+  the Repository boundary, parameterized queries, transactions, and the
+  `NUMERIC`/`BIGINT` precision boundary at the database adapter.
 - [`database/README.md`](database/README.md) — schema/seed files and how
   to run them.
 
@@ -123,5 +137,6 @@ MIT — see [`LICENSE`](LICENSE).
 Calculation Core implements the official competition billing rules
 (meter usage, tiered/fallback electricity, water, invoice totals) and is
 covered by automated tests against the official published test cases
-(`cd backend && npm test`). CRUD, a live Supabase connection, and
+(`cd backend && npm test`). A read-only Repository layer over Postgres.js
+exists and is unit-tested; full CRUD, a `CreateInvoice` workflow, and
 billing UI screens are not implemented yet.

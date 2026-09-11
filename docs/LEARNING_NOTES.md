@@ -87,6 +87,25 @@ Viết SQL trực tiếp (thay vì Prisma/Sequelize/Drizzle) giúp:
 Nếu sau này project lớn lên và việc viết SQL tay trở nên lặp lại quá
 nhiều, đây sẽ là quyết định được xem xét lại — nhưng không phải bây giờ.
 
+### Vì sao Postgres.js (thay vì `pg`, hay một ORM)
+
+Dự án dùng package `postgres` ("Postgres.js") làm CLIENT PostgreSQL —
+không phải ORM, chỉ mở kết nối và gửi đúng câu SQL đã viết. Hai lý do cụ
+thể:
+
+1. Cú pháp tagged template (`` sql`SELECT ... WHERE id = ${id}` ``) tham
+   số hoá giá trị AN TOÀN mà vẫn đọc như một câu SQL bình thường, không
+   cần gọi `.query(text, [params])` với chỉ số vị trí ($1, $2, ...) như
+   client `pg` truyền thống — dễ đọc, dễ đối chiếu với SQL trong
+   migration.
+2. Đã KIỂM CHỨNG (không suy đoán) rằng Postgres.js trả về cả `NUMERIC`
+   lẫn `BIGINT` dưới dạng `string` theo MẶC ĐỊNH — đúng với ranh giới
+   chính xác tuyệt đối mà dự án đã chọn cho tiền/kWh/ID (xem
+   docs/DATABASE_ACCESS.md mục "NUMERIC/BIGINT precision boundary").
+
+Chi tiết đầy đủ về Repository boundary, transaction, và ranh giới chính
+xác số học ở tầng database: xem `docs/DATABASE_ACCESS.md`.
+
 ## Vì sao Modular Monolith, không phải Microservices
 
 Xem chi tiết trong `docs/ARCHITECTURE.md` mục 1. Tóm tắt: microservices

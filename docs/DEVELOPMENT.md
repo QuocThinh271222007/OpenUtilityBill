@@ -30,7 +30,7 @@ cp .env.example .env   # edit values if needed; PORT defaults to 3000
 | `npm run typecheck` | Run `tsc --noEmit` — type-check without emitting files. |
 | `npm run build` | Compile TypeScript to `backend/dist/`. |
 | `npm start` | Run the compiled server (`node dist/server.js`). Requires `npm run build` first. |
-| `npm test` | Run Calculation Core's unit tests (Node's built-in `node:test` runner, executed via `tsx` — no Jest/Vitest/Mocha). Covers `backend/src/calculation/**/*.test.ts`, including the official competition test cases. |
+| `npm test` | Run all backend tests (Node's built-in `node:test` runner, executed via `tsx` — no Jest/Vitest/Mocha). Covers `backend/src/**/*.test.ts`: Calculation Core (including the official competition test cases), database config/adapter unit tests, and Repository row-mapping/error-semantics unit tests. Tests that need a real PostgreSQL connection (`*.integration.test.ts`) auto-**skip** (not fail) when `DATABASE_URL` is unset. |
 
 Verify it works:
 
@@ -60,16 +60,23 @@ be running (`npm run dev` in `backend/`, in a separate terminal).
 - Backend environment variables are documented in `backend/.env.example`.
   Copy it to `backend/.env` and edit locally — `.env` is git-ignored and
   must never be committed.
-- No database connection is required to run the current foundation
-  (health endpoint does not touch PostgreSQL/Supabase). `DATABASE_URL` is
-  reserved for future work — see `database/README.md`.
+- `DATABASE_URL` is required to run anything that touches the database
+  (the Repository layer, `npm run dev`/`start` if a route ever calls a
+  Repository, and the `*.integration.test.ts` tests). The health
+  endpoint (`GET /api/v1/health`) still does **not** touch the database
+  and works with no `DATABASE_URL` set — see `docs/DATABASE_ACCESS.md`.
+  Never put a real Supabase connection string in a committed file.
 
 ## Repository layout
 
 ```
 OpenUtilityBill/
-  backend/     Node.js + TypeScript + Express REST API
+  backend/     Node.js + TypeScript + Express REST API,
+               domain models, Calculation Core, database adapter
+               and Repository layer
   frontend/    Vite + TypeScript + Bootstrap client
-  database/    Future PostgreSQL schema/migrations (Supabase-hosted)
-  docs/        Architecture, error handling, and learning documentation
+  database/    PostgreSQL schema (migrations/), seed data (seeds/),
+               and runtime validation SQL (validation/) — Supabase-hosted
+  docs/        Architecture, database access, calculation, and
+               learning documentation
 ```
