@@ -2,9 +2,10 @@
 
 import { Result, ok, fail } from "../../shared/result";
 import { logDatabaseError } from "../../database/postgres-client";
+import { isUniqueViolation } from "../../database/unique-violation";
 import type { DatabaseExecutor } from "../../database/database.types";
 import { MeterReading, UtilityType } from "../../modules/meter-reading/meter-reading.model";
-import { MeterReadingRepository } from "../meter-reading.repository";
+import { MeterReadingRepository, NewMeterReading, UpdateMeterReading } from "../meter-reading.repository";
 
 /**
  * Responsibility:
@@ -71,6 +72,118 @@ export class PostgresMeterReadingRepository implements MeterReadingRepository {
     } catch (error) {
       logDatabaseError("PostgresMeterReadingRepository.findByRoomPeriodAndUtility", error);
       return fail("DATABASE_READ_FAILED", "Không thể đọc dữ liệu meter reading từ database.");
+    }
+  }
+
+  async findById(id: string): Promise<Result<MeterReading>> {
+    try {
+      const rows = await this.sql<MeterReadingRow[]>`
+        SELECT id, room_id, billing_period, utility_type,
+               previous_reading, current_reading, meter_maximum_value, created_at
+        FROM meter_readings
+        WHERE id = ${id}
+      `;
+      if (rows.length === 0) {
+        return fail("METER_READING_NOT_FOUND", `Không tìm thấy meter reading với id = ${id}.`);
+      }
+      return ok(mapMeterReadingRow(rows[0]));
+    } catch (error) {
+      logDatabaseError("PostgresMeterReadingRepository.findById", error);
+      return fail("DATABASE_READ_FAILED", "Không thể đọc dữ liệu meter reading từ database.");
+    }
+  }
+
+  async listByRoom(roomId: string, billingPeriod?: Date): Promise<Result<MeterReading[]>> {
+    try {
+      const rows =
+        billingPeriod === undefined
+          ? await this.sql<MeterReadingRow[]>`
+              SELECT id, room_id, billing_period, utility_type,
+                     previous_reading, current_reading, meter_maximum_value, created_at
+              FROM meter_readings
+              WHERE room_id = ${roomId}
+              ORDER BY billing_period DESC, utility_type ASC, id ASC
+            `
+          : await this.sql<MeterReadingRow[]>`
+              SELECT id, room_id, billing_period, utility_type,
+                     previous_reading, current_reading, meter_maximum_value, created_at
+              FROM meter_readings
+              WHERE room_id = ${roomId} AND billing_period = ${billingPeriod}
+              ORDER BY billing_period DESC, utility_type ASC, id ASC
+            `;
+      return ok(rows.map(mapMeterReadingRow));
+    } catch (error) {
+      logDatabaseError("PostgresMeterReadingRepository.listByRoom", error);
+      return fail("DATABASE_READ_FAILED", "Không thể đọc lịch sử meter reading từ database.");
+    }
+  }
+
+  /** Failure: `METER_READING_ALREADY_EXISTS` khi vi phạm `UNIQUE(room_id, billing_period, utility_type)` (SQLSTATE 23505). */
+  async create(input: NewMeterReading): Promise<Result<MeterReading>> {
+    try {
+      const rows = await this.sql<MeterReadingRow[]>`
+        INSERT INTO meter_readings (
+          room_id, billing_period, utility_type, previous_reading, current_reading, meter_maximum_value
+        ) VALUES (
+          ${input.roomId}, ${input.billingPeriod}, ${input.utilityType},
+          ${input.previousReading}, ${input.currentReading}, ${input.meterMaximumValue}
+        )
+        RETURNING id, room_id, billing_period, utility_type, previous_reading, current_reading, meter_maximum_value, created_at
+      `;
+      return ok(mapMeterReadingRow(rows[0]));
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        return fail(
+          "METER_READING_ALREADY_EXISTS",
+          `Meter reading cho room ${input.roomId}, kỳ ${input.billingPeriod.toISOString().slice(0, 10)}, loại ${input.utilityType} đã tồn tại.`
+        );
+      }
+      logDatabaseError("PostgresMeterReadingRepository.create", error);
+      return fail("DATABASE_WRITE_FAILED", "Không thể ghi dữ liệu meter reading vào database.");
+    }
+  }
+
+  /** Full replacement — xem `UpdateMeterReading` (meter-reading.repository.ts) cho lý do. */
+  async update(id: string, input: UpdateMeterReading): Promise<Result<MeterReading>> {
+    try {
+      const rows = await this.sql<MeterReadingRow[]>`
+        UPDATE meter_readings SET
+          room_id = ${input.roomId},
+          billing_period = ${input.billingPeriod},
+          utility_type = ${input.utilityType},
+          previous_reading = ${input.previousReading},
+          current_reading = ${input.currentReading},
+          meter_maximum_value = ${input.meterMaximumValue}
+        WHERE id = ${id}
+        RETURNING id, room_id, billing_period, utility_type, previous_reading, current_reading, meter_maximum_value, created_at
+      `;
+      if (rows.length === 0) {
+        return fail("METER_READING_NOT_FOUND", `Không tìm thấy meter reading với id = ${id}.`);
+      }
+      return ok(mapMeterReadingRow(rows[0]));
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        return fail(
+          "METER_READING_ALREADY_EXISTS",
+          `Meter reading cho room ${input.roomId}, kỳ ${input.billingPeriod.toISOString().slice(0, 10)}, loại ${input.utilityType} đã tồn tại.`
+        );
+      }
+      logDatabaseError("PostgresMeterReadingRepository.update", error);
+      return fail("DATABASE_WRITE_FAILED", "Không thể cập nhật dữ liệu meter reading vào database.");
+    }
+  }
+
+  async isReferencedByInvoice(id: string): Promise<Result<boolean>> {
+    try {
+      const rows = await this.sql`
+        SELECT 1 FROM invoices
+        WHERE electricity_reading_id = ${id} OR water_reading_id = ${id}
+        LIMIT 1
+      `;
+      return ok(rows.length > 0);
+    } catch (error) {
+      logDatabaseError("PostgresMeterReadingRepository.isReferencedByInvoice", error);
+      return fail("DATABASE_READ_FAILED", "Không thể kiểm tra meter reading có đang được invoice tham chiếu hay không.");
     }
   }
 }
