@@ -117,8 +117,11 @@ value is handled as a `string` end to end, matching the backend's own
 by string manipulation, never by converting through a JS `number`. See
 [`docs/FRONTEND.md`](docs/FRONTEND.md).
 
-Authentication, roles, an admin UI, and a production deployment still
-do not exist — these are separate, later, reviewable tasks.
+The mandatory management UI, including electricity/water tariff
+configuration, is implemented (see above). Authentication, role-based
+authorization, a separate role-gated admin/user area, and a production
+deployment are not implemented — these are separate, later, reviewable
+tasks.
 
 ## Repository structure
 
@@ -204,5 +207,7 @@ readback together transactionally; the full mandatory REST API (invoice
 workflow plus property/room/meter-reading/tariff management) exposes
 that through real endpoints (see `docs/API.md`, `docs/MANAGEMENT_API.md`);
 and a Vite + TypeScript + Bootstrap browser UI (`docs/FRONTEND.md`)
-consumes that API end to end for the full mandatory workflow. DELETE,
-authentication, and a production deployment are not implemented yet.
+consumes that API end to end for the full mandatory workflow, including
+the mandatory tariff-configuration management UI. DELETE, authentication,
+role-based authorization, and a production deployment are not
+implemented yet.

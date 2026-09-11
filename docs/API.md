@@ -278,7 +278,9 @@ at module-import time. This means:
 ## What is not implemented
 
 DELETE for any resource (by design — see `docs/MANAGEMENT_API.md` "No
-DELETE endpoints"), authentication, roles, an admin UI, and any
-frontend screen consuming this API. Property/Room/MeterReading/Tariff
+DELETE endpoints"), authentication, role-based authorization, and a
+separate role-gated admin/user area. Property/Room/MeterReading/Tariff
 management (list/create/update) **is** implemented — see
-`docs/MANAGEMENT_API.md`.
+`docs/MANAGEMENT_API.md` — and a full mandatory browser UI now consumes
+this API end to end, including tariff configuration — see
+`docs/FRONTEND.md`.
