@@ -26,18 +26,21 @@ schema is correct" — see below.
 database/
   migrations/
     001_initial_domain_schema.sql          Tables, constraints, relationships
+    002_preserve_invoice_item_precision.sql  Widen invoice_items.quantity/amount to unconstrained NUMERIC
   seeds/
     001_competition_defaults.sql           Official competition default tariffs
   validation/
     001_domain_success_validation.sql      One run: schema/seed check + valid-data proof
     002_domain_constraint_validation.sql   One block at a time: constraint rejection proof
     003_validation_cleanup.sql             Safety net: delete only VALIDATION_* rows
+    004_invoice_item_precision_validation.sql  One run: proves quantity/amount preserve >2 decimal places
 ```
 
 ## Running these files (once a real Supabase database is available)
 
 ```bash
 psql "$DATABASE_URL" -f database/migrations/001_initial_domain_schema.sql
+psql "$DATABASE_URL" -f database/migrations/002_preserve_invoice_item_precision.sql
 psql "$DATABASE_URL" -f database/seeds/001_competition_defaults.sql
 ```
 
@@ -76,13 +79,15 @@ the Supabase project's own SQL Editor:
 2. Open **SQL Editor** in the Supabase dashboard.
 3. Paste and run `database/migrations/001_initial_domain_schema.sql`.
    Expect: **PASS** (success, no errors).
-4. Paste and run `database/seeds/001_competition_defaults.sql`.
+4. Paste and run `database/migrations/002_preserve_invoice_item_precision.sql`.
    Expect: **PASS**.
-5. Paste and run `database/validation/001_domain_success_validation.sql`
+5. Paste and run `database/seeds/001_competition_defaults.sql`.
+   Expect: **PASS**.
+6. Paste and run `database/validation/001_domain_success_validation.sql`
    **completely, in one execution**. Expect: **PASS** on every statement
    — read each `-- Kỳ vọng:` comment and compare against the actual
    result. Any error here means an actual problem, not an expected one.
-6. Open `database/validation/002_domain_constraint_validation.sql` and
+7. Open `database/validation/002_domain_constraint_validation.sql` and
    run blocks `D1` through `D18` **one at a time**, in order or in any
    order — they don't depend on each other. For each block: select just
    that block's SQL (from its `-- ====` header down to its final
@@ -90,22 +95,27 @@ the Supabase project's own SQL Editor:
    returned against the block's `-- Kỳ vọng: FAIL — ...` comment. **A
    constraint error here is the test passing, not failing.** Fill in the
    PASS/FAIL checklist near the top of that file as you go.
-7. Optionally run `database/validation/003_validation_cleanup.sql` as a
+8. Paste and run `database/validation/004_invoice_item_precision_validation.sql`
+   **completely, in one execution** (no intentional errors, same model
+   as step 6). Expect: `quantity_text` = `'62.5125'` and `amount_text` =
+   `'124025.123456'` **exactly**, proving migration 002 actually
+   prevents silent rounding on real PostgreSQL, not just on paper.
+9. Optionally run `database/validation/003_validation_cleanup.sql` as a
    safety net — it only deletes rows whose name starts with
-   `VALIDATION_SUCCESS_` or `VALIDATION_CONSTRAINT_`, and never touches
-   `Competition Default ...` rows. Under normal conditions (steps 5–6
-   run as documented) it will find nothing to delete, since neither
-   validation file ever issues `COMMIT`.
-8. To prove seed idempotency: run `database/seeds/001_competition_defaults.sql`
-   a second time (expect: **PASS**, no error), then re-run the
-   "B. Competition seed verification" queries in
-   `001_domain_success_validation.sql` — every count must be unchanged
-   (1 electricity tariff, 6 tiers, 1 water tariff), proving the second
-   run created no duplicates.
-9. **Never** paste a real connection string, database password, or
-   Supabase service-role/anon key into any file in this repository —
-   only run these files directly inside the Supabase SQL Editor, where
-   credentials are handled by Supabase itself, not typed into a file.
+   `VALIDATION_SUCCESS_`, `VALIDATION_CONSTRAINT_`, or
+   `VALIDATION_PRECISION_`, and never touches `Competition Default ...`
+   rows. Under normal conditions (steps 6–8 run as documented) it will
+   find nothing to delete, since no validation file ever issues `COMMIT`.
+10. To prove seed idempotency: run `database/seeds/001_competition_defaults.sql`
+    a second time (expect: **PASS**, no error), then re-run the
+    "B. Competition seed verification" queries in
+    `001_domain_success_validation.sql` — every count must be unchanged
+    (1 electricity tariff, 6 tiers, 1 water tariff), proving the second
+    run created no duplicates.
+11. **Never** paste a real connection string, database password, or
+    Supabase service-role/anon key into any file in this repository —
+    only run these files directly inside the Supabase SQL Editor, where
+    credentials are handled by Supabase itself, not typed into a file.
 
 ### Why not one big file with `SAVEPOINT`
 

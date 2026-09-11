@@ -1,0 +1,85 @@
+-- SPDX-License-Identifier: MIT
+
+-- ============================================================
+-- Preserve exact invoice-item intermediate precision
+-- ============================================================
+--
+-- Responsibility:
+-- Nới rộng invoice_items.quantity và invoice_items.amount từ
+-- NUMERIC(p, s) có scale cố định sang NUMERIC không giới hạn scale, để
+-- database KHÔNG BAO GIỜ làm tròn giá trị chính xác mà Calculation Core
+-- đã tính (xem backend/src/calculation/, docs/NUMERIC_PRECISION.md).
+--
+-- Does NOT:
+-- - sửa database/migrations/001_initial_domain_schema.sql. Migration đó
+--   đã được chứng minh chạy được trên PostgreSQL thật (xem
+--   database/validation/); đây là migration TIẾP THEO, không phải viết
+--   lại lịch sử.
+-- - thay đổi invoice_items.unit_price, invoices.calculated_total, hay
+--   invoices.actual_charged_amount — xem "Vì sao KHÔNG đổi các cột
+--   khác" bên dưới.
+-- - chuyển đổi dữ liệu phá huỷ. Thu hẹp phạm vi scale KHÔNG xảy ra ở
+--   đây — NUMERIC(p, s) -> NUMERIC (không giới hạn) là một phép NỚI
+--   RỘNG: mọi giá trị hợp lệ trong cột cũ vẫn là giá trị hợp lệ, giữ
+--   NGUYÊN VẸN, trong cột mới. Không có hàng nào bị mất hay bị làm
+--   tròn bởi chính migration này.
+--
+-- ------------------------------------------------------------
+-- Vì sao NUMERIC(12, 2)/NUMERIC(14, 2) không an toàn cho quantity/amount
+-- ------------------------------------------------------------
+-- Calculation Core CỐ Ý giữ nguyên độ chính xác trung gian — ngưỡng bậc
+-- thang được nhân với quotaFactor mà KHÔNG làm tròn (xem
+-- docs/NUMERIC_PRECISION.md). Ví dụ minh hoạ:
+--
+--   ngưỡng bậc gốc: 50.01 kWh
+--   quota:          1.25
+--   ngưỡng đã điều chỉnh (quantity của dòng invoice_item):
+--     50.01 * 1.25 = 62.5125
+--
+-- NUMERIC(12, 2) chỉ giữ được 2 chữ số thập phân — nó sẽ ÂM THẦM làm
+-- tròn 62.5125 thành 62.51, phá vỡ chính nguyên tắc "không làm tròn giá
+-- trị trung gian" mà Calculation Core được thiết kế để bảo vệ. Tương
+-- tự, amount = quantity * unit_price có thể cần NHIỀU HƠN 2 chữ số thập
+-- phân bất cứ khi nào quantity không phải số nguyên/2-chữ-số (ví dụ
+-- 62.5125 * 1984.12 = 124.032,xxxxxx với nhiều chữ số thập phân). Đây
+-- là lỗi ĐÚNG/SAI (correctness bug), không phải vấn đề hiển thị — số
+-- tiền lưu trong database có thể khác với số tiền Calculation Core đã
+-- tính, dù cả hai đều "đúng" theo logic riêng của chúng.
+--
+-- Lưu ý: bộ dữ liệu MẶC ĐỊNH của kỳ thi hiện tại
+-- (database/seeds/001_competition_defaults.sql) dùng ngưỡng bậc là số
+-- nguyên (50, 100), nên rủi ro này KHÔNG xuất hiện với cấu hình mặc
+-- định. Nhưng schema phải đúng với MỌI cấu hình hợp lệ mà CHECK
+-- constraint hiện tại cho phép (threshold_kwh > 0, không giới hạn số
+-- chữ số thập phân) — xem docs/DATABASE_DESIGN.md.
+--
+-- ------------------------------------------------------------
+-- Vì sao KHÔNG đổi unit_price, calculated_total, actual_charged_amount
+-- ------------------------------------------------------------
+-- invoice_items.unit_price là một BẢN SAO CHỤP (snapshot) trực tiếp từ
+-- một cột đã có scale cố định sẵn ở nguồn —
+-- electricity_tariff_tiers.unit_price hoặc water_tariffs.price_per_*,
+-- cả hai đều NUMERIC(14, 2) (xem migration 001). Vì unit_price KHÔNG
+-- bao giờ được TÍNH TOÁN thêm trước khi lưu (nó chỉ được sao chép
+-- nguyên văn từ cấu hình tariff), nó không thể có nhiều hơn 2 chữ số
+-- thập phân bất kể quota/threshold là bao nhiêu — nới rộng cột này sẽ
+-- không bảo vệ thêm giá trị nào, chỉ thêm một cột "không giới hạn"
+-- không có lý do cụ thể (đi ngược nguyên tắc "không đổi cột chỉ vì đối
+-- xứng" của task này).
+--
+-- invoices.calculated_total và invoices.actual_charged_amount là SỐ
+-- TIỀN VNĐ CUỐI CÙNG, đã qua bước half-up rounding — đây là mối quan
+-- tâm khác hẳn với việc bảo toàn giá trị TRUNG GIAN chưa làm tròn. Theo
+-- đúng nguyên tắc "chỉ làm tròn một lần, ở tổng cuối cùng"
+-- (docs/NUMERIC_PRECISION.md), các cột này ĐÚNG RA phải là số nguyên
+-- VNĐ — NUMERIC(14, 2) hiện tại đã đủ (thực chất luôn lưu .00). Không
+-- có yêu cầu cụ thể nào đòi hỏi thay đổi các cột này trong corrective
+-- này; thay đổi mà không có nhu cầu chứng minh được sẽ vi phạm nguyên
+-- tắc "không đổi migration lịch sử/không đổi cột chỉ vì đối xứng".
+
+BEGIN;
+
+ALTER TABLE invoice_items ALTER COLUMN quantity TYPE NUMERIC;
+ALTER TABLE invoice_items ALTER COLUMN amount TYPE NUMERIC;
+
+COMMIT;
