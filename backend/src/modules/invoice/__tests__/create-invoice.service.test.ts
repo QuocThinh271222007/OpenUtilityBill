@@ -450,8 +450,78 @@ test("CreateInvoiceService: createInvoiceItems thất bại sau khi createInvoic
   // createInvoice ĐÃ được gọi (và "thành công" ở fake này) — bằng chứng
   // ROLLBACK THẬT (transaction thật không để lại invoice mồ côi) được
   // chứng minh RIÊNG bởi integration test chạy trên PostgreSQL thật
-  // (__tests__/create-invoice.transaction.integration.test.ts), KHÔNG
-  // phải bởi fake này — fake chỉ chứng minh Service KHÔNG tự ý trả
-  // thành công khi write phase thất bại.
+  // (backend/src/repositories/__tests__/postgres-invoice-unit-of-work.integration.test.ts),
+  // KHÔNG phải bởi fake này — fake chỉ chứng minh Service KHÔNG tự ý
+  // trả thành công khi write phase thất bại.
   assert.equal(invoiceRepository.createInvoiceCalls.length, 1);
+});
+
+// ---- actualChargedAmount scale corrective (NUMERIC(14,2) persistence contract) ----
+
+test("CreateInvoiceService: actualChargedAmount với hơn 2 chữ số thập phân -> VALIDATION_ERROR TRƯỚC roomRepository.findById, không đọc/ghi gì", async () => {
+  const { service, roomRepository, invoiceRepository } = buildService({
+    readings: { ELECTRICITY: electricityReading("0", "120"), WATER: waterMeterReading("0", "10") },
+  });
+
+  const result = await service.execute(baseInput({ actualChargedAmount: "367000.123456" }));
+
+  assert.equal(result.success, false);
+  if (result.success) return;
+  assert.equal(result.error.code, "VALIDATION_ERROR");
+  assert.equal(roomRepository.calls.length, 0, "phải fail TRƯỚC khi đọc Room");
+  assert.equal(invoiceRepository.createInvoiceCalls.length, 0);
+});
+
+test("CreateInvoiceService: actualChargedAmount 13 chữ số phần nguyên (vượt NUMERIC(14,2)) -> VALIDATION_ERROR", async () => {
+  const { service } = buildService();
+  const result = await service.execute(baseInput({ actualChargedAmount: "1000000000000" }));
+  assert.equal(result.success, false);
+  if (result.success) return;
+  assert.equal(result.error.code, "VALIDATION_ERROR");
+});
+
+test("CreateInvoiceService: actualChargedAmount âm -> VALIDATION_ERROR", async () => {
+  const { service } = buildService();
+  const result = await service.execute(baseInput({ actualChargedAmount: "-1" }));
+  assert.equal(result.success, false);
+  if (result.success) return;
+  assert.equal(result.error.code, "VALIDATION_ERROR");
+});
+
+test("CreateInvoiceService: actualChargedAmount không phải số -> VALIDATION_ERROR", async () => {
+  const { service } = buildService();
+  const result = await service.execute(baseInput({ actualChargedAmount: "abc" }));
+  assert.equal(result.success, false);
+  if (result.success) return;
+  assert.equal(result.error.code, "VALIDATION_ERROR");
+});
+
+test("CreateInvoiceService: actualChargedAmount đúng scale 2 ('367000.12') -> được chấp nhận, lưu ĐÚNG NGUYÊN VĂN", async () => {
+  const { service, invoiceRepository } = buildService({
+    readings: { ELECTRICITY: electricityReading("0", "120"), WATER: waterMeterReading("0", "10") },
+  });
+
+  const result = await service.execute(baseInput({ actualChargedAmount: "367000.12" }));
+
+  assert.equal(result.success, true);
+  if (!result.success) return;
+  assert.equal(invoiceRepository.createInvoiceCalls[0].actualChargedAmount, "367000.12");
+  // legalRoundedTotal = 366994 (xem happy-path A) -> difference = 367000.12 - 366994 = 6.12
+  assert.equal(result.data.billingDifference, "6.12");
+});
+
+test("CreateInvoiceService: actualChargedAmount là số nguyên không phần thập phân ('480000') -> được chấp nhận", async () => {
+  const { service } = buildService({
+    readings: { ELECTRICITY: electricityReading("0", "120"), WATER: waterMeterReading("0", "10") },
+  });
+  const result = await service.execute(baseInput({ actualChargedAmount: "480000" }));
+  assert.equal(result.success, true);
+});
+
+test("CreateInvoiceService: actualChargedAmount tối đa scale (12 chữ số nguyên + 2 thập phân) -> được chấp nhận", async () => {
+  const { service } = buildService({
+    readings: { ELECTRICITY: electricityReading("0", "120"), WATER: waterMeterReading("0", "10") },
+  });
+  const result = await service.execute(baseInput({ actualChargedAmount: "999999999999.99" }));
+  assert.equal(result.success, true);
 });

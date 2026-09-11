@@ -13,6 +13,7 @@ import { calculateBillingDifference } from "../../calculation/invoice/calculate-
 import { ElectricityTierInput, FallbackElectricityResult, TieredElectricityResult } from "../../calculation/types/calculation.types";
 import { buildInvoiceItemBreakdown } from "./build-invoice-item-breakdown";
 import { CreateInvoiceDependencies, CreateInvoiceInput, CreateInvoiceResult } from "./create-invoice.types";
+import { isFirstDayOfMonthUtc, isPositiveIntegerId, isValidActualChargedAmountScale } from "./invoice-input-validation";
 
 /**
  * Responsibility:
@@ -67,28 +68,6 @@ const ELECTRICITY_BILLING_METHODS: ReadonlySet<string> = new Set<ElectricityBill
 ]);
 const WATER_BILLING_METHODS: ReadonlySet<string> = new Set<WaterBillingMethod>(["PER_CUBIC_METER", "PER_PERSON"]);
 
-/**
- * roomId phải là chuỗi biểu diễn một BIGINT dương — KHÔNG BAO GIỜ
- * `Number(roomId)` (BIGINT có thể vượt quá `Number.MAX_SAFE_INTEGER`,
- * xem docs/DATABASE_ACCESS.md mục "BIGINT / ID boundary"). Kiểm tra
- * CHUỖI bằng regex thay vì parse ra số.
- */
-function isPositiveIntegerId(value: string): boolean {
-  return /^[1-9][0-9]*$/.test(value);
-}
-
-/**
- * `billingPeriod` phải là ngày đầu tiên của tháng (khớp CHECK
- * `EXTRACT(DAY FROM billing_period) = 1` ở migration 001). Dùng
- * `getUTCDate()`, KHÔNG dùng `getDate()` (local time) — tránh sai lệch
- * theo múi giờ máy chủ (xem docs/DATABASE_ACCESS.md mục "DATE boundary
- * — reviewed, not changed"; task này không đổi toàn bộ ranh giới DATE,
- * chỉ tránh method local-time ở nơi có thể).
- */
-function isFirstDayOfMonthUtc(date: Date): boolean {
-  return !Number.isNaN(date.getTime()) && date.getUTCDate() === 1;
-}
-
 interface ValidatedMethods {
   electricityBillingMethod: ElectricityBillingMethod;
   waterBillingMethod: WaterBillingMethod;
@@ -111,6 +90,20 @@ function validateCreateInvoiceInput(input: CreateInvoiceInput): Result<Validated
     return fail(
       "VALIDATION_ERROR",
       `waterBillingMethod không hợp lệ: "${input.waterBillingMethod}" (chỉ chấp nhận PER_CUBIC_METER hoặc PER_PERSON).`
+    );
+  }
+  // Corrective: actualChargedAmount sẽ được lưu vào invoices
+  // .actual_charged_amount NUMERIC(14, 2) — kiểm tra TRƯỚC bất kỳ
+  // repository read/write nào rằng giá trị vừa scale 2 mà KHÔNG bị
+  // PostgreSQL âm thầm làm tròn khi lưu (xem
+  // invoice-input-validation.ts cho lý do đầy đủ). Dùng VALIDATION_ERROR
+  // (không phải INVALID_ACTUAL_CHARGED_AMOUNT, vốn là mã lỗi của
+  // calculateBillingDifference cho một tình huống khác — parse thất
+  // bại/âm — xảy ra SAU bước đọc, không phải bước validate đầu vào này).
+  if (input.actualChargedAmount !== null && !isValidActualChargedAmountScale(input.actualChargedAmount)) {
+    return fail(
+      "VALIDATION_ERROR",
+      `actualChargedAmount không hợp lệ: "${input.actualChargedAmount}" (phải là chuỗi thập phân không âm, tối đa 12 chữ số nguyên và tối đa 2 chữ số thập phân, để lưu vừa NUMERIC(14, 2) mà không bị làm tròn).`
     );
   }
 
@@ -375,4 +368,4 @@ export class CreateInvoiceService {
 }
 
 /** Xuất riêng để unit-test validate input mà không cần dựng toàn bộ Service. */
-export const __testing = { validateCreateInvoiceInput, isPositiveIntegerId, isFirstDayOfMonthUtc };
+export const __testing = { validateCreateInvoiceInput };
