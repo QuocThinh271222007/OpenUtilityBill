@@ -6,11 +6,11 @@ respect. It complements
 [`docs/DOMAIN_MODEL.md`](DOMAIN_MODEL.md) and
 [`docs/DATABASE_DESIGN.md`](DATABASE_DESIGN.md).
 
-**No workflow code exists yet.** This document describes the *intended*
-transaction boundaries for Service-layer code that a future task will
-implement (`CreateInvoice`, tariff configuration, etc.) — see section 38
-of the domain/database foundation task brief for what is explicitly
-deferred.
+**`CreateInvoice` is now implemented** (section A below) —
+`CreateInvoiceService`, see `docs/CREATE_INVOICE_WORKFLOW.md` for the
+full read/calculate/write sequence. Tariff configuration (section C)
+and delete operations (section B) remain *intended* transaction
+boundaries for a future task — no such workflow exists yet.
 
 ## ACID, in the context of OpenUtilityBill
 
@@ -39,10 +39,12 @@ one of them succeeds.
 crash immediately afterward. This is provided by PostgreSQL itself (via
 Supabase); nothing in this project's code needs to implement it.
 
-## A. Create Invoice (future workflow)
+## A. Create Invoice
 
-**Not implemented in this task.** This is the intended transaction
-boundary for when the `CreateInvoice` Service workflow is built:
+**Implemented** — `CreateInvoiceService`
+(`backend/src/modules/invoice/create-invoice.service.ts`), see
+`docs/CREATE_INVOICE_WORKFLOW.md` for the full walkthrough. This is the
+actual transaction boundary it follows:
 
 ```
 BEGIN
@@ -63,8 +65,10 @@ BEGIN
      INVOICE_ALREADY_EXISTS error rather than only relying on the
      database UNIQUE constraint to reject the write.
 
-2. Run the calculation (Calculation Core — future task). This step reads
-   configuration and readings but does not write anything yet.
+2. Run the calculation (Calculation Core, `backend/src/calculation/`).
+   This step reads configuration and readings but does not write
+   anything yet — it runs entirely OUTSIDE the transaction (see
+   `docs/DATABASE_ACCESS.md` "Transactions" for why).
 
 3. Insert one row into `invoices`, snapshotting:
    - tenant_count_used (Room.tenantCount at this moment)
@@ -87,12 +91,22 @@ invoice that has a total but a missing or partial breakdown, or a
 breakdown pointing at an invoice that doesn't fully exist.
 
 **What happens when step 3 of 4 fails (concretely):** if inserting
-`invoice_items` fails partway through (e.g. a `CHECK` constraint
-violation on one row, or the connection drops), PostgreSQL rolls back
-the entire transaction — including the `invoices` row inserted in step
-3. The caller receives a failure `Result` (see
+`invoice_items` fails partway through (e.g. a `CHECK`/`UNIQUE`
+constraint violation on one row, or the connection drops), PostgreSQL
+rolls back the entire transaction — including the `invoices` row
+inserted in step 3, and any `invoice_items` rows already inserted
+before the failing one. The caller receives a failure `Result` (see
 `docs/ERROR_HANDLING.md`); no invoice row is left behind for the caller
-to accidentally treat as valid.
+to accidentally treat as valid. This exact scenario (a real
+`UNIQUE(invoice_id, display_order)` violation on the second
+`invoice_items` insert, after the first one already succeeded) has a
+`DATABASE_URL`-gated integration test proving it against real
+PostgreSQL —
+`backend/src/repositories/__tests__/postgres-invoice-unit-of-work.integration.test.ts`
+— see `docs/CREATE_INVOICE_WORKFLOW.md` for whether it has actually
+been executed in this repository's history so far (`TEST_IMPLEMENTED`
+vs. `TEST_RUNTIME_EXECUTED` — see `docs/DATABASE_ACCESS.md`
+"Transactions").
 
 ## B. Delete operations
 

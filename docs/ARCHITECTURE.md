@@ -103,17 +103,22 @@ Controller       (backend/src/modules/<module>/<module>.controller.ts)
  ↓
 Service / Orchestrator   (backend/src/modules/<module>/<module>.service.ts)
  ├── Calculation Core (implemented, pure functions — backend/src/calculation/)
- └── Repository (implemented for reads — backend/src/repositories/)
+ ├── Repository (implemented for reads, and writes for Invoice — backend/src/repositories/)
+ └── InvoiceUnitOfWork (implemented — backend/src/repositories/invoice-unit-of-work.ts,
+     wraps the transactional write path for CreateInvoice)
           ↓
        PostgreSQL (Supabase)
 ```
 
-Note: the Route → Controller → Service chain above is still the intended
-shape for a future domain endpoint (e.g. rooms, invoices) — no such
-Controller/Service exists yet for those domains. Calculation Core and
-the Repository layer are implemented and independently tested; they are
-not yet wired to a Controller/Service, since no CRUD/API task has run
-yet (see `docs/CALCULATION_CORE.md`, `docs/DATABASE_ACCESS.md`).
+Note: the Route → Controller chain above is still the intended shape for
+a future domain endpoint (e.g. rooms, invoices) — no such Route/
+Controller exists yet for those domains. Calculation Core, the
+Repository layer, and now one complete Service (`CreateInvoiceService`,
+`backend/src/modules/invoice/create-invoice.service.ts` — see
+`docs/CREATE_INVOICE_WORKFLOW.md`) are implemented and independently
+tested; `CreateInvoiceService` is not yet wired to a Controller/route,
+since no CRUD/API task has run yet (see `docs/CALCULATION_CORE.md`,
+`docs/DATABASE_ACCESS.md`).
 
 Concrete example implemented in this foundation — the health check:
 

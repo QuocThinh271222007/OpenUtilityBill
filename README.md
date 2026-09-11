@@ -74,16 +74,24 @@ every financial value, with no database or HTTP dependency. See
 [`docs/NUMERIC_PRECISION.md`](docs/NUMERIC_PRECISION.md).
 
 A persistence foundation now exists: a Postgres.js database adapter and
-transaction boundary (`backend/src/database/`), and read-only Repository
+transaction boundary (`backend/src/database/`), and Repository
 implementations for `Room`, `MeterReading`, `ElectricityTariff` (with its
-tiers), `WaterTariff`, and `Invoice` existence checks
-(`backend/src/repositories/`) — all parameterized SQL, no ORM, `NUMERIC`
-and `BIGINT` preserved as exact strings end to end. See
+tiers), `WaterTariff` (all read-only), and `Invoice` (read + write —
+`createInvoice`/`createInvoiceItems`) (`backend/src/repositories/`) —
+all parameterized SQL, no ORM, `NUMERIC` and `BIGINT` preserved as exact
+strings end to end. See
 [`docs/DATABASE_ACCESS.md`](docs/DATABASE_ACCESS.md).
 
-Full CRUD, a `CreateInvoice` workflow, REST billing endpoints, and
-billing UI screens still do not exist — these are separate, later,
-reviewable tasks. No route or Controller calls the database yet.
+The first complete write workflow is implemented:
+`CreateInvoiceService` (`backend/src/modules/invoice/`) orchestrates
+Room/MeterReading/Tariff reads, Calculation Core, and a transactional
+`InvoiceUnitOfWork` to persist an invoice and its full breakdown
+atomically, with race-condition-safe duplicate protection. See
+[`docs/CREATE_INVOICE_WORKFLOW.md`](docs/CREATE_INVOICE_WORKFLOW.md).
+
+Full CRUD for other domains, REST billing endpoints, and billing UI
+screens still do not exist — these are separate, later, reviewable
+tasks. No route or Controller calls the database yet.
 
 ## Repository structure
 
@@ -127,6 +135,9 @@ and typecheck commands for both `backend/` and `frontend/`.
 - [`docs/DATABASE_ACCESS.md`](docs/DATABASE_ACCESS.md) — Postgres.js,
   the Repository boundary, parameterized queries, transactions, and the
   `NUMERIC`/`BIGINT` precision boundary at the database adapter.
+- [`docs/CREATE_INVOICE_WORKFLOW.md`](docs/CREATE_INVOICE_WORKFLOW.md) —
+  the `CreateInvoiceService` sequence: reads, calculation, transactional
+  write, duplicate/race protection, invoice snapshot principle.
 - [`database/README.md`](database/README.md) — schema/seed files and how
   to run them.
 
@@ -137,6 +148,8 @@ MIT — see [`LICENSE`](LICENSE).
 Calculation Core implements the official competition billing rules
 (meter usage, tiered/fallback electricity, water, invoice totals) and is
 covered by automated tests against the official published test cases
-(`cd backend && npm test`). A read-only Repository layer over Postgres.js
-exists and is unit-tested; full CRUD, a `CreateInvoice` workflow, and
-billing UI screens are not implemented yet.
+(`cd backend && npm test`). A Repository layer over Postgres.js exists
+(read-only for Room/MeterReading/Tariff, read+write for Invoice) and a
+complete `CreateInvoiceService` workflow ties them together
+transactionally; full CRUD for other domains, REST billing endpoints,
+and billing UI screens are not implemented yet.

@@ -6,6 +6,57 @@ All notable changes to this project are documented in this file.
 
 ### Added
 
+- CreateInvoice workflow: the first complete Service/Orchestrator write
+  path, connecting Repository reads, Calculation Core, and transactional
+  invoice persistence. `CreateInvoiceService`
+  (`backend/src/modules/invoice/create-invoice.service.ts`) validates
+  input, loads Room/MeterReading/Tariff data, dispatches
+  QUOTA_TIERED/FALLBACK_TIER_FLAT electricity and
+  PER_CUBIC_METER/PER_PERSON water calculation, sums exact components
+  and rounds once for the final total, computes an optional
+  actual-charged-amount difference, and persists the invoice + its full
+  breakdown atomically. See `docs/CREATE_INVOICE_WORKFLOW.md` for the
+  full sequence.
+- Extended `InvoiceRepository` with write operations — `createInvoice`,
+  `createInvoiceItems` — using dedicated `NewInvoice`/`NewInvoiceItem`
+  input types (not `Omit<Invoice, ...>`/`Partial<Invoice>`). The
+  Postgres implementation uses `INSERT ... RETURNING` so the returned
+  domain object always reflects the actually-persisted row, and
+  translates a `SQLSTATE 23505` unique-violation on `createInvoice`
+  (the `UNIQUE(room_id, billing_period)` constraint) into
+  `INVOICE_ALREADY_EXISTS` — the real race-condition guard behind the
+  Service's own (necessary but not sufficient alone) pre-check.
+- `InvoiceUnitOfWork` (`backend/src/repositories/invoice-unit-of-work.ts`,
+  Postgres implementation
+  `backend/src/repositories/postgres/postgres-invoice-unit-of-work.ts`):
+  a small, single-method interface (`run(work)`) that lets
+  `CreateInvoiceService` run `createInvoice`/`createInvoiceItems` inside
+  one real transaction without importing Postgres.js,
+  `DatabaseExecutor`, or `runInTransaction` itself — keeping the
+  Service/Repository boundary intact.
+- Unit tests for the new write repository methods (row mapping,
+  `INSERT ... RETURNING` success, the SQLSTATE 23505 → 
+  `INVOICE_ALREADY_EXISTS` mapping, generic write failure →
+  `DATABASE_WRITE_FAILED`) and for `CreateInvoiceService` orchestration
+  (hand-written fake Repositories/UnitOfWork, no PostgreSQL) — happy
+  paths for both electricity methods and both water methods, duplicate
+  invoice, missing readings, `tenantCount = 0`, meter rollover, and both
+  branches of the `actualChargedAmount` comparison. A
+  `DATABASE_URL`-gated integration test
+  (`backend/src/repositories/__tests__/postgres-invoice-unit-of-work.integration.test.ts`)
+  proves, against real PostgreSQL when available, both a full commit and
+  a genuine rollback (a real `UNIQUE(invoice_id, display_order)`
+  violation on the second `invoice_items` insert rolling back the
+  already-inserted invoice and first item) — it `SKIP`s, and this has
+  not yet been `TEST_RUNTIME_EXECUTED`, when `DATABASE_URL` is unset
+  (see docs/CREATE_INVOICE_WORKFLOW.md "Tests actually executed").
+
+No Express route, Controller, REST billing endpoint, or frontend work
+is included in this change — see `docs/CREATE_INVOICE_WORKFLOW.md`
+"What is still deferred".
+
+### Added
+
 - Database access foundation: added `postgres` (Postgres.js) as the
   PostgreSQL client — no ORM/query-builder. `backend/src/database/`:
   `postgres-client.ts` (single cached application-level client, no

@@ -55,8 +55,9 @@ Controller  →  Service / Orchestrator  →  Repository interface
 
 Each domain has a small, explicit **Repository interface**
 (`backend/src/repositories/*.repository.ts`) describing *what* can be
-read, in domain terms — e.g. `RoomRepository.findById(id): Promise<Result<Room>>`.
-The interface has no SQL and no Postgres.js import.
+read (and, for `InvoiceRepository` only, written) in domain terms — e.g.
+`RoomRepository.findById(id): Promise<Result<Room>>`. The interface has
+no SQL and no Postgres.js import.
 
 The **Postgres implementation** (`backend/src/repositories/postgres/postgres-*.repository.ts`)
 is the only place that SQL for that domain exists. It:
@@ -71,6 +72,13 @@ is the only place that SQL for that domain exists. It:
 No `GenericRepository<T>`/`BaseRepository` exists. Each repository has
 only the operations a real, current use case needs — see the table in
 `README.md`/`CHANGELOG.md` for exactly which methods exist and why.
+
+`InvoiceRepository` is the one repository with write methods
+(`createInvoice`, `createInvoiceItems`), added for
+`CreateInvoiceService` — see `docs/CREATE_INVOICE_WORKFLOW.md`. Write
+inputs use dedicated `NewInvoice`/`NewInvoiceItem` types, not
+`Omit<Invoice, ...>`/`Partial<Invoice>`, so the write contract stays
+readable on its own instead of being inferred from the read model.
 
 ## Parameterized queries (SQL injection prevention)
 
@@ -131,15 +139,17 @@ Postgres.js roll back, then converts that back into the same failed
 raw thrown error, for the expected-failure path.
 
 **Transaction scope rule:** Calculation Core must run *before*
-`runInTransaction` is called, not inside it. The intended future shape
-(for a `CreateInvoice` workflow, not implemented in this task) is:
+`runInTransaction` is called, not inside it. This shape is now
+implemented by `CreateInvoiceService`
+(`backend/src/modules/invoice/create-invoice.service.ts`) — see
+`docs/CREATE_INVOICE_WORKFLOW.md`:
 
 ```
 load required data (Repository reads)
         ↓
 validate + calculate (Calculation Core — pure, no I/O)
         ↓
-BEGIN  (runInTransaction)
+BEGIN  (runInTransaction, via InvoiceUnitOfWork)
   insert invoice
   insert invoice_items
 COMMIT
@@ -148,6 +158,18 @@ COMMIT
 Holding a database transaction open while doing CPU-bound calculation
 work would block a connection for no reason — the transaction should
 only wrap the writes.
+
+**`InvoiceUnitOfWork`** (`backend/src/repositories/invoice-unit-of-work.ts`,
+Postgres implementation
+`backend/src/repositories/postgres/postgres-invoice-unit-of-work.ts`) is
+a small interface — one method, `run(work)` — that hides `runInTransaction`/
+`DatabaseExecutor`/`PostgresInvoiceRepository` from `CreateInvoiceService`.
+The Postgres implementation constructs a `PostgresInvoiceRepository`
+bound to the transaction context and passes it to `work`, so
+`createInvoice` and `createInvoiceItems` always run against the SAME
+transaction. This is deliberately not a general Unit-of-Work framework
+(no multi-repository support, no nested transactions) — `CreateInvoice`
+is the only write workflow that exists.
 
 This mechanism is exercised with real rollback/commit assertions against
 PostgreSQL in
@@ -309,12 +331,20 @@ asking "does one already exist?" before deciding whether to create one
 Raw PostgreSQL errors (SQL text that was running, connection details,
 stack traces) are **never** put into a `Result`'s `message` — they are
 logged server-side only, via `logDatabaseError()`, for developer
-debugging. A future write path may inspect a specific PostgreSQL error
-code (e.g. unique-violation `SQLSTATE 23505` →
-`INVOICE_ALREADY_EXISTS`) at the lowest Repository level, but no generic
-PostgreSQL-error-mapping framework is built — that is deferred until a
-write path that actually needs it exists (see "Deliberately deferred"
-below).
+debugging.
+
+`PostgresInvoiceRepository.createInvoice` inspects one specific
+PostgreSQL error code — unique-violation `SQLSTATE 23505` (the
+`UNIQUE(room_id, billing_period)` constraint) — and translates it to
+`INVOICE_ALREADY_EXISTS`, because `CreateInvoiceService`
+(`backend/src/modules/invoice/create-invoice.service.ts`) genuinely
+needs this specific mapping to protect against a race condition its own
+pre-check cannot fully prevent (see
+`docs/CREATE_INVOICE_WORKFLOW.md` "Duplicate invoice / race
+condition"). This is the **only** SQLSTATE mapping in the codebase —
+still no generic PostgreSQL-error-mapping framework is built. Any other
+write failure (including a different constraint violation) falls
+through to the generic `DATABASE_WRITE_FAILED`.
 
 ## Least privilege
 
@@ -340,10 +370,14 @@ source file interpolates a real credential.
 
 ## Deliberately deferred
 
-This task establishes the persistence *foundation* only. It
-deliberately does **not** implement: full CRUD for any domain, a
-`CreateInvoiceService`/workflow, REST billing endpoints, a specific
-PostgreSQL-error-code-to-domain-error mapping table (beyond what's
-described above), `PropertyRepository` (no current read use case needs
-it), or any frontend/auth/admin work. These are separate, later,
-reviewable tasks.
+The persistence foundation, plus the first complete write workflow
+(`CreateInvoiceService`, see `docs/CREATE_INVOICE_WORKFLOW.md`), are
+now implemented. Still deliberately **not** implemented: any Express
+route/Controller calling this Service (no REST billing endpoint
+exists), full CRUD for `RentalProperty`/`Room`/`MeterReading`/
+`ElectricityTariff`/`WaterTariff` (create/update/delete — only reads
+and the one `CreateInvoice` write path exist), `PropertyRepository` (no
+current read use case needs it), a generic
+PostgreSQL-error-code-to-domain-error mapping table (beyond the one
+`SQLSTATE 23505` case described above), and any frontend/auth/admin
+work. These are separate, later, reviewable tasks.
