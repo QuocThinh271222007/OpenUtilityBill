@@ -24,6 +24,9 @@ npm install
 cp .env.example .env   # sửa giá trị nếu cần; PORT mặc định 3000
 ```
 
+**Lưu ý:** chỉ sửa `.env` là chưa đủ để `DATABASE_URL` có tác dụng —
+xem mục "Thiết lập môi trường" bên dưới.
+
 | Lệnh | Mục đích |
 |---|---|
 | `npm run dev` | Chạy backend với auto-reload (`tsx watch`). |
@@ -95,7 +98,22 @@ khi lỗi mạng — xem `docs/FRONTEND.md` mục "Ranh giới API client"). Xem
 
 - Biến môi trường backend được ghi trong `backend/.env.example`. Copy
   nó thành `backend/.env` rồi sửa tại máy local — `.env` bị git-ignore
-  và không bao giờ được commit.
+  và không bao giờ được commit. **Backend không dùng dotenv và không
+  tự động đọc `backend/.env`** — `backend/src/config/database.config.ts`
+  chỉ đọc đúng biến môi trường `process.env.DATABASE_URL` của chính
+  tiến trình Node đang chạy, nên giá trị trong `.env` phải được tự nạp
+  vào biến môi trường của shell trước khi chạy `npm start`/`npm run
+  dev`. Trên PowerShell (môi trường của chủ dự án):
+
+  ```powershell
+  $env:DATABASE_URL = '<SUPABASE_DATABASE_URL>'
+  ```
+
+  rồi chạy `npm start`/`npm run dev` từ **cùng** cửa sổ PowerShell đó
+  (biến chỉ áp dụng cho tiến trình hiện tại và tiến trình con của nó).
+  Trên Bash/Linux: `export DATABASE_URL='<SUPABASE_DATABASE_URL>'`. Xem
+  `docs/FINAL_SMOKE_CHECKLIST.md` mục "Chuẩn bị" để có hướng dẫn đầy đủ
+  kèm cách kiểm tra biến đã có mặt mà không in ra giá trị thật.
 - `DATABASE_URL` là bắt buộc để chạy bất cứ thứ gì chạm tới database:
   tầng Repository, mọi REST endpoint dưới `/api/v1` trừ `/health`
   (`npm run dev`/`start`), và các test `*.integration.test.ts`. Health
