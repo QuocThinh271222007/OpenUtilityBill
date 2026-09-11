@@ -2,6 +2,7 @@
 
 import express, { Express } from "express";
 import healthRoutes from "./modules/health/health.routes";
+import invoiceRoutes from "./modules/invoice/invoice.routes";
 
 /**
  * Responsibility:
@@ -22,5 +23,6 @@ app.use(express.json());
 
 const API_V1_PREFIX = "/api/v1";
 app.use(API_V1_PREFIX, healthRoutes);
+app.use(API_V1_PREFIX, invoiceRoutes);
 
 export default app;
