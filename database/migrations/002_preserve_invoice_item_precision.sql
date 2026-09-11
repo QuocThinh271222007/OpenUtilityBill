@@ -46,7 +46,7 @@
 -- tiền lưu trong database có thể khác với số tiền Calculation Core đã
 -- tính, dù cả hai đều "đúng" theo logic riêng của chúng.
 --
--- Lưu ý: bộ dữ liệu MẶC ĐỊNH của kỳ thi hiện tại
+-- Lưu ý: bộ dữ liệu MẶC ĐỊNH hiện tại
 -- (database/seeds/001_competition_defaults.sql) dùng ngưỡng bậc là số
 -- nguyên (50, 100), nên rủi ro này KHÔNG xuất hiện với cấu hình mặc
 -- định. Nhưng schema phải đúng với MỌI cấu hình hợp lệ mà CHECK

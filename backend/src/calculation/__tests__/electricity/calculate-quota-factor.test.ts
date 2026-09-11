@@ -30,7 +30,7 @@ test("calculateQuotaFactor: peoplePerQuotaUnit không phải hằng số cứng 
   }
 });
 
-test("calculateQuotaFactor: tenantCount = 0 -> FAIL (đề thi không định nghĩa quy tắc 0 người)", () => {
+test("calculateQuotaFactor: tenantCount = 0 -> FAIL (chưa có quy tắc cho 0 người)", () => {
   const result = calculateQuotaFactor({ tenantCount: 0, peoplePerQuotaUnit: 4 });
   assert.equal(result.success, false);
   if (!result.success) {

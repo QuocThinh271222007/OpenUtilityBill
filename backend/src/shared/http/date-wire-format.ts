@@ -14,8 +14,8 @@ import { Result, ok, fail } from "../result";
  * Two entry points, vì KHÔNG PHẢI mọi field ngày dùng cùng một ràng
  * buộc "phải là ngày đầu tháng":
  * - `parseDateWireFormat`: bất kỳ ngày lịch hợp lệ nào — dùng cho tariff
- *   `effectiveFrom`/`effectiveTo` (ví dụ seed thật của kỳ thi dùng
- *   "2025-05-10", KHÔNG phải ngày đầu tháng).
+ *   `effectiveFrom`/`effectiveTo` (ví dụ seed thật dùng "2025-05-10",
+ *   KHÔNG phải ngày đầu tháng).
  * - `parseFirstOfMonthWireFormat`: PHẢI là ngày đầu tháng — dùng cho
  *   `billingPeriod` (invoice, meter-reading), khớp CHECK
  *   `EXTRACT(DAY FROM billing_period) = 1` ở migration 001.

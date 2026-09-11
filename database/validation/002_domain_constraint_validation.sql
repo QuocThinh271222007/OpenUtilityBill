@@ -89,8 +89,8 @@
 --
 -- "PASS" ở đây nghĩa là: PostgreSQL trả về ĐÚNG lỗi được ghi trong
 -- "Kỳ vọng" của khối đó (một lỗi cố ý xảy ra LÀ kết quả test đúng, không
--- phải một thất bại). Không tự động điền PASS — chủ repository tự chạy
--- và tự xác nhận từng dòng.
+-- phải một thất bại). Không tự động điền PASS — người thực hiện tự
+-- chạy và tự xác nhận từng dòng.
 
 
 -- ============================================================

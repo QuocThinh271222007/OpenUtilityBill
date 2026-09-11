@@ -30,7 +30,7 @@ nghĩa xoá CRUD mù quáng sẽ đòi hỏi các quyết định sản phẩm m
 chưa đưa ra: xoá hẳn hay lưu trữ (archive), điều gì xảy ra với tính
 toàn vẹn lịch sử khi một dòng được tham chiếu bị xoá, một thao tác xoá
 có cần khôi phục được không. Không quyết định nào trong số đó là bắt
-buộc cho phạm vi kỳ thi, nên DELETE **cố ý chưa được cài đặt** ở bất kỳ
+buộc cho phạm vi bắt buộc hiện tại, nên DELETE **cố ý chưa được cài đặt** ở bất kỳ
 đâu trong API này — `DELETE_NOT_IMPLEMENTED_BY_DESIGN=true`. Đây là một
 management API cho các field mà phạm vi bắt buộc cần, không phải một
 tuyên bố về CRUD đầy đủ tổng quát.
@@ -368,7 +368,7 @@ tariff chưa được bất kỳ invoice nào tham chiếu.
 `effectiveFrom`/`effectiveTo` dùng hình dạng `"YYYY-MM-DD"` nghiêm ngặt
 (từ chối chuỗi sai định dạng, ngày lịch không tồn tại, và timestamp có
 thành phần giờ) nhưng — khác với `billingPeriod` — **không** yêu cầu
-ngày phải là `01`. `effectiveFrom` thật của tariff điện seed của kỳ thi
+ngày phải là `01`. `effectiveFrom` thật của tariff điện seed mặc định
 là `"2025-05-10"` (ngày hiệu lực pháp lý thật theo Quyết định
 1279/QĐ-BCT); ép ngày-01 ở đây sẽ từ chối dữ liệu tariff thực sự hợp
 lệ.
@@ -420,7 +420,7 @@ dụng cho tariff.
 
 ## Không hard-code hằng số tariff
 
-Không có giá trị nào từ dữ liệu seed của kỳ thi (`1984`, `2050`,
+Không có giá trị nào từ dữ liệu seed mặc định (`1984`, `2050`,
 `2380`, `2998`, `3350`, `3460`, `8500`, `80000`, `0.08`, `0.05`,
 `0.10`, ...) xuất hiện ở bất kỳ đâu trong Service/Controller/Repository
 quản lý — mọi giá, tỷ lệ, ngưỡng, và giá trị cấu hình định mức đều do

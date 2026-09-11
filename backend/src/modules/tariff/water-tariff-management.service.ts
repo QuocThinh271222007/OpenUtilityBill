@@ -29,7 +29,7 @@ import { CreateWaterTariffInput, UpdateWaterTariffInput, WaterTariffManagementDe
  *   chiếu.
  *
  * Không chịu trách nhiệm:
- * - chứa hằng số biểu giá nào của kỳ thi.
+ * - chứa hằng số biểu giá cụ thể nào.
  * - chứa SQL/Postgres.js import.
  * - implement `delete`.
  */

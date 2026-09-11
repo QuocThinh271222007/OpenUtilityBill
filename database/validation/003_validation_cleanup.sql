@@ -14,7 +14,7 @@
 -- Không chịu trách nhiệm:
 -- - xoá bất kỳ dòng nào KHÔNG khớp chính xác các tiền tố trên. Không có
 --   câu lệnh nào trong file này chạm tới dữ liệu tên
---   "Competition Default ..." (dữ liệu seed chính thức của kỳ thi).
+--   "Competition Default ..." (dữ liệu seed chính thức mặc định).
 -- - cần chạy trong tình huống bình thường. Cả ba file validation đều
 --   được thiết kế để KHÔNG BAO GIỜ commit dữ liệu thử nghiệm (không
 --   file nào chứa câu lệnh COMMIT) — mọi block validation tự dọn dẹp

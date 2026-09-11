@@ -10,7 +10,7 @@ tầng này dùng lại).
 
 ## Vì sao Postgres.js, và vì sao không dùng ORM
 
-Chủ dự án đã duyệt tường minh: PostgreSQL host bởi Supabase, truy cập
+Lựa chọn kiến trúc của dự án: PostgreSQL host bởi Supabase, truy cập
 qua **Postgres.js** (package npm `postgres`) với **SQL tham số hoá trực
 tiếp** — không ORM, không framework query-builder (Drizzle, Prisma,
 TypeORM, Sequelize, Knex, Kysely).
@@ -19,9 +19,9 @@ Postgres.js là một *client* PostgreSQL — nó mở kết nối, gửi văn b
 và tham số mà dự án này tự viết, và decode response. Nó không tự sinh
 SQL từ một object model, không tự quản lý schema, và không áp đặt một
 DSL query-building nào. Điều này khớp với nguyên tắc xuyên suốt dự án
-(xem `docs/LEARNING_NOTES.md`) rằng chủ repository phải đọc và giải
-thích được chính xác SQL nào đang chạy — với một ORM, SQL thực tế
-thường được sinh gián tiếp và khó đoán trước hơn; với một client thuần
+(xem `docs/LEARNING_NOTES.md`) rằng SQL thực tế chạy phải đọc và giải
+thích được chính xác — với một ORM, SQL thực tế thường được sinh gián
+tiếp và khó đoán trước hơn; với một client thuần
 và SQL viết tay, câu query trong file nguồn *chính là* câu query sẽ
 chạy.
 
@@ -363,9 +363,9 @@ vào `DATABASE_WRITE_FAILED` chung.
 Backend kết nối bằng một `DATABASE_URL` nên được giới hạn đúng phạm vi
 truy cập mà ứng dụng này thực sự cần (đọc/ghi trên các bảng của chính
 dự án này) — không phải một khoá service-role/admin của Supabase dùng
-cho tiện lợi. Cấp phát đúng role cụ thể đó là một bước vận hành của
-chủ repository trong Supabase dashboard, không phải thứ codebase này
-có thể tự ép buộc, nhưng ranh giới connection string (chỉ backend,
+cho tiện lợi. Cấp phát đúng role cụ thể đó là một bước vận hành thủ
+công trong Supabase dashboard, không phải thứ codebase này có thể tự
+ép buộc, nhưng ranh giới connection string (chỉ backend,
 không bao giờ gửi tới frontend) được đảm bảo theo thiết kế: không có
 credential database nào từng được đọc bởi, hay truyền tới, code
 frontend.

@@ -9,7 +9,7 @@ import { PostgresWaterTariffRepository } from "../postgres/postgres-water-tariff
 /**
  * Trách nhiệm:
  * Chứng minh, bằng PostgreSQL THẬT, rằng các Repository đọc đúng dữ liệu
- * seed chính thức của kỳ thi (`database/seeds/001_competition_defaults.sql`)
+ * seed chính thức (`database/seeds/001_competition_defaults.sql`)
  * — không phải dữ liệu giả lập trong unit test.
  *
  * Không chịu trách nhiệm:
@@ -38,7 +38,7 @@ import { PostgresWaterTariffRepository } from "../postgres/postgres-water-tariff
 const hasDatabaseUrl = typeof process.env.DATABASE_URL === "string" && process.env.DATABASE_URL.trim().length > 0;
 
 test(
-  "PostgresElectricityTariffRepository: đọc đúng tariff + 6 tier mặc định của kỳ thi",
+  "PostgresElectricityTariffRepository: đọc đúng tariff + 6 tier mặc định",
   { skip: hasDatabaseUrl ? false : "Cần DATABASE_URL trỏ tới Supabase PostgreSQL đã chạy migration + seed." },
   async () => {
     const sql = getDatabaseClient();
@@ -74,7 +74,7 @@ test(
 );
 
 test(
-  "PostgresWaterTariffRepository: đọc đúng tariff nước mặc định của kỳ thi",
+  "PostgresWaterTariffRepository: đọc đúng tariff nước mặc định",
   { skip: hasDatabaseUrl ? false : "Cần DATABASE_URL trỏ tới Supabase PostgreSQL đã chạy migration + seed." },
   async () => {
     const sql = getDatabaseClient();

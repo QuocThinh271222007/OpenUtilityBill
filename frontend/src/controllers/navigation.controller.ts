@@ -25,7 +25,7 @@ import { clearGlobalAlerts } from "../views/shared.view";
  * - tự parse tham số động trong hash (ví dụ `#/invoices/123`) — mọi
  *   route hiện tại là đường dẫn TĨNH; các screen tự giữ trạng thái lựa
  *   chọn (property/room/kỳ) qua state module nội bộ của Controller đó,
- *   không qua URL — đủ cho phạm vi bắt buộc của kỳ thi.
+ *   không qua URL — đủ cho phạm vi bắt buộc hiện tại.
  */
 export interface RouteDefinition {
   hash: string;

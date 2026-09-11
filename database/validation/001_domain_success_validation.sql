@@ -7,7 +7,7 @@
 -- Trách nhiệm:
 -- Chứng minh, bằng PostgreSQL THẬT, rằng:
 --   1. migration đã tạo đúng 8 bảng domain;
---   2. seed đã tạo đúng dữ liệu mặc định của kỳ thi;
+--   2. seed đã tạo đúng dữ liệu mặc định;
 --   3. dữ liệu HỢP LỆ (kể cả dữ liệu có "hình dạng" rollover) được
 --      database chấp nhận đúng như thiết kế;
 --   4. một transaction bị ROLLBACK sẽ không để lại dấu vết nào.
@@ -19,7 +19,7 @@
 --   đúng, cố ý tách riêng khỏi file này).
 -- - implement Calculation Core, CRUD, Repository, hay business logic.
 -- - dùng PL/pgSQL, stored procedure, hay một "test framework" tự chế —
---   chỉ SQL thuần, chủ repository tự đọc kết quả và so sánh với "Kỳ
+--   chỉ SQL thuần, người thực hiện tự đọc kết quả và so sánh với "Kỳ
 --   vọng" ghi trong comment.
 --
 -- CÁCH CHẠY FILE NÀY:
@@ -71,7 +71,7 @@ WHERE table_schema = 'public'
 -- Kỳ vọng: domain_table_count = 8.
 
 -- ============================================================
--- B. Competition seed verification
+-- B. Kiểm chứng seed mặc định
 -- ============================================================
 -- Nếu bạn vừa chạy seed LẦN THỨ HAI để kiểm chứng idempotency, chạy lại
 -- các truy vấn COUNT(*) trong phần này — mọi count vẫn phải giữ nguyên

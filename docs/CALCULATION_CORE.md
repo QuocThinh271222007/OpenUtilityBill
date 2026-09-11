@@ -137,7 +137,7 @@ database nghĩa là:
 ## Cấu hình hoá, không hard-code
 
 Không có file nào dưới `backend/src/calculation/` (ngoài `__tests__/`)
-chứa hằng số riêng của đề thi (`1984`, `0.08`, `8500`, ...). Mọi giá
+chứa hằng số biểu giá cụ thể (`1984`, `0.08`, `8500`, ...). Mọi giá
 trị như vậy đều là tham số hàm, lấy từ cấu hình biểu giá vốn sẽ đến từ
 database. Nơi duy nhất các hằng số này tồn tại là fixture chỉ-dùng-cho-
 test, `backend/src/calculation/__tests__/fixtures/competition-defaults.ts`
@@ -146,9 +146,10 @@ test, `backend/src/calculation/__tests__/fixtures/competition-defaults.ts`
 ## Số người ở bằng không
 
 Schema database cho phép `rooms.tenant_count = 0` (xem
-`database/migrations/001_initial_domain_schema.sql`), nhưng đề thi
-không định nghĩa quy tắc định mức cho một phòng 0 người. Thay vì tự bịa
-ra một quyết định sản phẩm không có trong đề (ví dụ "quota factor 0
+`database/migrations/001_initial_domain_schema.sql`), nhưng đặc tả
+nghiệp vụ không định nghĩa quy tắc định mức cho một phòng 0 người.
+Thay vì tự bịa ra một quyết định sản phẩm không có căn cứ (ví dụ
+"quota factor 0
 nghĩa là các tier có giới hạn nhận dung lượng bằng 0"),
 `calculateQuotaFactor` từ chối tường minh `tenantCount <= 0` với mã lỗi
 `INVALID_TENANT_COUNT`. Điều này chỉ ảnh hưởng tới cách tính điện

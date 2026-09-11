@@ -27,7 +27,7 @@ import {
  * - giả định đúng 6 bậc, hay dựa vào thứ tự hàng tự nhiên của
  *   PostgreSQL cho các bậc — luôn `ORDER BY tier_number ASC` tường
  *   minh.
- * - chứa bất kỳ hằng số biểu giá nào của kỳ thi (1984, 0.08, ...) — mọi
+ * - chứa bất kỳ hằng số biểu giá cụ thể nào (1984, 0.08, ...) — mọi
  *   giá trị đến từ database/tham số gọi vào.
  * - tự mở transaction cho `createTariff`/`replaceTiers`/
  *   `updateTariffParent` — xem `../electricity-tariff-unit-of-work.ts`.

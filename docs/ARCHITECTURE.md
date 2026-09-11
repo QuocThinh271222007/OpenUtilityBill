@@ -1,9 +1,8 @@
 # Kiến trúc
 
 Tài liệu này giải thích OpenUtilityBill được tổ chức như thế nào, và vì
-sao. Tài liệu được viết để chủ dự án dùng lại khi bảo vệ (phỏng vấn)
-trực tiếp — mọi quyết định ở đây đều phải giải thích được, không chỉ là
-"starter kit làm vậy nên tôi làm theo".
+sao — mọi quyết định ở đây đều có lý do kỹ thuật cụ thể, không chỉ là
+"starter kit làm vậy nên giữ nguyên như vậy".
 
 ## 1. Modular Monolith
 

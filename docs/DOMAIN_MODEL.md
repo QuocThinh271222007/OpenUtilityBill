@@ -154,7 +154,7 @@ và "Nguyên tắc snapshot lịch sử" trong `docs/DATABASE_DESIGN.md`.
 - **File:** `backend/src/modules/tariff/tariff.model.ts`
 - **Bảng:** `water_tariffs`
 - **Trách nhiệm:** một phiên bản cấu hình tính tiền nước, hỗ trợ cả hai
-  phương pháp tính mà đề thi này yêu cầu.
+  phương pháp tính mà nghiệp vụ yêu cầu.
 - **Field chính:** `id`, `name`, `effectiveFrom`, `effectiveTo`
   (nullable), `pricePerCubicMeter`, `pricePerPerson`, `vatRate`,
   `environmentalFeeRate`, `createdAt`.

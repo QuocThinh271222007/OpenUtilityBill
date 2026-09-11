@@ -18,10 +18,6 @@ bạch, có thể giải thích từng bước, và kiểm tra lại độc lậ
 - Cho phép so sánh giữa các kỳ hoá đơn hoặc các kịch bản biểu giá khác
   nhau.
 
-Đây là bài dự thi cá nhân cho Kỳ thi tuyển chọn đội tuyển phần mềm mã
-nguồn mở 2026. Mọi quyết định kiến trúc và cài đặt đều phải được chính
-chủ dự án hiểu, giải thích, và bảo vệ được — xem `docs/LEARNING_NOTES.md`.
-
 ## Kiến trúc tổng quan
 
 - **Modular Monolith**: một backend triển khai duy nhất, được tổ chức
@@ -119,9 +115,9 @@ nối PostgreSQL thật (Supabase) — hành vi `NUMERIC`/`BIGINT` của
 Postgres.js, commit/rollback transaction, đọc/ghi Repository, và
 `POST`/`GET /api/v1/invoices` qua HTTP thật — đều đã được kiểm chứng
 bằng thực thi thật, không chỉ suy đoán. Kết quả: 320/320 test PASS,
-0 FAIL, 0 SKIP (không còn test tích hợp database nào bị bỏ qua). Việc
-click-through thủ công qua trình duyệt vẫn còn đang chờ chủ dự án tự
-xác nhận — xem [`docs/FINAL_SMOKE_CHECKLIST.md`](docs/FINAL_SMOKE_CHECKLIST.md).
+0 FAIL, 0 SKIP (không còn test tích hợp database nào bị bỏ qua). Kiểm
+thử click-through thủ công qua trình duyệt vẫn chưa được xác nhận —
+xem [`docs/FINAL_SMOKE_CHECKLIST.md`](docs/FINAL_SMOKE_CHECKLIST.md).
 
 ## Cấu trúc repository
 
@@ -154,8 +150,8 @@ chạy, build, và typecheck cho cả `backend/` và `frontend/`.
 
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — kiến trúc, luồng
   request, hướng phụ thuộc, ranh giới module.
-- [`docs/LEARNING_NOTES.md`](docs/LEARNING_NOTES.md) — lý do lựa chọn
-  từng công nghệ và quyết định kiến trúc.
+- [`docs/LEARNING_NOTES.md`](docs/LEARNING_NOTES.md) — cơ sở lựa chọn
+  kỹ thuật và kiến trúc cho từng công nghệ trong dự án.
 - [`docs/ERROR_HANDLING.md`](docs/ERROR_HANDLING.md) — hợp đồng thành
   công/thất bại, mã lỗi, pipeline fail-fast.
 - [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) — cài đặt và các lệnh.
@@ -193,8 +189,8 @@ chạy, build, và typecheck cho cả `backend/` và `frontend/`.
 - [`database/README.md`](database/README.md) — các file schema/seed và
   cách chạy chúng.
 - [`docs/FINAL_SMOKE_CHECKLIST.md`](docs/FINAL_SMOKE_CHECKLIST.md) —
-  checklist smoke test thủ công (chủ dự án tự chạy trên trình duyệt)
-  trước khi phát hành.
+  checklist smoke test thủ công trên trình duyệt, cần thực hiện trước
+  khi phát hành.
 
 ## Giấy phép
 

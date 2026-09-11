@@ -12,7 +12,7 @@ import { loadDatabaseConfig } from "../config/database.config";
  *
  * Không chịu trách nhiệm:
  * - chứa business logic, câu SQL domain cụ thể (`SELECT ... FROM
- *   rooms ...`), hay bất kỳ hằng số biểu giá nào của kỳ thi — đây CHỈ
+ *   rooms ...`), hay bất kỳ hằng số biểu giá cụ thể nào — đây CHỈ
  *   là adapter kết nối, không phải nơi đặt query.
  * - tự triển khai connection pool. Postgres.js TỰ quản lý pool/kết nối
  *   bên trong một instance `Sql` — gọi `postgres(...)` ĐÚNG MỘT LẦN rồi

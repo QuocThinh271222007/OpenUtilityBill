@@ -54,7 +54,7 @@ import {
  * xem `electricity-tariff-management.types.ts`.
  *
  * Không chịu trách nhiệm:
- * - hard-code số lượng bậc hay bất kỳ hằng số biểu giá nào của kỳ thi.
+ * - hard-code số lượng bậc hay bất kỳ hằng số biểu giá cụ thể nào.
  * - chứa SQL/Postgres.js import.
  * - implement `delete`.
  */

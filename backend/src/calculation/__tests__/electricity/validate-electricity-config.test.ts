@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { validateElectricityConfig } from "../../electricity/validate-electricity-config";
 import { COMPETITION_ELECTRICITY_TIERS } from "../fixtures/competition-defaults";
 
-test("validateElectricityConfig: cấu hình 6 bậc của kỳ thi hợp lệ", () => {
+test("validateElectricityConfig: cấu hình 6 bậc mặc định hợp lệ", () => {
   const result = validateElectricityConfig(COMPETITION_ELECTRICITY_TIERS);
   assert.equal(result.success, true);
   if (result.success) {

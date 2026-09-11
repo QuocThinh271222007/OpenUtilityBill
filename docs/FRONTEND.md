@@ -187,7 +187,7 @@ cũng khăng khăng như vậy).
 Tariff `effectiveFrom`/`effectiveTo` dùng `<input type="date">` thuần
 thay vào đó (một ngày lịch thật được kỳ vọng, không phải một tháng
 billing, và ngày **không** bị ép về `01` — `effectiveFrom` thật của
-tariff điện seed của kỳ thi là `2025-05-10`, xem
+tariff điện seed mặc định là `2025-05-10`, xem
 `docs/MANAGEMENT_API.md` mục "Ngày hiệu lực tariff"). Giá trị `<input
 type="date">` (đã là `"YYYY-MM-DD"`) được gửi tới API nguyên vẹn.
 
@@ -355,10 +355,10 @@ REST API bắt buộc mà UI này tiêu thụ (`docs/API.md`,
 `docs/MANAGEMENT_API.md`) đã được kiểm chứng bằng 320/320 test PASS
 chạy thật trên PostgreSQL thật, 0 SKIP. **Việc thực sự click-through
 qua trình duyệt (mở app, điền form, xem kết quả bằng mắt, kiểm tra
-console) vẫn còn đang CHỜ chủ dự án tự chạy** — xem
+console) vẫn còn đang CHỜ thực hiện thủ công** — xem
 `docs/FINAL_SMOKE_CHECKLIST.md` cho checklist 15 bước cụ thể, và không
 tài liệu nào trong dự án này được phép tuyên bố bước đó đã hoàn thành
-cho tới khi chủ dự án tự xác nhận.
+cho tới khi việc đó được xác nhận.
 
 ## Chạy tại local
 

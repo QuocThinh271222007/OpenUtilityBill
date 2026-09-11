@@ -89,7 +89,7 @@ Không có triển khai production, xác thực, hay khu vực quản trị nào
   không chỉ Invoice. Xem `docs/MANAGEMENT_API.md` để có hợp đồng đầy
   đủ. DELETE cố ý chưa được cài đặt cho bất kỳ tài nguyên nào — khoá
   ngoại `RESTRICT` lịch sử khiến ngữ nghĩa xoá trở thành một quyết định
-  sản phẩm nằm ngoài phạm vi yêu cầu bắt buộc của kỳ thi
+  sản phẩm nằm ngoài phạm vi bắt buộc hiện tại
   (`DELETE_NOT_IMPLEMENTED_BY_DESIGN=true`).
 - Cài đặt `PropertyRepository` (`listAll`/`findById`/`create`/
   `update`) — trước đây bị hoãn ở giai đoạn nền tảng domain-database vì
@@ -378,12 +378,12 @@ công việc frontend nào được đưa vào trong thay đổi này.
     (không phải base + VAT).
   - Tính tổng hoá đơn (cộng các tổng chính xác, làm tròn một lần) và so
     sánh chênh lệch thực thu (chỉ tính ra, không lưu trữ).
-  - Không có hằng số biểu giá riêng của kỳ thi ở bất kỳ đâu trong code
+  - Không có hằng số biểu giá cụ thể nào ở bất kỳ đâu trong code
     tính toán production — mọi cấu hình là tham số hàm.
 - `backend/src/calculation/__tests__/`: unit test tự động dùng
   `node:test` + `node:assert/strict` có sẵn của Node (chạy qua `tsx`,
-  không dependency test framework mới), bao gồm cả 7 test case chính
-  thức đã công bố của kỳ thi và test biên cho mọi ràng buộc đã ghi rõ
+  không dependency test framework mới), bao gồm cả 7 test case tham
+  chiếu chính thức đã công bố và test biên cho mọi ràng buộc đã ghi rõ
   (`npm test` trong `backend/`).
 - `docs/CALCULATION_CORE.md` và `docs/NUMERIC_PRECISION.md` ghi lại
   pipeline tính toán và chiến lược số học chính xác.
@@ -409,11 +409,11 @@ này.
   hay vào việc SQL client tiếp tục sau một lỗi). Thêm
   `database/validation/003_validation_cleanup.sql` như một lưới an
   toàn chỉ bao giờ xoá các dòng có tiền tố `VALIDATION_*`.
-- Sửa ngày seed tariff của kỳ thi: `effective_from` của điện nay trích
+- Sửa ngày seed tariff mặc định: `effective_from` của điện nay trích
   dẫn ngày pháp lý thật (10/05/2025, theo Quyết định 1279/QĐ-BCT) với
   `effective_to = 2026-12-31` ghi rõ là giới hạn cấu hình VAT 8% đã
   seed, không phải giá gốc; `effective_from` của nước (06/09/2026)
-  được ghi rõ là ngày kích hoạt cấu hình của kỳ thi, không phải một
+  được ghi rõ là ngày kích hoạt cấu hình mặc định, không phải một
   ngày tariff pháp lý, với `effective_to` để `NULL`.
 - Xoá field/cột `difference_amount` suy ra khỏi `invoices` và model
   `Invoice` — nó lặp lại `actual_charged_amount - calculated_total` và
@@ -436,7 +436,7 @@ này.
   (`database/migrations/001_initial_domain_schema.sql`): mọi bảng
   domain kèm khoá ngoại, ràng buộc `UNIQUE`/`CHECK`, kiểu tài chính
   `NUMERIC`, và chính sách `ON DELETE` có chủ đích cho từng quan hệ.
-- Cấu hình biểu giá mặc định chính thức của kỳ thi làm dữ liệu seed
+- Cấu hình biểu giá mặc định chính thức làm dữ liệu seed
   (`database/seeds/001_competition_defaults.sql`): VAT điện, số người/
   định mức, tier fallback, 6 tier điện, và giá/VAT/phí môi trường
   nước — lưu dưới dạng dữ liệu, không hard-code.

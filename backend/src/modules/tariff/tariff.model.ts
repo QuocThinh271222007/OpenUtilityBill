@@ -41,9 +41,9 @@
  *   VAT/phí — đó là việc của Calculation Core (task sau). File này CHỈ
  *   mô tả hình dạng dữ liệu cấu hình.
  * - hard-code số lượng bậc. Số bậc là DATA-DRIVEN: một ElectricityTariff
- *   có thể có bất kỳ số ElectricityTariffTier nào (mặc định kỳ thi hiện
- *   tại là 6, nhưng đây không phải giới hạn cố định trong code hay
- *   schema).
+ *   có thể có bất kỳ số ElectricityTariffTier nào (cấu hình mặc định
+ *   hiện tại là 6, nhưng đây không phải giới hạn cố định trong code
+ *   hay schema).
  * - có Repository/Service/Controller đi kèm ở task này.
  *
  * Vì sao ElectricityTariff và ElectricityTariffTier là hai model riêng biệt:
@@ -55,7 +55,7 @@
  *
  * Vì sao ElectricityTariff.peoplePerQuotaUnit và .fallbackTierNumber tồn tại:
  * Quy tắc "số người / 4 = số định mức" và "phương pháp fallback dùng giá
- * bậc 3" là quy định của kỳ thi HIỆN TẠI, không phải hằng số vĩnh viễn
+ * bậc 3" là quy định cấu hình HIỆN TẠI, không phải hằng số vĩnh viễn
  * của chương trình. Lưu chúng như cấu hình cho phép thay đổi mà không
  * cần sửa Calculation Core sau này (xem docs/DATABASE_DESIGN.md).
  *

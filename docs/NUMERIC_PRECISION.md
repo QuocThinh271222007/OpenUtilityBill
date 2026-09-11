@@ -3,7 +3,6 @@
 Tài liệu này giải thích chiến lược số học của Calculation Core — vì sao
 dự án không dùng `number` (JavaScript floating-point) cho các phép tính
 tài chính, và cách `BigInt` + phân số chính xác giải quyết vấn đề đó.
-Viết bằng tiếng Việt, phục vụ trực tiếp cho buổi bảo vệ đồ án.
 
 ## 1. Vấn đề của IEEE-754 `number`
 
@@ -19,8 +18,8 @@ không viết hết được trong hệ thập phân.
 ```
 
 Với ứng dụng thông thường, sai số cỡ 10⁻¹⁷ không ai để ý. Nhưng với hoá
-đơn tiền — nơi kỳ thi chấm chính xác từng đồng — một sai số dù cực nhỏ ở
-bước trung gian có thể khiến kết quả cuối lệch khỏi đáp án chính thức.
+đơn tiền — nơi từng đồng đều cần chính xác — một sai số dù cực nhỏ ở
+bước trung gian có thể khiến kết quả cuối lệch khỏi giá trị đúng.
 Các giá trị dễ bị ảnh hưởng nhất trong bài toán này:
 
 - Ngưỡng bậc thang sau khi nhân với quota: `62.5`, `12.5` kWh.
@@ -29,7 +28,7 @@ Các giá trị dễ bị ảnh hưởng nhất trong bài toán này:
 
 ## 2. Vì sao làm tròn sớm là SAI, không chỉ là "không đẹp"
 
-Quy tắc của kỳ thi:
+Quy tắc tính toán của hệ thống:
 
 - **Giữ nguyên** độ chính xác thập phân ở mọi bước trung gian.
 - **Không** làm tròn ngưỡng bậc thang.
@@ -153,14 +152,14 @@ cách PostgreSQL `NUMERIC` cũng dùng chuỗi ở ranh giới dữ liệu (xem
 ## 10. Vì sao không dùng decimal.js
 
 `decimal.js` là một lựa chọn chuyên nghiệp, hợp lệ, được dùng rộng rãi
-trong thực tế — không có gì sai khi chọn nó. Với dự án thi này, tập phép
-toán thực sự cần chỉ có khoảng 8-9 hàm nhỏ (cộng/trừ/nhân/chia/so
+trong thực tế — không có gì sai khi chọn nó. Với phạm vi hiện tại, tập
+phép toán thực sự cần chỉ có khoảng 8-9 hàm nhỏ (cộng/trừ/nhân/chia/so
 sánh/parse/format/làm tròn). Viết tay bằng `BigInt` giúp:
 
 - Không thêm dependency mới.
-- Tự giải thích được TỪNG dòng khi bảo vệ đồ án, thay vì phải tin tưởng
-  logic bên trong một thư viện ngoài.
-- Đủ nhỏ để review, test, và hiểu toàn bộ trong một buổi.
+- Tự giải thích được TỪNG dòng, thay vì phải tin tưởng logic bên trong
+  một thư viện ngoài.
+- Đủ nhỏ để review, test, và hiểu toàn bộ nhanh chóng.
 
 Đánh đổi: nhiều code hơn một chút so với gọi thẳng API của `decimal.js`.
 Với quy mô bài toán này, sự minh bạch quan trọng hơn số dòng code tiết
@@ -235,7 +234,7 @@ luôn là số nguyên).
   "mọi giá trị công khai là chuỗi thập phân" (mục 9 ở trên) cho TOÀN BỘ
   Calculation Core, không riêng một field — một thay đổi kiến trúc lớn
   hơn nhiều so với phạm vi một corrective, không mang lại lợi ích nào
-  cho cấu hình thực tế của kỳ thi (`peoplePerQuotaUnit = 4`, luôn hữu
+  cho cấu hình thực tế đang dùng (`peoplePerQuotaUnit = 4`, luôn hữu
   hạn).
 - **Chiến lược B** (đã chọn): định nghĩa tường minh "`peoplePerQuotaUnit`
   hợp lệ = giá trị mà MỌI `tenantCount` đều cho thương số hữu hạn", tức

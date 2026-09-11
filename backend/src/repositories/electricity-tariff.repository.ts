@@ -71,7 +71,7 @@ export type { TariffEffectivePeriod };
  * caller (`ElectricityTariffUnitOfWork`) kiểm soát.
  *
  * Không chịu trách nhiệm:
- * - hard-code số lượng bậc hay bất kỳ hằng số biểu giá nào của kỳ thi.
+ * - hard-code số lượng bậc hay bất kỳ hằng số biểu giá cụ thể nào.
  * - implement `delete`.
  */
 export interface ElectricityTariffRepository {

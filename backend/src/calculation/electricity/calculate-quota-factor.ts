@@ -35,10 +35,10 @@ import { ExactNumber, divide, fromBigInt, isFiniteDecimalDenominator, toDecimalS
  * lần duy nhất, ở tổng hoá đơn cuối cùng (xem docs/NUMERIC_PRECISION.md).
  *
  * Không chịu trách nhiệm:
- * - áp dụng cho tenantCount = 0. Đề thi không định nghĩa quy tắc tính
- *   quota cho phòng 0 người ở — thay vì tự suy diễn "quotaFactor = 0
- *   nghĩa là không có bậc nào áp dụng" (một quyết định sản phẩm không
- *   có căn cứ trong đề bài), hàm này TỪ CHỐI tường minh bằng
+ * - áp dụng cho tenantCount = 0. Đặc tả nghiệp vụ không định nghĩa quy
+ *   tắc tính quota cho phòng 0 người ở — thay vì tự suy diễn
+ *   "quotaFactor = 0 nghĩa là không có bậc nào áp dụng" (một quyết
+ *   định sản phẩm không có căn cứ), hàm này TỪ CHỐI tường minh bằng
  *   INVALID_TENANT_COUNT. Xem docs/CALCULATION_CORE.md mục "Zero tenant
  *   count".
  * - giả định peoplePerQuotaUnit = 4. Giá trị này luôn đọc từ tham số
@@ -53,9 +53,9 @@ import { ExactNumber, divide, fromBigInt, isFiniteDecimalDenominator, toDecimalS
  * VÔ HẠN — không có chuỗi thập phân hữu hạn nào biểu diễn ĐÚNG giá trị
  * đó để trả ra ngoài (xem shared/exact-number.ts).
  *
- * Đề thi hiện tại chỉ dùng peoplePerQuotaUnit = 4 — không có căn cứ nào
- * trong đặc tả yêu cầu hỗ trợ giá trị tạo ra thương số vô hạn. Vì vậy dự
- * án CHỌN Chiến lược B (trong hai chiến lược đã cân nhắc):
+ * Cấu hình hiện tại chỉ dùng peoplePerQuotaUnit = 4 — không có căn cứ
+ * nào trong đặc tả yêu cầu hỗ trợ giá trị tạo ra thương số vô hạn. Vì
+ * vậy dự án CHỌN Chiến lược B (trong hai chiến lược đã cân nhắc):
  *
  *   Chiến lược A (lan truyền ExactNumber chính xác xuyên suốt, định
  *   nghĩa một biểu diễn JSON-safe cho số vô hạn tuần hoàn — ví dụ
@@ -67,7 +67,7 @@ import { ExactNumber, divide, fromBigInt, isFiniteDecimalDenominator, toDecimalS
  *   thiết kế lại thành một định dạng phân số cho MỌI field, không riêng
  *   quotaFactor — một thay đổi kiến trúc lớn hơn nhiều so với phạm vi
  *   một corrective, và không mang lại lợi ích nào cho cấu hình thực tế
- *   của kỳ thi (peoplePerQuotaUnit = 4, luôn hữu hạn).
+ *   đang dùng (peoplePerQuotaUnit = 4, luôn hữu hạn).
  *
  *   Chiến lược B (đã chọn): định nghĩa tường minh "peoplePerQuotaUnit
  *   hợp lệ cho tính hoá đơn = giá trị mà MỌI tenantCount đều cho
@@ -104,7 +104,7 @@ export function calculateQuotaFactorExact(input: QuotaFactorInput): Result<Exact
   if (!Number.isInteger(input.tenantCount) || input.tenantCount <= 0) {
     return fail(
       "INVALID_TENANT_COUNT",
-      `tenantCount phải là số nguyên dương để tính quota điện theo bậc thang (đề thi không định nghĩa quy tắc cho 0 hoặc số âm): ${input.tenantCount}`
+      `tenantCount phải là số nguyên dương để tính quota điện theo bậc thang (chưa có quy tắc cho 0 hoặc số âm): ${input.tenantCount}`
     );
   }
   if (!Number.isInteger(input.peoplePerQuotaUnit) || input.peoplePerQuotaUnit <= 0) {

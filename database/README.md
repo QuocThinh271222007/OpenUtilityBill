@@ -5,7 +5,7 @@ OpenUtilityBill, host trên [Supabase](https://supabase.com).
 
 ## Trạng thái hiện tại
 
-Schema domain ban đầu, seed cấu hình mặc định của kỳ thi, và một bộ
+Schema domain ban đầu, seed cấu hình mặc định, và một bộ
 script kiểm chứng runtime tồn tại dưới dạng file SQL (bên dưới). Cả hai
 migration, seed, và toàn bộ backend REST API/frontend đã được chạy
 thật đối với một database PostgreSQL thật (Supabase) trong lần chạy
@@ -27,7 +27,7 @@ database/
     001_initial_domain_schema.sql          Bảng, ràng buộc, quan hệ
     002_preserve_invoice_item_precision.sql  Nới invoice_items.quantity/amount thành NUMERIC không giới hạn
   seeds/
-    001_competition_defaults.sql           Biểu giá mặc định chính thức của kỳ thi
+    001_competition_defaults.sql           Biểu giá mặc định chính thức
   validation/
     001_domain_success_validation.sql      Chạy một lần: kiểm tra schema/seed + chứng minh dữ liệu hợp lệ
     002_domain_constraint_validation.sql   Chạy từng khối một: chứng minh ràng buộc từ chối dữ liệu sai
@@ -111,7 +111,7 @@ dùng chính SQL Editor của dự án Supabase:
 10. Để chứng minh seed idempotent: chạy
     `database/seeds/001_competition_defaults.sql` lần thứ hai (kỳ
     vọng: **PASS**, không lỗi), rồi chạy lại các query "B. Kiểm chứng
-    seed kỳ thi" trong `001_domain_success_validation.sql` — mọi số
+    seed mặc định" trong `001_domain_success_validation.sql` — mọi số
     đếm phải không đổi (1 tariff điện, 6 tier, 1 tariff nước), chứng
     minh lần chạy thứ hai không tạo ra bản trùng lặp nào.
 11. **Không bao giờ** paste một connection string thật, mật khẩu

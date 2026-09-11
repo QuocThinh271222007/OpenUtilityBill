@@ -1,4 +1,4 @@
-# Checklist smoke test cuối cùng (chủ dự án tự chạy)
+# Checklist smoke test cuối cùng (thực hiện thủ công)
 
 **Trạng thái: CHƯA được bất kỳ agent nào thực thi.** Phiên làm việc này
 không có công cụ điều khiển trình duyệt nào được bật (Claude in Chrome
@@ -10,9 +10,9 @@ API tạo/đọc hoá đơn thật, typecheck + build backend/frontend, health
 endpoint, dev server backend/frontend cùng Vite proxy `/api`) đã được
 chạy thật — xem báo cáo runtime closure để biết bằng chứng chi tiết.
 **Chỉ riêng thao tác click-through trong trình duyệt bên dưới là chưa
-được xác minh bởi agent.** Chủ dự án cần tự chạy checklist này và xác
-nhận kết quả trước khi coi giao diện trình duyệt bắt buộc là sẵn sàng
-phát hành.
+được xác minh bởi agent.** Checklist này cần được thực hiện thủ công
+trên trình duyệt và xác nhận kết quả trước khi coi giao diện trình
+duyệt bắt buộc là sẵn sàng phát hành.
 
 ## Chuẩn bị
 
@@ -24,7 +24,7 @@ biến môi trường `process.env.DATABASE_URL` của chính tiến trình Node
 `DATABASE_URL` phải thực sự có mặt trong biến môi trường của cửa sổ
 PowerShell (hoặc shell khác) TRƯỚC KHI chạy `npm start`/`npm run dev`.
 
-### 1. Đặt DATABASE_URL trong PowerShell (môi trường thật của chủ dự án)
+### 1. Đặt DATABASE_URL trong PowerShell (môi trường kiểm thử thủ công)
 
 ```powershell
 $env:DATABASE_URL = '<SUPABASE_DATABASE_URL>'
@@ -90,8 +90,9 @@ Get-Content backend\.env | ForEach-Object {
 
 ### 4. Nền tảng khác (Bash/Linux) — tuỳ chọn
 
-PowerShell là hướng dẫn chính vì đó là môi trường thật của chủ dự án.
-Nếu chạy trên Bash/Linux thay vì PowerShell, tương đương là:
+PowerShell là hướng dẫn chính vì đây là môi trường Windows/PowerShell
+được dùng để kiểm thử thủ công. Nếu chạy trên Bash/Linux thay vì
+PowerShell, tương đương là:
 
 ```bash
 export DATABASE_URL='<SUPABASE_DATABASE_URL>'
@@ -163,15 +164,15 @@ nguyên nào (property/room/meter reading/tariff/invoice) — xem
   để dễ nhận ra đây là dữ liệu smoke test, không phải dữ liệu thật.
 - Việc để lại các bản ghi này trong database development/test là CHẤP
   NHẬN ĐƯỢC.
-- Nếu chủ dự án muốn dọn dẹp, có thể tự xoá trực tiếp trong database
-  development/test (ví dụ qua Supabase SQL editor) sau khi smoke test
-  xong — đây là một bước TUỲ CHỌN, không bắt buộc, và không cần thêm
-  DELETE API chỉ để phục vụ việc dọn dẹp này.
+- Nếu cần dọn dẹp, có thể xoá trực tiếp trong database development/
+  test (ví dụ qua Supabase SQL editor) sau khi smoke test xong — đây
+  là một bước TUỲ CHỌN, không bắt buộc, và không cần thêm DELETE API
+  chỉ để phục vụ việc dọn dẹp này.
 
 ## Sau khi chạy checklist này
 
 Ghi lại kết quả (đạt/không đạt, và bất kỳ lỗi nào phát hiện được)
 trước khi tiến hành bất kỳ bước merge/tag/release nào. Checklist này
 tự nó KHÔNG cho phép merge vào `main`, tạo tag, hay tạo GitHub Release
-— đó vẫn là các hành động riêng biệt, tường minh, do chủ dự án quyết
-định.
+— đó vẫn là các hành động riêng biệt, tường minh, cần được xác nhận
+độc lập.

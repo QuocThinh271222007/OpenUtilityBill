@@ -141,7 +141,7 @@ CREATE TABLE meter_readings (
 -- ------------------------------------------------------------
 -- ElectricityTariff là CẤU HÌNH (configuration), không phải công thức.
 --
--- people_per_quota_unit và fallback_tier_number là tham số của kỳ thi
+-- people_per_quota_unit và fallback_tier_number là tham số cấu hình
 -- HIỆN TẠI ("số người / 4 = định mức", "fallback dùng giá bậc 3") —
 -- lưu như dữ liệu để Calculation Core (task sau) đọc, thay vì hard-code
 -- hằng số 4 hay 3 trong TypeScript.

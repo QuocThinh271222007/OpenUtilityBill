@@ -1,17 +1,17 @@
 -- SPDX-License-Identifier: MIT
 
 -- ============================================================
--- Competition default configuration seed
+-- Default configuration seed
 -- ============================================================
 --
 -- Trách nhiệm:
--- Nạp cấu hình biểu giá điện/nước MẶC ĐỊNH do đề thi cung cấp, vào các
--- bảng electricity_tariffs, electricity_tariff_tiers, water_tariffs đã
--- tạo bởi database/migrations/001_initial_domain_schema.sql.
+-- Nạp cấu hình biểu giá điện/nước MẶC ĐỊNH vào các bảng
+-- electricity_tariffs, electricity_tariff_tiers, water_tariffs đã tạo
+-- bởi database/migrations/001_initial_domain_schema.sql.
 --
--- Đây là DỮ LIỆU cấu hình mặc định của kỳ thi — KHÔNG phải quy tắc bất
--- biến (immutable rule) của chương trình. Giá trị này có thể được thay
--- thế sau này qua giao diện quản trị (admin configuration, task sau),
+-- Đây là DỮ LIỆU cấu hình mặc định — KHÔNG phải quy tắc bất biến
+-- (immutable rule) của chương trình. Giá trị này có thể được thay thế
+-- sau này qua giao diện quản trị (admin configuration, task sau),
 -- không cần sửa Calculation Core hay schema.
 --
 -- Không chịu trách nhiệm:
@@ -29,7 +29,7 @@
 -- Ngày hiệu lực (effective_from/effective_to) — xem giải thích riêng
 -- ngay tại từng INSERT bên dưới, vì điện và nước có NGUỒN GỐC khác
 -- nhau cho ngày hiệu lực (một cái là ngày pháp lý, một cái là ngày
--- công bố cấu hình cho kỳ thi).
+-- công bố cấu hình mặc định).
 
 BEGIN;
 
@@ -37,13 +37,13 @@ BEGIN;
 -- Electricity: tariff + 6 tiers
 -- ------------------------------------------------------------
 -- effective_from = '2025-05-10': đây là NGÀY HIỆU LỰC PHÁP LÝ của biểu
--- giá điện theo Quyết định 1279/QĐ-BCT, được đề thi trích dẫn làm căn
--- cứ — không phải ngày giả định.
+-- giá điện theo Quyết định 1279/QĐ-BCT, dùng làm căn cứ — không phải
+-- ngày giả định.
 --
 -- effective_to = '2026-12-31': ngày này giới hạn PHIÊN BẢN CẤU HÌNH
 -- này (bao gồm cả electricity_vat_rate = 0.08), KHÔNG PHẢI ngày hết
--- hạn của bản thân đơn giá điện theo Quyết định 1279/QĐ-BCT. Đề thi
--- quy định mức thuế VAT điện 8% chỉ áp dụng tới hết 31/12/2026; sau
+-- hạn của bản thân đơn giá điện theo Quyết định 1279/QĐ-BCT. Quy định
+-- hiện hành đặt mức thuế VAT điện 8% chỉ áp dụng tới hết 31/12/2026; sau
 -- ngày này, một phiên bản electricity_tariffs MỚI (ví dụ với VAT khác)
 -- sẽ cần được thêm bằng một seed/migration riêng — schema đã hỗ trợ
 -- điều đó qua effective_from/effective_to (xem
@@ -59,7 +59,7 @@ INSERT INTO electricity_tariffs (
     'Competition Default Electricity Tariff',
     '2025-05-10',
     '2026-12-31',
-    0.08,   -- VAT điện 8%, có hiệu lực tới hết 2026-12-31 theo đề thi.
+    0.08,   -- VAT điện 8%, có hiệu lực tới hết 2026-12-31.
     4,      -- "số người / 4 = số định mức".
     3       -- Phương pháp fallback dùng giá bậc 3.
 )
@@ -87,13 +87,13 @@ ON CONFLICT (tariff_id, tier_number) DO NOTHING;
 -- ------------------------------------------------------------
 -- Water tariff
 -- ------------------------------------------------------------
--- effective_from = '2026-09-06': đề thi KHÔNG cung cấp một ngày hiệu
--- lực pháp lý cho biểu giá nước (không có quyết định/văn bản tham
--- chiếu như điện). Ngày này là NGÀY KÍCH HOẠT/CÔNG BỐ CẤU HÌNH cho kỳ
--- thi (ngày các giá trị này được xác định cố định để dùng trong đồ
--- án) — KHÔNG PHẢI ngày hiệu lực pháp lý của một biểu giá nước địa
--- phương thực tế. effective_to để NULL: không có căn cứ nào giới hạn
--- ngày kết thúc cho cấu hình nước của kỳ thi.
+-- effective_from = '2026-09-06': KHÔNG có một ngày hiệu lực pháp lý
+-- cho biểu giá nước (không có quyết định/văn bản tham chiếu như
+-- điện). Ngày này là NGÀY KÍCH HOẠT/CÔNG BỐ CẤU HÌNH mặc định (ngày
+-- các giá trị này được xác định cố định để dùng trong hệ thống) —
+-- KHÔNG PHẢI ngày hiệu lực pháp lý của một biểu giá nước địa phương
+-- thực tế. effective_to để NULL: không có căn cứ nào giới hạn ngày
+-- kết thúc cho cấu hình nước mặc định.
 INSERT INTO water_tariffs (
     name,
     effective_from,

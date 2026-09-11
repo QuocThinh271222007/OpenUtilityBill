@@ -33,7 +33,7 @@ xem mục "Thiết lập môi trường" bên dưới.
 | `npm run typecheck` | Chạy `tsc --noEmit` — kiểm tra kiểu mà không emit file. |
 | `npm run build` | Biên dịch TypeScript sang `backend/dist/`. |
 | `npm start` | Chạy server đã biên dịch (`node dist/server.js`). Cần chạy `npm run build` trước. |
-| `npm test` | Chạy toàn bộ test backend (test runner có sẵn của Node `node:test`, chạy qua `tsx` — không dùng Jest/Vitest/Mocha). Bao phủ `backend/src/**/*.test.ts`: Calculation Core (bao gồm cả các test case chính thức của kỳ thi), test unit cho config/adapter database, test unit cho việc ánh xạ dòng/ngữ nghĩa lỗi của Repository, mọi orchestration của Service quản lý/hoá đơn (dùng Repository giả, không có PostgreSQL), và tầng HTTP của mỗi module (hàm thuần `*.http.ts` + `*.controller.ts` với Service giả). Các test cần kết nối PostgreSQL thật (`*.integration.test.ts`) tự động **SKIP** (không FAIL) khi `DATABASE_URL` chưa đặt — bao gồm `invoice.api.integration.test.ts`, test này chạy thật app Express qua một round-trip HTTP thật (`app.listen(0)` + `fetch` có sẵn, không dùng `supertest`). **Nợ kỹ thuật đã biết:** `backend/tsconfig.json` loại trừ `src/**/__tests__/**`, nên lệnh này KHÔNG tự type-check các file test — xem `docs/MANAGEMENT_API.md` mục "Known debt: test-file typechecking". |
+| `npm test` | Chạy toàn bộ test backend (test runner có sẵn của Node `node:test`, chạy qua `tsx` — không dùng Jest/Vitest/Mocha). Bao phủ `backend/src/**/*.test.ts`: Calculation Core (bao gồm cả bộ test case tham chiếu chính thức), test unit cho config/adapter database, test unit cho việc ánh xạ dòng/ngữ nghĩa lỗi của Repository, mọi orchestration của Service quản lý/hoá đơn (dùng Repository giả, không có PostgreSQL), và tầng HTTP của mỗi module (hàm thuần `*.http.ts` + `*.controller.ts` với Service giả). Các test cần kết nối PostgreSQL thật (`*.integration.test.ts`) tự động **SKIP** (không FAIL) khi `DATABASE_URL` chưa đặt — bao gồm `invoice.api.integration.test.ts`, test này chạy thật app Express qua một round-trip HTTP thật (`app.listen(0)` + `fetch` có sẵn, không dùng `supertest`). **Nợ kỹ thuật đã biết:** `backend/tsconfig.json` loại trừ `src/**/__tests__/**`, nên lệnh này KHÔNG tự type-check các file test — xem `docs/MANAGEMENT_API.md` mục "Known debt: test-file typechecking". |
 
 Kiểm tra hoạt động:
 
@@ -103,7 +103,7 @@ khi lỗi mạng — xem `docs/FRONTEND.md` mục "Ranh giới API client"). Xem
   chỉ đọc đúng biến môi trường `process.env.DATABASE_URL` của chính
   tiến trình Node đang chạy, nên giá trị trong `.env` phải được tự nạp
   vào biến môi trường của shell trước khi chạy `npm start`/`npm run
-  dev`. Trên PowerShell (môi trường của chủ dự án):
+  dev`. Trên Windows PowerShell:
 
   ```powershell
   $env:DATABASE_URL = '<SUPABASE_DATABASE_URL>'

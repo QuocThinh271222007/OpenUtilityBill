@@ -314,27 +314,28 @@ tương lai, được biện minh tường minh.
 
 - **Điện** (`effective_from = 2025-05-10`,
   `effective_to = 2026-12-31`): `effective_from` là một ngày hiệu lực
-  **pháp lý** thật — đề thi trích dẫn Quyết định 1279/QĐ-BCT có hiệu
-  lực từ 10/05/2025 cho biểu giá điện gốc. `effective_to = 2026-12-31`
-  **không** có nghĩa bản thân giá điện hết hạn vào ngày đó — nó chỉ
-  giới hạn *dòng cấu hình này*, vốn cũng gộp cả mức VAT điện 8% của đề
-  thi, và đề thi nêu rõ mức VAT 8% đó chỉ áp dụng tới hết 31/12/2026.
-  Qua ngày đó, một dòng `electricity_tariffs` mới (ví dụ với mức VAT
-  cập nhật) sẽ cần được seed/insert — schema đã hỗ trợ sẵn điều đó dưới
+  **pháp lý** thật — đặc tả nghiệp vụ trích dẫn Quyết định 1279/QĐ-BCT
+  có hiệu lực từ 10/05/2025 cho biểu giá điện gốc. `effective_to =
+  2026-12-31` **không** có nghĩa bản thân giá điện hết hạn vào ngày đó
+  — nó chỉ giới hạn *dòng cấu hình này*, vốn cũng gộp cả mức VAT điện
+  8% theo cấu hình mặc định, vốn chỉ áp dụng tới hết 31/12/2026. Qua
+  ngày đó, một dòng `electricity_tariffs` mới (ví dụ với mức VAT cập
+  nhật) sẽ cần được seed/insert — schema đã hỗ trợ sẵn điều đó dưới
   dạng một dòng mới với `effective_from` muộn hơn, không cần migration.
-- **Nước** (`effective_from = 2026-09-06`, `effective_to = NULL`): đề
-  thi không trích dẫn bất kỳ văn bản pháp lý biểu giá nước nào có ngày
-  hiệu lực thật. `2026-09-06` được ghi rõ là **ngày kích hoạt/công bố
-  của cấu hình kỳ thi** — ngày các giá trị cố định này được xác lập để
-  dùng trong dự án này — không phải một tuyên bố rằng một biểu giá nước
-  địa phương thật đã có hiệu lực đúng ngày đó. `effective_to` là `NULL`
-  vì không có căn cứ nào cho một ngày kết thúc.
+- **Nước** (`effective_from = 2026-09-06`, `effective_to = NULL`): đặc
+  tả nghiệp vụ không trích dẫn bất kỳ văn bản pháp lý biểu giá nước nào
+  có ngày hiệu lực thật. `2026-09-06` được ghi rõ là **ngày kích hoạt/
+  công bố của cấu hình mặc định** — ngày các giá trị cố định này được
+  xác lập để dùng trong dự án này — không phải một tuyên bố rằng một
+  biểu giá nước địa phương thật đã có hiệu lực đúng ngày đó.
+  `effective_to` là `NULL` vì không có căn cứ nào cho một ngày kết
+  thúc.
 
-Sự phân biệt này quan trọng khi bảo vệ trực tiếp: `effective_from`
-trên `electricity_tariffs` có thể bảo vệ được bằng cách trích dẫn một
-văn bản pháp lý bên ngoài; `effective_from` trên `water_tariffs` thì
-không, và nên được giải thích là "khi cấu hình cố định của kỳ thi này
-được áp dụng," không phải "khi một biểu giá nước thật có hiệu lực."
+Sự phân biệt này quan trọng khi đối chiếu nguồn gốc dữ liệu:
+`effective_from` trên `electricity_tariffs` có căn cứ từ một văn bản
+pháp lý bên ngoài; `effective_from` trên `water_tariffs` thì không, và
+nên được hiểu là "khi cấu hình mặc định này được áp dụng," không phải
+"khi một biểu giá nước thật có hiệu lực."
 
 ## Vì sao SQL được giữ dễ đọc và trực tiếp
 
@@ -342,9 +343,8 @@ Mọi ràng buộc ở trên đều hiển thị trực tiếp trong
 `database/migrations/001_initial_domain_schema.sql` dưới dạng các câu
 lệnh `CREATE TABLE` thuần với mệnh đề `CHECK`/`REFERENCES` inline —
 không do một công cụ sinh ra, không ẩn sau các decorator model của một
-ORM. Chủ repository có thể đọc migration từ đầu tới cuối và biết chính
-xác database sẽ ép buộc điều gì, không có tầng gián tiếp nào cần lần
-theo khi bảo vệ trực tiếp.
+ORM. Người đọc có thể đọc migration từ đầu tới cuối và biết chính xác
+database sẽ ép buộc điều gì, không có tầng gián tiếp nào cần lần theo.
 
 ## Vì sao không dùng ORM
 
