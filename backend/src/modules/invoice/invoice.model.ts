@@ -20,6 +20,11 @@ import type {
  * - `calculatedTotal >= 0`.
  * - `actualChargedAmount >= 0` khi có giá trị.
  *
+ * ID representation:
+ * `id` và mọi field kết thúc bằng `...Id` là `string` (BIGINT ở
+ * database) — xem ../property/property.model.ts mục "ID representation"
+ * và docs/DATABASE_ACCESS.md.
+ *
  * Numeric representation:
  * `calculatedTotal`, `actualChargedAmount`, `quantity`, `unitPrice`,
  * `amount` đều là `string` — cùng quy ước với
@@ -82,28 +87,28 @@ import type {
  * không cần parse một trường tổng hợp hay một JSON blob.
  */
 export interface Invoice {
-  id: number;
-  roomId: number;
+  id: string;
+  roomId: string;
   billingPeriod: Date;
 
   /** Snapshot của Room.tenantCount tại thời điểm tính hoá đơn này. */
   tenantCountUsed: number;
 
   /** Tham chiếu đúng phiên bản tariff đã dùng, không phải "mới nhất". */
-  electricityTariffId: number;
-  waterTariffId: number;
+  electricityTariffId: string;
+  waterTariffId: string;
 
   electricityBillingMethod: ElectricityBillingMethod;
   waterBillingMethod: WaterBillingMethod;
 
   /** Bắt buộc: mọi hoá đơn đều cần chỉ số điện. */
-  electricityReadingId: number;
+  electricityReadingId: string;
 
   /**
    * Có thể NULL: phương pháp PER_PERSON tính theo số người, không cần
    * chỉ số nước thực tế (xem ../tariff/tariff.model.ts WaterBillingMethod).
    */
-  waterReadingId: number | null;
+  waterReadingId: string | null;
 
   calculatedTotal: string;
 
@@ -128,8 +133,8 @@ export type InvoiceItemCategory =
   | "WATER_ENVIRONMENTAL_FEE";
 
 export interface InvoiceItem {
-  id: number;
-  invoiceId: number;
+  id: string;
+  invoiceId: string;
   category: InvoiceItemCategory;
 
   /** Chỉ có ý nghĩa cho category = ELECTRICITY_TIER. */

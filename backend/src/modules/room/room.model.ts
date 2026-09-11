@@ -16,6 +16,11 @@
  *   name)) — KHÔNG phải duy nhất toàn hệ thống. Hai property khác nhau
  *   vẫn có thể cùng có một phòng tên "101".
  *
+ * ID representation:
+ * `id`, `propertyId` là `string` (BIGINT ở database) — xem
+ * ../property/property.model.ts mục "ID representation" và
+ * docs/DATABASE_ACCESS.md.
+ *
  * Does NOT:
  * - tự đảm bảo hoá đơn cũ không đổi khi `tenantCount` thay đổi sau này.
  *   Việc đó là trách nhiệm của `Invoice.tenantCountUsed` (xem
@@ -32,8 +37,8 @@
  * lập với property cha của nó.
  */
 export interface Room {
-  id: number;
-  propertyId: number;
+  id: string;
+  propertyId: string;
   name: string;
   tenantCount: number;
   createdAt: Date;

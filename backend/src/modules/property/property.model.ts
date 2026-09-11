@@ -14,6 +14,14 @@
  *   (BIGINT GENERATED ALWAYS AS IDENTITY).
  * - `name` không được NULL.
  *
+ * ID representation:
+ * `id` là `string`, không phải `number`. Cột database là BIGINT (int8),
+ * và JS `number` không biểu diễn an toàn mọi giá trị BIGINT (giới hạn
+ * an toàn là 2^53-1). Driver `postgres` (Postgres.js) trả BIGINT dưới
+ * dạng chuỗi mặc định — domain model phản ánh đúng ranh giới đó thay vì
+ * ép về `number` và âm thầm giả định ID "chắc sẽ luôn nhỏ" (xem
+ * docs/DATABASE_ACCESS.md mục "BIGINT / ID boundary").
+ *
  * Does NOT:
  * - chứa thông tin xác thực/chủ sở hữu (authentication, ownership) —
  *   chưa có yêu cầu ở giai đoạn này (xem docs/ARCHITECTURE.md).
@@ -30,7 +38,7 @@
  * docs/DOMAIN_MODEL.md mục "No circular dependencies").
  */
 export interface RentalProperty {
-  id: number;
+  id: string;
   name: string;
   address: string | null;
   createdAt: Date;

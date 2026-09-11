@@ -25,6 +25,11 @@
  *   để một tháng luôn ứng với đúng một giá trị `billingPeriod`, dễ
  *   truy vấn theo tháng (`WHERE billing_period = '2026-09-01'`).
  *
+ * ID representation:
+ * `id`, `roomId` là `string` (BIGINT ở database) — xem
+ * ../property/property.model.ts mục "ID representation" và
+ * docs/DATABASE_ACCESS.md.
+ *
  * Numeric representation:
  * `previousReading`, `currentReading`, `meterMaximumValue` được khai
  * báo là `string`, không phải `number`, vì các cột tương ứng ở database
@@ -54,8 +59,8 @@
 export type UtilityType = "ELECTRICITY" | "WATER";
 
 export interface MeterReading {
-  id: number;
-  roomId: number;
+  id: string;
+  roomId: string;
   billingPeriod: Date;
   utilityType: UtilityType;
   previousReading: string;

@@ -22,6 +22,11 @@
  *   KHÔNG theo quy ước này — đó là đơn giá tiền, không có giới hạn trên
  *   tự nhiên (xem docs/DATABASE_DESIGN.md).
  *
+ * ID representation:
+ * `id`, `tariffId` là `string` (BIGINT ở database) — xem
+ * ../property/property.model.ts mục "ID representation" và
+ * docs/DATABASE_ACCESS.md.
+ *
  * Numeric representation:
  * `electricityVatRate`, `unitPrice`, `thresholdKwh`, `pricePerCubicMeter`,
  * `pricePerPerson`, `vatRate`, `environmentalFeeRate` đều là `string`,
@@ -66,7 +71,7 @@ export type ElectricityBillingMethod = "QUOTA_TIERED" | "FALLBACK_TIER_FLAT";
 export type WaterBillingMethod = "PER_CUBIC_METER" | "PER_PERSON";
 
 export interface ElectricityTariff {
-  id: number;
+  id: string;
   name: string;
   effectiveFrom: Date;
   effectiveTo: Date | null;
@@ -77,15 +82,15 @@ export interface ElectricityTariff {
 }
 
 export interface ElectricityTariffTier {
-  id: number;
-  tariffId: number;
+  id: string;
+  tariffId: string;
   tierNumber: number;
   thresholdKwh: string | null;
   unitPrice: string;
 }
 
 export interface WaterTariff {
-  id: number;
+  id: string;
   name: string;
   effectiveFrom: Date;
   effectiveTo: Date | null;
