@@ -149,10 +149,16 @@ Holding a database transaction open while doing CPU-bound calculation
 work would block a connection for no reason — the transaction should
 only wrap the writes.
 
-This mechanism is proven with real rollback/commit behavior against
-PostgreSQL in `backend/src/database/__tests__/transaction.integration.test.ts`
-(see the final report for whether it was actually executed in this
-session).
+This mechanism is exercised with real rollback/commit assertions against
+PostgreSQL in
+`backend/src/database/__tests__/transaction.integration.test.ts` — a
+genuine `TEST_IMPLEMENTED` (the test exists, is correct, and will run
+whenever `DATABASE_URL` is supplied). Whether it has actually been
+`TEST_RUNTIME_EXECUTED` (run against a live database and observed to
+pass) is a separate claim, tracked per-session in the task that added or
+last touched this test — do not treat "the test exists" as "the test has
+run." Distinguishing these two is deliberate project policy: this
+project never reports a runtime PASS that was not actually observed.
 
 ## `NUMERIC` / `BIGINT` precision boundary
 
@@ -182,11 +188,34 @@ deliberately does **not** register a custom type parser for either, and
 documents why in its header comment: doing so would risk reintroducing
 float/number coercion.
 
-This is verified against a real PostgreSQL connection in
-`backend/src/database/__tests__/postgres-client.numeric.integration.test.ts`,
-which asserts that `62.5125`, `124025.123456`, `0.08`, and the BIGINT
+`backend/src/database/__tests__/postgres-client.numeric.integration.test.ts`
+asserts this against a real PostgreSQL connection when one is available —
+`62.5125`, `124025.123456`, an unscaled `0.08`, a **fixed-scale**
+`NUMERIC(p, s)` expression (matching how the real schema's columns are
+declared — e.g. `NUMERIC(5, 4)` reads back as `"0.0800"`, not `"0.08"`;
+see "NUMERIC string format is not canonicalized" below), and the BIGINT
 maximum value (`9223372036854775807`, far beyond
-`Number.MAX_SAFE_INTEGER`) all round-trip as exact strings.
+`Number.MAX_SAFE_INTEGER`) are all asserted to round-trip as exact
+strings. As with the transaction test above, this is `TEST_IMPLEMENTED`
+— whether it has been `TEST_RUNTIME_EXECUTED` in a given session depends
+on whether `DATABASE_URL` was available; that distinction is reported
+explicitly in each task's final report rather than assumed.
+
+### NUMERIC string format is not canonicalized
+
+The Repository layer passes through whatever exact string PostgreSQL
+sends — it does **not** reformat it (e.g. stripping trailing zeros).
+`electricity_tariffs.electricity_vat_rate` is `NUMERIC(5, 4)`, so a row
+read from it has `electricityVatRate === "0.0800"`, not `"0.08"` — both
+strings represent the identical exact value, and `parseDecimal` in
+Calculation Core (`docs/NUMERIC_PRECISION.md`) accepts either form
+identically. This is a deliberate simplicity choice, not an oversight:
+canonicalizing decimal strings would mean writing (and maintaining) a
+zero-trimming function in the Repository layer for no correctness
+benefit — Calculation Core already normalizes any valid decimal string
+to a reduced exact fraction the moment it parses one, so canonical
+*formatting* only matters at a final display/output boundary, if and
+when one needs it, not at the Repository read boundary.
 
 Repository row-mapping code **never** calls `Number(...)`, `parseFloat`,
 `parseInt`, or unary `+` on a `NUMERIC`-backed or `BIGINT`-backed
@@ -221,6 +250,44 @@ JSON-facing object — IDs are plain strings end to end, so no special
 serialization strategy is needed (unlike Calculation Core's internal
 `ExactNumber`/`BigInt`, which never crosses a module boundary at all —
 see `docs/NUMERIC_PRECISION.md`).
+
+## `DATE` boundary — reviewed, not changed (future consideration)
+
+`billing_period`, `effective_from`, and `effective_to` are PostgreSQL
+`DATE` columns (a calendar day, with no time-of-day or timezone
+component). The Repository layer currently represents them as JS `Date`
+objects, matching the existing domain models
+(`docs/DOMAIN_MODEL.md`) and Postgres.js's built-in `date` type handler
+(OID `1082`/`1114`/`1184`, parsed via `new Date(x)`).
+
+This was reviewed for a specific risk: Postgres.js serializes an
+outgoing JS `Date` parameter as a `timestamptz` (OID `1184`, via
+`.toISOString()`), not as a `date`. When that parameter is compared
+against a `DATE` column (e.g. `WHERE billing_period = ${someDate}`),
+PostgreSQL casts the column's `date` value to `timestamptz` using the
+**session's timezone** to do the comparison — not necessarily UTC. If
+that session timezone were ever something other than UTC, a `Date`
+meant to represent "2026-09-01" could, in principle, fail to match a
+`billing_period` of `2026-09-01`, or match the wrong row, depending on
+the offset.
+
+**This is a theoretical risk, not a demonstrated bug.** No live
+PostgreSQL connection was available to actually test it in the tasks
+that built this layer, and Supabase-hosted PostgreSQL databases default
+their session timezone to UTC, which would make this a non-issue in
+practice for this project's actual deployment. No code change was made
+based on this review, per instruction: only a demonstrated defect
+justifies changing behavior, not a theoretical one.
+
+**Future boundary consideration:** if this is ever a concern (e.g. the
+database's timezone configuration changes, or a future API boundary
+needs to accept/return dates), the more robust fix is to stop relying on
+JS `Date` + implicit timezone-dependent casting entirely for `DATE`
+columns, and instead use canonical `YYYY-MM-DD` strings at the
+Repository parameter/return boundary (parsed/formatted explicitly,
+never through `Date`'s local-timezone-sensitive methods like
+`getDate()`/`getMonth()`). This would need its own small task, not a
+change bundled into unrelated work.
 
 ## Error translation
 

@@ -27,6 +27,21 @@ import { closeDatabaseClient, getDatabaseClient } from "../postgres-client";
  * decimal types in native Javascript. These [and similar] types will be
  * returned as a string." Test này xác nhận hành vi đó trên kết nối THẬT,
  * không chỉ tin vào tài liệu.
+ *
+ * QUAN TRỌNG — phân biệt hai loại literal NUMERIC khác nhau:
+ * `'0.08'::numeric` (không khai báo precision/scale) là một NUMERIC
+ * "linh hoạt" — PostgreSQL giữ ĐÚNG số chữ số đã nhập, không thêm số 0.
+ * Đây KHÔNG PHẢI cùng một tình huống với đọc một CỘT đã khai báo scale
+ * cố định, ví dụ `electricity_tariffs.electricity_vat_rate
+ * NUMERIC(5, 4)` — cột đó LUÔN trả đủ 4 chữ số thập phân
+ * (`"0.0800"`), vì PostgreSQL đệm số 0 theo scale đã khai báo khi lưu
+ * trữ, không phải khi đọc. Test đầu tiên dưới đây (dùng `::numeric`
+ * không khai báo scale) chứng minh KHÔNG có sai số dấu phẩy động — vẫn
+ * đúng và hữu ích. Test thứ hai dùng `CAST(... AS NUMERIC(p, s))` để mô
+ * phỏng ĐÚNG hành vi của một cột có scale cố định như trong schema thật
+ * (`database/migrations/001_initial_domain_schema.sql`) — đây là bằng
+ * chứng sát với dữ liệu thực tế mà Repository đọc được, xem
+ * `backend/src/repositories/__tests__/repository-reads.integration.test.ts`.
  */
 const hasDatabaseUrl = typeof process.env.DATABASE_URL === "string" && process.env.DATABASE_URL.trim().length > 0;
 
@@ -60,6 +75,35 @@ test(
       // (2^53 - 1). Nếu driver ép về `number`, giá trị này sẽ bị sai.
       assert.equal(typeof row.big_id, "string");
       assert.equal(row.big_id, "9223372036854775807");
+    } finally {
+      await closeDatabaseClient();
+    }
+  }
+);
+
+test(
+  "postgres-client: NUMERIC với scale cố định (như cột thật trong schema) giữ đủ số 0 đệm, không mất chính xác",
+  { skip: hasDatabaseUrl ? false : "Cần DATABASE_URL trỏ tới Supabase PostgreSQL thật để chạy test này." },
+  async () => {
+    const sql = getDatabaseClient();
+    try {
+      const rows = await sql`
+        SELECT
+          CAST('0.08' AS NUMERIC(6, 4))   AS vat_rate,
+          CAST('3460' AS NUMERIC(14, 2))  AS unit_price
+      `;
+
+      assert.equal(rows.length, 1);
+      const row = rows[0];
+
+      // Giống hệt electricity_tariffs.electricity_vat_rate NUMERIC(5, 4)
+      // trong schema thật — PostgreSQL đệm đủ 4 chữ số thập phân.
+      assert.equal(typeof row.vat_rate, "string");
+      assert.equal(row.vat_rate, "0.0800");
+
+      // Giống hệt electricity_tariff_tiers.unit_price NUMERIC(14, 2).
+      assert.equal(typeof row.unit_price, "string");
+      assert.equal(row.unit_price, "3460.00");
     } finally {
       await closeDatabaseClient();
     }

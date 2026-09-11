@@ -21,6 +21,19 @@ import { PostgresWaterTariffRepository } from "../postgres/postgres-water-tariff
  * Điều kiện trước khi chạy: migration 001+002 và seed
  * 001_competition_defaults.sql đã chạy trên database mà DATABASE_URL
  * trỏ tới.
+ *
+ * Về định dạng chuỗi NUMERIC kỳ vọng bên dưới (QUAN TRỌNG):
+ * PostgreSQL trả về NUMERIC theo ĐÚNG SCALE đã khai báo ở migration —
+ * không tự cắt số 0 ở cuối. `electricity_vat_rate` là
+ * `NUMERIC(5, 4)` nên đọc lại là `"0.0800"` (4 chữ số thập phân), KHÔNG
+ * phải `"0.08"`; `unit_price`/`price_per_cubic_meter`/`price_per_person`
+ * là `NUMERIC(14, 2)` nên đọc lại là `"3460.00"`/`"8500.00"`/
+ * `"80000.00"` (2 chữ số thập phân). Đây KHÔNG phải một vấn đề chính
+ * xác (precision) — `"0.08"` và `"0.0800"` biểu diễn CÙNG một giá trị
+ * chính xác tuyệt đối. Repository CỐ Ý không chuẩn hoá (canonicalize)
+ * chuỗi này — xem docs/DATABASE_ACCESS.md mục "NUMERIC string format is
+ * not canonicalized". Calculation Core (`parseDecimal`) chấp nhận cả
+ * hai dạng như nhau.
  */
 const hasDatabaseUrl = typeof process.env.DATABASE_URL === "string" && process.env.DATABASE_URL.trim().length > 0;
 
@@ -39,7 +52,9 @@ test(
       if (!result.success) return;
 
       assert.equal(result.data.tariff.name, "Competition Default Electricity Tariff");
-      assert.equal(result.data.tariff.electricityVatRate, "0.08");
+      // electricity_vat_rate là NUMERIC(5, 4) -> "0.0800", không phải
+      // "0.08" (xem giải thích scale ở đầu file).
+      assert.equal(result.data.tariff.electricityVatRate, "0.0800");
       assert.equal(result.data.tariff.peoplePerQuotaUnit, 4);
       assert.equal(result.data.tariff.fallbackTierNumber, 3);
       assert.equal(typeof result.data.tariff.id, "string");
@@ -50,7 +65,8 @@ test(
         [1, 2, 3, 4, 5, 6]
       );
       assert.equal(result.data.tiers[5].thresholdKwh, null);
-      assert.equal(result.data.tiers[5].unitPrice, "3460");
+      // unit_price là NUMERIC(14, 2) -> "3460.00", không phải "3460".
+      assert.equal(result.data.tiers[5].unitPrice, "3460.00");
     } finally {
       await closeDatabaseClient();
     }
@@ -70,10 +86,13 @@ test(
       if (!result.success) return;
 
       assert.equal(result.data.name, "Competition Default Water Tariff");
-      assert.equal(result.data.pricePerCubicMeter, "8500");
-      assert.equal(result.data.pricePerPerson, "80000");
-      assert.equal(result.data.vatRate, "0.05");
-      assert.equal(result.data.environmentalFeeRate, "0.10");
+      // price_per_cubic_meter/price_per_person là NUMERIC(14, 2);
+      // vat_rate/environmental_fee_rate là NUMERIC(5, 4) — xem giải
+      // thích scale ở đầu file.
+      assert.equal(result.data.pricePerCubicMeter, "8500.00");
+      assert.equal(result.data.pricePerPerson, "80000.00");
+      assert.equal(result.data.vatRate, "0.0500");
+      assert.equal(result.data.environmentalFeeRate, "0.1000");
       assert.equal(result.data.effectiveTo, null);
     } finally {
       await closeDatabaseClient();

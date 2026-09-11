@@ -10,9 +10,12 @@ All notable changes to this project are documented in this file.
   PostgreSQL client — no ORM/query-builder. `backend/src/database/`:
   `postgres-client.ts` (single cached application-level client, no
   custom connection pool), `transaction.ts` (`runInTransaction`, a
-  `Result`-returning wrapper around `sql.begin()` proven to roll back on
-  failure and commit on success), `database.types.ts`. Fail-fast
-  `DATABASE_URL` loading in `backend/src/config/database.config.ts`.
+  `Result`-returning wrapper around `sql.begin()`, designed to roll back
+  on a failed `Result` and commit on a successful one — an integration
+  test exercising this against real PostgreSQL is included and runs when
+  `DATABASE_URL` is supplied; see "Tests" below for whether it has
+  actually been executed), `database.types.ts`. Fail-fast `DATABASE_URL`
+  loading in `backend/src/config/database.config.ts`.
 - Read-only Repository layer (`backend/src/repositories/`): interfaces
   (`RoomRepository`, `MeterReadingRepository`,
   `ElectricityTariffRepository`, `WaterTariffRepository`,
@@ -25,11 +28,17 @@ All notable changes to this project are documented in this file.
   prevent overlapping effective-date ranges. `PropertyRepository` and
   write operations (invoice creation) are deliberately not implemented —
   no current use case needs them yet.
-- Verified (source + official docs + a live-database integration test)
-  that Postgres.js returns both `NUMERIC` and `BIGINT` as exact decimal
-  strings by default, with zero custom type configuration — matching
-  the project's precision contract without introducing any risk of
-  floating-point coercion.
+- Verified, by reading `node_modules/postgres/src/types.js` (no parser
+  registered for the `NUMERIC`/`BIGINT` type OIDs) and the library's own
+  README (which states this explicitly), that Postgres.js returns both
+  `NUMERIC` and `BIGINT` as exact decimal strings by default, with zero
+  custom type configuration — matching the project's precision contract
+  without introducing any risk of floating-point coercion. Integration
+  tests proving this against a real PostgreSQL connection (including a
+  fixed-scale `NUMERIC(p, s)` case matching the actual schema, e.g.
+  `"0.0800"` not `"0.08"`) are included and run when `DATABASE_URL` is
+  supplied; see "Tests" below for whether they have actually been
+  executed in this repository's history so far.
 - Changed all domain model ID fields (`RentalProperty.id`, `Room.id`,
   `Room.propertyId`, and every other `id`/`...Id` field across
   `backend/src/modules/*/*.model.ts`) from `number` to `string`, since
@@ -43,10 +52,13 @@ All notable changes to this project are documented in this file.
   the `NUMERIC`/`BIGINT` precision boundary, error translation, and what
   must vs. must not be treated as secret.
 - Unit tests (no live database required) for config loading, row
-  mapping, and error-semantics for every Repository; integration tests
-  (`*.integration.test.ts`) for `NUMERIC`/`BIGINT` round-tripping,
-  transaction rollback/commit, and repository reads against seeded data
-  — these `skip` (not fail) when `DATABASE_URL` is unset.
+  mapping, and error-semantics for every Repository. Integration tests
+  (`*.integration.test.ts`) are implemented to prove, when run against
+  real PostgreSQL, `NUMERIC`/`BIGINT` round-tripping (including
+  fixed-scale columns), transaction rollback/commit, and repository
+  reads against seeded data — these `skip` (not fail) when
+  `DATABASE_URL` is unset, and have not yet been executed against a
+  live database in this repository's history (see "Tests" below).
 
 No CRUD, `CreateInvoiceService`, REST billing endpoints, or frontend
 work are included in this change — see `docs/DATABASE_ACCESS.md`
