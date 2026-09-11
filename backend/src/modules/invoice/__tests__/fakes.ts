@@ -88,24 +88,35 @@ export function createFakeWaterTariffRepository(data: WaterTariff | null): Water
 
 export interface FakeInvoiceRepositoryOptions {
   existingInvoice?: Invoice | null;
+  /** Item đã "lưu sẵn" cho `existingInvoice` — dùng khi test đọc lại một invoice lịch sử mà không đi qua createInvoice/createInvoiceItems trước. */
+  existingItems?: InvoiceItem[];
   createInvoiceResult?: Result<Invoice>;
   createInvoiceItemsResult?: Result<InvoiceItem[]>;
+  findItemsByInvoiceIdResult?: Result<InvoiceItem[]>;
 }
 
 export interface FakeInvoiceRepository extends InvoiceRepository {
   readonly createInvoiceCalls: NewInvoice[];
   readonly createInvoiceItemsCalls: Array<{ invoiceId: string; items: NewInvoiceItem[] }>;
+  readonly findItemsByInvoiceIdCalls: string[];
 }
 
 export function createFakeInvoiceRepository(options: FakeInvoiceRepositoryOptions = {}): FakeInvoiceRepository {
   const createInvoiceCalls: NewInvoice[] = [];
   const createInvoiceItemsCalls: Array<{ invoiceId: string; items: NewInvoiceItem[] }> = [];
+  const findItemsByInvoiceIdCalls: string[] = [];
   let nextInvoiceId = 1;
   let nextItemId = 1;
+
+  const itemsByInvoiceId = new Map<string, InvoiceItem[]>();
+  if (options.existingInvoice && options.existingItems) {
+    itemsByInvoiceId.set(options.existingInvoice.id, options.existingItems);
+  }
 
   return {
     createInvoiceCalls,
     createInvoiceItemsCalls,
+    findItemsByInvoiceIdCalls,
 
     async findByRoomAndPeriod(): Promise<Result<Invoice | null>> {
       return ok(options.existingInvoice ?? null);
@@ -139,20 +150,28 @@ export function createFakeInvoiceRepository(options: FakeInvoiceRepositoryOption
       if (options.createInvoiceItemsResult) {
         return options.createInvoiceItemsResult;
       }
-      return ok(
-        items.map((item) => ({
-          id: String(nextItemId++),
-          invoiceId,
-          category: item.category,
-          tierNumber: item.tierNumber,
-          quantity: item.quantity,
-          unitName: item.unitName,
-          unitPrice: item.unitPrice,
-          amount: item.amount,
-          description: item.description,
-          displayOrder: item.displayOrder,
-        }))
-      );
+      const created = items.map((item) => ({
+        id: String(nextItemId++),
+        invoiceId,
+        category: item.category,
+        tierNumber: item.tierNumber,
+        quantity: item.quantity,
+        unitName: item.unitName,
+        unitPrice: item.unitPrice,
+        amount: item.amount,
+        description: item.description,
+        displayOrder: item.displayOrder,
+      }));
+      itemsByInvoiceId.set(invoiceId, created);
+      return ok(created);
+    },
+
+    async findItemsByInvoiceId(invoiceId: string): Promise<Result<InvoiceItem[]>> {
+      findItemsByInvoiceIdCalls.push(invoiceId);
+      if (options.findItemsByInvoiceIdResult) {
+        return options.findItemsByInvoiceIdResult;
+      }
+      return ok(itemsByInvoiceId.get(invoiceId) ?? []);
     },
   };
 }

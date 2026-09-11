@@ -216,6 +216,28 @@ export class PostgresInvoiceRepository implements InvoiceRepository {
       return fail("DATABASE_WRITE_FAILED", "Không thể ghi dữ liệu invoice_items vào database.");
     }
   }
+
+  /**
+   * `ORDER BY display_order ASC` tường minh — KHÔNG dựa vào thứ tự hàng
+   * tự nhiên PostgreSQL trả về (không được đảm bảo mà không có ORDER BY).
+   */
+  async findItemsByInvoiceId(invoiceId: string): Promise<Result<InvoiceItem[]>> {
+    try {
+      const rows = await this.sql<InvoiceItemRow[]>`
+        SELECT id, invoice_id, category, tier_number,
+               quantity, unit_name, unit_price, amount,
+               description, display_order
+        FROM invoice_items
+        WHERE invoice_id = ${invoiceId}
+        ORDER BY display_order ASC
+      `;
+
+      return ok(rows.map(mapInvoiceItemRow));
+    } catch (error) {
+      logDatabaseError("PostgresInvoiceRepository.findItemsByInvoiceId", error);
+      return fail("DATABASE_READ_FAILED", "Không thể đọc dữ liệu invoice_items từ database.");
+    }
+  }
 }
 
 /** Xuất riêng để unit-test ánh xạ row mà không cần database thật. */

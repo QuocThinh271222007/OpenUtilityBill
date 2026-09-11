@@ -75,6 +75,12 @@ export interface NewInvoiceItem {
  *   bằng `findByRoomAndPeriod`, một request khác có thể đã insert xen
  *   giữa (race condition); `DATABASE_WRITE_FAILED` cho lỗi ghi khác.
  * - `createInvoiceItems`: `DATABASE_WRITE_FAILED` khi câu ghi thất bại.
+ * - `findItemsByInvoiceId`: `DATABASE_READ_FAILED` khi câu query thất
+ *   bại. KHÔNG fail với NOT_FOUND khi một invoice hợp lệ không có dòng
+ *   item nào (không nên xảy ra trong thực tế vì `createInvoiceItems`
+ *   luôn chạy cùng transaction với `createInvoice`, nhưng đọc lại một
+ *   mảng rỗng vẫn là một kết quả THÀNH CÔNG hợp lệ về mặt kiểu dữ liệu,
+ *   không phải lỗi).
  *
  * Important invariant:
  * `createInvoice`/`createInvoiceItems` KHÔNG tự mở transaction riêng —
@@ -92,4 +98,13 @@ export interface InvoiceRepository {
   findByRoomAndPeriod(roomId: string, billingPeriod: Date): Promise<Result<Invoice | null>>;
   createInvoice(input: NewInvoice): Promise<Result<Invoice>>;
   createInvoiceItems(invoiceId: string, items: NewInvoiceItem[]): Promise<Result<InvoiceItem[]>>;
+
+  /**
+   * Đọc lại các dòng breakdown ĐÃ LƯU của một invoice, sắp xếp theo
+   * `displayOrder` tăng dần (`ORDER BY display_order ASC` — không dựa
+   * vào thứ tự hàng tự nhiên của PostgreSQL). Dùng cho readback lịch sử
+   * (`GetInvoiceService`, backend/src/modules/invoice/) — KHÔNG tính lại
+   * breakdown từ Calculation Core.
+   */
+  findItemsByInvoiceId(invoiceId: string): Promise<Result<InvoiceItem[]>>;
 }
