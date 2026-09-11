@@ -4,6 +4,37 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Calculation Core (`backend/src/calculation/`): pure TypeScript billing
+  calculation engine with no Express/database dependency. Exact
+  `BigInt`-based rational arithmetic (`shared/exact-number.ts`) replaces
+  floating-point for every financial value, so intermediate precision
+  (e.g. quota-adjusted 62.5 kWh thresholds, 11192.4 VND VAT) is never
+  lost before the single final half-up rounding step.
+  - Meter usage, including rollover handling (`meter/`).
+  - Configurable, data-driven electricity tier validation and iterative
+    quota-adjusted allocation (`electricity/`), supporting both
+    `QUOTA_TIERED` and `FALLBACK_TIER_FLAT` billing methods.
+  - Water charge calculation for both `PER_CUBIC_METER` and
+    `PER_PERSON` methods, with the environmental fee correctly computed
+    from the base amount (not base + VAT).
+  - Invoice totaling (sum exact totals, round once) and actual-charge
+    difference comparison (derived, not persisted).
+  - No contest-specific tariff constants anywhere in production
+    calculation code — all configuration is a function parameter.
+- `backend/src/calculation/__tests__/`: automated unit tests using
+  Node's built-in `node:test` + `node:assert/strict` (run via `tsx`, no
+  new test framework dependency), including all 7 officially published
+  competition test cases and boundary tests for every documented
+  constraint (`npm test` in `backend/`).
+- `docs/CALCULATION_CORE.md` and `docs/NUMERIC_PRECISION.md` documenting
+  the calculation pipeline and the exact-arithmetic strategy.
+
+No CRUD, Repository, live Supabase connection, REST billing endpoint, or
+frontend billing screens are included in this change — see
+`docs/CALCULATION_CORE.md` for what is deliberately deferred.
+
 ### Fixed
 
 - Corrected the Supabase SQL Editor runtime-validation execution model

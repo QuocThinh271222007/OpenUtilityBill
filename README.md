@@ -28,9 +28,10 @@ repository owner — see `docs/LEARNING_NOTES.md`.
   small business-domain modules.
 - **MVC-oriented**, extended with a Service/Orchestrator layer and a
   Repository layer that isolates database access.
-- **Calculation Core** (future work): pure TypeScript, independent of
-  Express, HTML, and Supabase, so tariff/invoice math is independently
-  testable.
+- **Calculation Core**: pure TypeScript, independent of Express, HTML,
+  and Supabase — meter usage, tiered/fallback electricity, water, and
+  invoice-total math, implemented and independently unit-tested (see
+  [`docs/CALCULATION_CORE.md`](docs/CALCULATION_CORE.md)).
 - **Result contract**: business logic returns `{ success, data }` or
   `{ success: false, error: { code, message } }` instead of throwing or
   returning `false`, enabling fail-fast error propagation.
@@ -62,20 +63,30 @@ tariff configuration as seed data. See
 [`docs/DOMAIN_MODEL.md`](docs/DOMAIN_MODEL.md) and
 [`docs/DATABASE_DESIGN.md`](docs/DATABASE_DESIGN.md).
 
-The database schema has **not** been run against a live database yet (no
-Supabase connection was available for this task). Calculation Core
-(the actual billing formulas) and CRUD (Controllers/Services/Repositories
-for these domains) still do not exist — these are separate, later,
-reviewable tasks.
+Calculation Core is now implemented and independently tested: meter
+usage (including rollover), configurable quota-adjusted tier allocation,
+both electricity billing methods (`QUOTA_TIERED`, `FALLBACK_TIER_FLAT`),
+both water billing methods (`PER_CUBIC_METER`, `PER_PERSON`), invoice
+totaling, and actual-charge comparison — all pure TypeScript, using
+exact `BigInt`-based rational arithmetic (never floating-point) for
+every financial value, with no database or HTTP dependency. See
+[`docs/CALCULATION_CORE.md`](docs/CALCULATION_CORE.md) and
+[`docs/NUMERIC_PRECISION.md`](docs/NUMERIC_PRECISION.md).
+
+CRUD (Controllers/Services/Repositories), a live Supabase connection
+from the backend, invoice persistence, and billing UI screens still do
+not exist — these are separate, later, reviewable tasks.
 
 ## Repository structure
 
 ```
 OpenUtilityBill/
-  backend/     Node.js + TypeScript + Express REST API, domain models
+  backend/     Node.js + TypeScript + Express REST API, domain models,
+               Calculation Core (backend/src/calculation/)
   frontend/    Vite + TypeScript + Bootstrap client
   database/    PostgreSQL schema (migrations/) and seed data (seeds/)
-  docs/        Architecture, domain model, database, and learning docs
+  docs/        Architecture, domain model, database, calculation, and
+               learning docs
 ```
 
 ## Quick start
@@ -98,6 +109,10 @@ and typecheck commands for both `backend/` and `frontend/`.
   reasoning: normalization, keys, constraints, `NUMERIC` vs. `FLOAT`.
 - [`docs/TRANSACTIONS.md`](docs/TRANSACTIONS.md) — ACID guarantees and
   transaction boundaries for future write workflows.
+- [`docs/CALCULATION_CORE.md`](docs/CALCULATION_CORE.md) — the billing
+  calculation pipeline, module responsibilities, fail-fast design.
+- [`docs/NUMERIC_PRECISION.md`](docs/NUMERIC_PRECISION.md) — why exact
+  `BigInt`-based rational arithmetic is used instead of floating-point.
 - [`database/README.md`](database/README.md) — schema/seed files and how
   to run them.
 
@@ -105,6 +120,8 @@ and typecheck commands for both `backend/` and `frontend/`.
 
 MIT — see [`LICENSE`](LICENSE).
 
-Calculation rules for electricity/water billing will be implemented from
-the official competition specification in a later task; none are
-implemented in this repository yet.
+Calculation Core implements the official competition billing rules
+(meter usage, tiered/fallback electricity, water, invoice totals) and is
+covered by automated tests against the official published test cases
+(`cd backend && npm test`). CRUD, a live Supabase connection, and
+billing UI screens are not implemented yet.

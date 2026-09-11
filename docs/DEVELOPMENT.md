@@ -30,6 +30,7 @@ cp .env.example .env   # edit values if needed; PORT defaults to 3000
 | `npm run typecheck` | Run `tsc --noEmit` — type-check without emitting files. |
 | `npm run build` | Compile TypeScript to `backend/dist/`. |
 | `npm start` | Run the compiled server (`node dist/server.js`). Requires `npm run build` first. |
+| `npm test` | Run Calculation Core's unit tests (Node's built-in `node:test` runner, executed via `tsx` — no Jest/Vitest/Mocha). Covers `backend/src/calculation/**/*.test.ts`, including the official competition test cases. |
 
 Verify it works:
 
