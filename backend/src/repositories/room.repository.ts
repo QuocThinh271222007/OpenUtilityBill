@@ -4,21 +4,41 @@ import { Result } from "../shared/result";
 import { Room } from "../modules/room/room.model";
 
 /**
+ * Dữ liệu ĐẦU VÀO để tạo/sửa một Room — type riêng, cùng lý do với
+ * `NewRentalProperty`/`UpdateRentalProperty` (`property.repository.ts`).
+ *
+ * `UpdateRoom` CỐ Ý không có `propertyId` — di chuyển room giữa các
+ * property mang ý nghĩa lịch sử không cần thiết cho phạm vi kỳ thi (xem
+ * docs/MANAGEMENT_API.md mục "propertyId is immutable on PATCH").
+ */
+export interface NewRoom {
+  propertyId: string;
+  name: string;
+  tenantCount: number;
+}
+
+export interface UpdateRoom {
+  name?: string;
+  tenantCount?: number;
+}
+
+/**
  * Responsibility:
- * Hợp đồng (interface) cho việc đọc dữ liệu `Room` — ranh giới persistence
- * mà Service layer (tương lai) phụ thuộc vào, KHÔNG phụ thuộc trực tiếp
+ * Hợp đồng (interface) cho việc đọc/ghi dữ liệu `Room` — ranh giới
+ * persistence mà Service layer phụ thuộc vào, KHÔNG phụ thuộc trực tiếp
  * vào Postgres.js hay bất kỳ implementation cụ thể nào.
  *
  * Does NOT:
  * - chứa SQL — implementation cụ thể (Postgres.js) nằm ở
  *   `postgres/postgres-room.repository.ts`.
- * - implement CRUD đầy đủ. Chỉ có đúng thao tác cần cho công việc hiện
- *   tại (`findById`) — xem docs/DATABASE_ACCESS.md mục "Repository
- *   contracts".
+ * - implement `delete` — xem docs/MANAGEMENT_API.md.
  *
  * Failure conditions (xem implementation cụ thể):
- * - `ROOM_NOT_FOUND` khi không có room nào khớp id.
- * - `DATABASE_READ_FAILED` khi bản thân câu query thất bại.
+ * - `findById`/`update`: `ROOM_NOT_FOUND` khi không có room nào khớp id.
+ * - `create`/`update`: `ROOM_ALREADY_EXISTS` khi vi phạm
+ *   `UNIQUE(property_id, name)`.
+ * - `DATABASE_READ_FAILED`/`DATABASE_WRITE_FAILED` cho lỗi query/ghi
+ *   khác.
  *
  * Why this module is separate:
  * Interface tách khỏi implementation để Service layer (và test của nó)
@@ -28,4 +48,8 @@ import { Room } from "../modules/room/room.model";
  */
 export interface RoomRepository {
   findById(id: string): Promise<Result<Room>>;
+  /** `propertyId` không cung cấp -> mọi room. `ORDER BY id ASC` — thứ tự xác định. */
+  listAll(propertyId?: string): Promise<Result<Room[]>>;
+  create(input: NewRoom): Promise<Result<Room>>;
+  update(id: string, input: UpdateRoom): Promise<Result<Room>>;
 }

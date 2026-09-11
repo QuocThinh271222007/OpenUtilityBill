@@ -61,3 +61,86 @@ test("PostgresRoomRepository.findById: lỗi database -> DATABASE_READ_FAILED, k
     assert.equal(result.error.message.includes("connection terminated"), false);
   }
 });
+
+function createRowResultExecutor(rows: unknown[]): DatabaseExecutor {
+  const fn = async () => rows;
+  return fn as unknown as DatabaseExecutor;
+}
+
+const SAMPLE_ROOM_ROW = {
+  id: "1",
+  property_id: "10",
+  name: "101",
+  tenant_count: 4,
+  created_at: new Date("2026-01-01T00:00:00.000Z"),
+};
+
+test("listAll: không truyền propertyId -> trả về tất cả", async () => {
+  const repository = new PostgresRoomRepository(createRowResultExecutor([SAMPLE_ROOM_ROW]));
+  const result = await repository.listAll();
+  assert.equal(result.success, true);
+  if (result.success) assert.equal(result.data.length, 1);
+});
+
+test("listAll: lỗi database -> DATABASE_READ_FAILED", async () => {
+  const repository = new PostgresRoomRepository(createThrowingExecutor(new Error("timeout")));
+  const result = await repository.listAll("10");
+  assert.equal(result.success, false);
+  if (!result.success) assert.equal(result.error.code, "DATABASE_READ_FAILED");
+});
+
+test("create: thành công -> ánh xạ đúng row từ RETURNING", async () => {
+  const repository = new PostgresRoomRepository(createRowResultExecutor([SAMPLE_ROOM_ROW]));
+  const result = await repository.create({ propertyId: "10", name: "101", tenantCount: 4 });
+  assert.equal(result.success, true);
+  if (result.success) assert.equal(result.data.propertyId, "10");
+});
+
+test("create: vi phạm UNIQUE(property_id, name) (SQLSTATE 23505) -> ROOM_ALREADY_EXISTS", async () => {
+  const uniqueViolation = Object.assign(new Error("duplicate key"), { code: "23505" });
+  const repository = new PostgresRoomRepository(createThrowingExecutor(uniqueViolation));
+  const result = await repository.create({ propertyId: "10", name: "101", tenantCount: 4 });
+  assert.equal(result.success, false);
+  if (!result.success) {
+    assert.equal(result.error.code, "ROOM_ALREADY_EXISTS");
+    assert.equal(result.error.message.includes("constraint"), false);
+  }
+});
+
+test("create: lỗi ghi khác -> DATABASE_WRITE_FAILED", async () => {
+  const repository = new PostgresRoomRepository(createThrowingExecutor(new Error("connection lost")));
+  const result = await repository.create({ propertyId: "10", name: "101", tenantCount: 4 });
+  assert.equal(result.success, false);
+  if (!result.success) assert.equal(result.error.code, "DATABASE_WRITE_FAILED");
+});
+
+test("update: cả hai field -> thành công", async () => {
+  const repository = new PostgresRoomRepository(createRowResultExecutor([{ ...SAMPLE_ROOM_ROW, name: "102", tenant_count: 5 }]));
+  const result = await repository.update("1", { name: "102", tenantCount: 5 });
+  assert.equal(result.success, true);
+  if (result.success) {
+    assert.equal(result.data.name, "102");
+    assert.equal(result.data.tenantCount, 5);
+  }
+});
+
+test("update: chỉ tenantCount -> thành công", async () => {
+  const repository = new PostgresRoomRepository(createRowResultExecutor([{ ...SAMPLE_ROOM_ROW, tenant_count: 6 }]));
+  const result = await repository.update("1", { tenantCount: 6 });
+  assert.equal(result.success, true);
+});
+
+test("update: không có hàng nào khớp id -> ROOM_NOT_FOUND", async () => {
+  const repository = new PostgresRoomRepository(createRowResultExecutor([]));
+  const result = await repository.update("999", { name: "X" });
+  assert.equal(result.success, false);
+  if (!result.success) assert.equal(result.error.code, "ROOM_NOT_FOUND");
+});
+
+test("update: vi phạm UNIQUE khi đổi tên trùng -> ROOM_ALREADY_EXISTS", async () => {
+  const uniqueViolation = Object.assign(new Error("duplicate key"), { code: "23505" });
+  const repository = new PostgresRoomRepository(createThrowingExecutor(uniqueViolation));
+  const result = await repository.update("1", { name: "trùng" });
+  assert.equal(result.success, false);
+  if (!result.success) assert.equal(result.error.code, "ROOM_ALREADY_EXISTS");
+});
