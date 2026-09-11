@@ -1,79 +1,79 @@
 # API
 
-This document is the REST contract for the endpoints that currently
-exist. It complements `docs/CREATE_INVOICE_WORKFLOW.md` (the underlying
-Service logic) and `docs/ERROR_HANDLING.md` (the general success/error
-contract).
+Tài liệu này là hợp đồng REST cho các endpoint hiện có. Nó bổ sung cho
+`docs/CREATE_INVOICE_WORKFLOW.md` (logic Service đứng sau) và
+`docs/ERROR_HANDLING.md` (hợp đồng thành công/lỗi chung).
 
-This document covers the invoice workflow endpoints
-(`POST`/`GET /api/v1/invoices`). Property/room/meter-reading/tariff
-management endpoints are documented separately in
-`docs/MANAGEMENT_API.md` — the two documents share the same
-conventions (IDs, decimal-string contract, error contract) described
-below. No authentication and no frontend consumes this API yet — do
-not assume otherwise from either document.
+Tài liệu này bao phủ các endpoint workflow hoá đơn
+(`POST`/`GET /api/v1/invoices`). Các endpoint quản lý property/room/
+meter-reading/tariff được ghi riêng trong `docs/MANAGEMENT_API.md` —
+hai tài liệu dùng chung các quy ước (ID, hợp đồng chuỗi thập phân, hợp
+đồng lỗi) mô tả bên dưới. API này chưa có xác thực — giao diện trình
+duyệt bắt buộc (`docs/FRONTEND.md`) tiêu thụ API này, nhưng không có
+kiểm soát truy cập nào.
 
 ## Base path
 
-Every endpoint is versioned under `/api/v1` (see `backend/src/app.ts`).
+Mọi endpoint đều versioned dưới `/api/v1` (xem `backend/src/app.ts`).
 
-## Conventions used throughout
+## Quy ước dùng xuyên suốt
 
-- **IDs** (`roomId`, `id`, every `...Id` field): decimal-digit strings,
-  never JSON numbers — the underlying column is `BIGINT`, which a JS
-  `number` cannot safely represent in full (see `docs/DATABASE_ACCESS.md`
-  "BIGINT / ID boundary").
-- **Financial values** (`calculatedTotal`, `actualChargedAmount`,
-  `amount`, `unitPrice`, `quantity`, `billingDifference`, and every
-  Calculation Core numeric field): decimal strings, never JSON numbers.
-  A value may come back at the database's declared `NUMERIC` scale
-  (e.g. `"366994.00"`, not `"366994"`) — this is the same exact value,
-  not a precision bug, and the API does **not** reformat it for
-  cosmetics (see `docs/DATABASE_ACCESS.md` "NUMERIC string format is
-  not canonicalized"). Clients must not run `Number(...)`/
-  `parseFloat(...)` on these fields for anything other than display
-  formatting that tolerates trailing zeros.
-- **`billingPeriod` wire format**: `"YYYY-MM-DD"` (e.g. `"2026-09-01"`),
-  always the first day of a month. Never a full ISO-8601 timestamp on
-  the wire — see "Date contract" below.
-- **`createdAt`**: a full ISO-8601 timestamp string (e.g.
+- **ID** (`roomId`, `id`, mọi field `...Id`): chuỗi chữ số thập phân,
+  không bao giờ là số JSON — cột gốc là `BIGINT`, thứ mà một `number`
+  của JS không thể biểu diễn an toàn đầy đủ (xem
+  `docs/DATABASE_ACCESS.md` mục "Ranh giới `BIGINT` / ID").
+- **Giá trị tài chính** (`calculatedTotal`, `actualChargedAmount`,
+  `amount`, `unitPrice`, `quantity`, `billingDifference`, và mọi field
+  số của Calculation Core): chuỗi thập phân, không bao giờ là số JSON.
+  Một giá trị có thể trả về theo đúng scale đã khai báo của database
+  (ví dụ `"366994.00"`, không phải `"366994"`) — đây là cùng một giá
+  trị chính xác, không phải một lỗi độ chính xác, và API **không** định
+  dạng lại nó cho đẹp (xem `docs/DATABASE_ACCESS.md` mục "Định dạng
+  chuỗi NUMERIC không được chuẩn hoá"). Client không được chạy
+  `Number(...)`/`parseFloat(...)` trên các field này cho bất cứ mục
+  đích nào ngoài định dạng hiển thị chấp nhận được số 0 ở cuối.
+- **Định dạng `billingPeriod` trên wire**: `"YYYY-MM-DD"` (ví dụ
+  `"2026-09-01"`), luôn là ngày đầu tiên của một tháng. Không bao giờ
+  là một timestamp ISO-8601 đầy đủ trên wire — xem "Hợp đồng ngày" bên
+  dưới.
+- **`createdAt`**: một chuỗi timestamp ISO-8601 đầy đủ (ví dụ
   `"2026-09-10T12:34:56.000Z"`).
-- **Success contract**: `{ "success": true, "data": ... }`.
-- **Error contract**: `{ "success": false, "error": { "code": "...", "message": "..." } }`
-  — see `docs/ERROR_HANDLING.md`. `message` is never a raw PostgreSQL
-  error, constraint name, SQL text, or stack trace.
+- **Hợp đồng thành công**: `{ "success": true, "data": ... }`.
+- **Hợp đồng lỗi**: `{ "success": false, "error": { "code": "...", "message": "..." } }`
+  — xem `docs/ERROR_HANDLING.md`. `message` không bao giờ là một lỗi
+  PostgreSQL thô, tên ràng buộc, văn bản SQL, hay stack trace.
 
-## Date contract
+## Hợp đồng ngày
 
-`billingPeriod` on the wire is **always** `"YYYY-MM-DD"` — never a full
-timestamp, never a JS-parseable arbitrary date string. The Controller
-(`backend/src/modules/invoice/invoice.http.ts`,
-`parseBillingPeriodWireFormat`) enforces, in order:
+`billingPeriod` trên wire **luôn luôn** là `"YYYY-MM-DD"` — không bao
+giờ là một timestamp đầy đủ, không bao giờ là một chuỗi ngày tuỳ ý mà
+JS parse được. Controller (`backend/src/modules/invoice/invoice.http.ts`,
+`parseBillingPeriodWireFormat`) ép buộc, theo thứ tự:
 
-1. The value is a string.
-2. It matches exactly `^\d{4}-\d{2}-\d{2}$`.
-3. It is a real calendar date (`"2026-02-30"` is rejected — JS `Date`
-   would otherwise silently roll it over to March instead of erroring).
-4. Its day is `01` — a billing period is always the first day of a
-   month, matching migration 001's
-   `CHECK (EXTRACT(DAY FROM billing_period) = 1)`.
+1. Giá trị là một chuỗi.
+2. Khớp chính xác `^\d{4}-\d{2}-\d{2}$`.
+3. Là một ngày lịch thật (`"2026-02-30"` bị từ chối — nếu không, `Date`
+   của JS sẽ âm thầm cuộn nó sang tháng Ba thay vì báo lỗi).
+4. Ngày của nó là `01` — một kỳ billing luôn là ngày đầu tiên của
+   tháng, khớp ràng buộc `CHECK (EXTRACT(DAY FROM billing_period) = 1)`
+   của migration 001.
 
-A valid value is parsed into a UTC-midnight `Date`
-(`"2026-09-01"` → `2026-09-01T00:00:00.000Z`), matching the existing
-`CreateInvoiceService`/`GetInvoiceService` contract. Any failure returns
-`400 VALIDATION_ERROR` — examples that are rejected:
-`"2026-9-1"`, `"2026-09-02"` (not the first of the month),
-`"2026-02-30"` (not a real date), `"2026-09-01T10:00:00Z"` (has a time
-component).
+Một giá trị hợp lệ được parse thành một `Date` tại UTC-midnight
+(`"2026-09-01"` → `2026-09-01T00:00:00.000Z`), khớp hợp đồng sẵn có của
+`CreateInvoiceService`/`GetInvoiceService`. Bất kỳ thất bại nào trả về
+`400 VALIDATION_ERROR` — ví dụ bị từ chối:
+`"2026-9-1"`, `"2026-09-02"` (không phải ngày đầu tháng),
+`"2026-02-30"` (không phải ngày thật), `"2026-09-01T10:00:00Z"` (có
+thành phần giờ).
 
-This is a **wire-format** decision only — it does not change the
-Repository/domain `Date` boundary reviewed (and deliberately left
-unchanged) in `docs/DATABASE_ACCESS.md` "DATE boundary".
+Đây chỉ là một quyết định ở **định dạng wire** — nó không thay đổi
+ranh giới `Date` của Repository/domain đã được review (và cố ý giữ
+nguyên) trong `docs/DATABASE_ACCESS.md` mục "Ranh giới `DATE`".
 
 ## `POST /api/v1/invoices`
 
-Creates a new invoice for a room/billing period, running the full
-`CreateInvoiceService` workflow (see `docs/CREATE_INVOICE_WORKFLOW.md`).
+Tạo một hoá đơn mới cho một room/kỳ billing, chạy toàn bộ workflow
+`CreateInvoiceService` (xem `docs/CREATE_INVOICE_WORKFLOW.md`).
 
 ### Request body
 
@@ -87,44 +87,44 @@ Creates a new invoice for a room/billing period, running the full
 }
 ```
 
-| Field | Type | Notes |
+| Field | Kiểu | Ghi chú |
 |---|---|---|
-| `roomId` | string | Required. Positive `BIGINT`-shaped decimal string. |
-| `billingPeriod` | string | Required. `"YYYY-MM-DD"`, first of month — see "Date contract". |
-| `electricityBillingMethod` | string | Required. `"QUOTA_TIERED"` \| `"FALLBACK_TIER_FLAT"`. |
-| `waterBillingMethod` | string | Required. `"PER_CUBIC_METER"` \| `"PER_PERSON"`. |
-| `actualChargedAmount` | string \| null | Optional (defaults to `null`). See "actualChargedAmount scale corrective" below. |
+| `roomId` | string | Bắt buộc. Chuỗi thập phân dương hình dạng `BIGINT`. |
+| `billingPeriod` | string | Bắt buộc. `"YYYY-MM-DD"`, ngày đầu tháng — xem "Hợp đồng ngày". |
+| `electricityBillingMethod` | string | Bắt buộc. `"QUOTA_TIERED"` \| `"FALLBACK_TIER_FLAT"`. |
+| `waterBillingMethod` | string | Bắt buộc. `"PER_CUBIC_METER"` \| `"PER_PERSON"`. |
+| `actualChargedAmount` | string \| null | Tuỳ chọn (mặc định `null`). Xem "Sửa lỗi scale actualChargedAmount" bên dưới. |
 
-The Controller only checks that these fields are *present and the right
-JS type* (string / string-or-null) and parses `billingPeriod`; it does
-**not** check that `roomId` is a valid BIGINT shape or that the methods
-are valid enum members — that is `CreateInvoiceService`'s job
-(`VALIDATION_ERROR` either way), keeping business validation out of the
-Controller.
+Controller chỉ kiểm tra các field này *có mặt và đúng kiểu JS* (string
+/ string-hoặc-null) và parse `billingPeriod`; nó **không** kiểm tra
+`roomId` có đúng hình dạng BIGINT hay các phương pháp có phải giá trị
+enum hợp lệ — đó là việc của `CreateInvoiceService` (cả hai đều trả
+`VALIDATION_ERROR`), giữ validate nghiệp vụ ngoài Controller.
 
-### `actualChargedAmount` scale corrective
+### Sửa lỗi scale `actualChargedAmount`
 
-`invoices.actual_charged_amount` is `NUMERIC(14, 2)`. Before this
-corrective, `CreateInvoiceService` would accept an arbitrary exact
-decimal (e.g. `"367000.123456"`), compute `billingDifference` from the
-full value, and then let PostgreSQL silently round it to `"367000.12"`
-on write — so the returned `billingDifference` and the persisted
-`actualChargedAmount` would describe two different source values. This
-is now rejected **before any Repository read**:
+`invoices.actual_charged_amount` là `NUMERIC(14, 2)`. Trước bản sửa
+này, `CreateInvoiceService` từng chấp nhận bất kỳ số thập phân chính
+xác tuỳ ý nào (ví dụ `"367000.123456"`), tính `billingDifference` từ
+giá trị đầy đủ, rồi để PostgreSQL âm thầm làm tròn nó thành
+`"367000.12"` khi ghi — khiến `billingDifference` trả về và
+`actualChargedAmount` đã lưu mô tả hai giá trị nguồn khác nhau. Điều
+này nay bị từ chối **trước bất kỳ Repository read nào**:
 
-- Must be a non-negative decimal string.
-- At most 12 integer digits, at most 2 fractional digits (so it always
-  fits `NUMERIC(14, 2)` without rounding).
-- Never parsed through `Number(...)`/`parseFloat(...)` — checked by
-  shape (regex) only (`backend/src/modules/invoice/invoice-input-validation.ts`,
+- Phải là một chuỗi thập phân không âm.
+- Tối đa 12 chữ số nguyên, tối đa 2 chữ số thập phân (để luôn vừa đúng
+  `NUMERIC(14, 2)` mà không cần làm tròn).
+- Không bao giờ parse qua `Number(...)`/`parseFloat(...)` — chỉ kiểm
+  tra hình dạng (regex)
+  (`backend/src/modules/invoice/invoice-input-validation.ts`,
   `isValidActualChargedAmountScale`).
 
-| Value | Result |
+| Giá trị | Kết quả |
 |---|---|
-| `"0"`, `"480000"`, `"480000.5"`, `"480000.50"`, `"999999999999.99"` | valid |
+| `"0"`, `"480000"`, `"480000.5"`, `"480000.50"`, `"999999999999.99"` | hợp lệ |
 | `"-1"`, `"12.345"`, `"367000.123456"`, `"1000000000000"`, `"abc"`, `""` | `400 VALIDATION_ERROR` |
 
-### Success response — `201 Created`
+### Response thành công — `201 Created`
 
 ```json
 {
@@ -156,131 +156,132 @@ is now rejected **before any Repository read**:
 }
 ```
 
-`electricity`/`water`/`invoiceTotal` are the full Calculation Core
-result objects (`backend/src/calculation/types/calculation.types.ts`)
-returned as-is — every field is already a `string`/`number`, no `Date`
-or `bigint`, so no separate serialization step is needed for them.
+`electricity`/`water`/`invoiceTotal` là các object kết quả đầy đủ của
+Calculation Core (`backend/src/calculation/types/calculation.types.ts`)
+trả về nguyên văn — mọi field đã là `string`/`number`, không có `Date`
+hay `bigint`, nên không cần bước serialize riêng nào cho chúng.
 
 ## `GET /api/v1/invoices`
 
-Reads back a **persisted, historical** invoice — it does **not**
-recalculate electricity/water. See `docs/CREATE_INVOICE_WORKFLOW.md`
-"Room snapshot" for why a historical invoice must never silently change
-when current tariff/tenant-count configuration changes.
+Đọc lại một hoá đơn **đã lưu, thuộc lịch sử** — nó **không** tính lại
+tiền điện/nước. Xem `docs/CREATE_INVOICE_WORKFLOW.md` mục "Snapshot
+của room" để biết vì sao một hoá đơn lịch sử không bao giờ được âm
+thầm thay đổi khi cấu hình tariff/số người ở hiện tại thay đổi.
 
 ### Query parameters
 
-| Parameter | Type | Notes |
+| Tham số | Kiểu | Ghi chú |
 |---|---|---|
-| `roomId` | string | Required. |
-| `billingPeriod` | string | Required. `"YYYY-MM-DD"` — same rules as POST. |
+| `roomId` | string | Bắt buộc. |
+| `billingPeriod` | string | Bắt buộc. `"YYYY-MM-DD"` — cùng quy tắc như POST. |
 
 ```
 GET /api/v1/invoices?roomId=1&billingPeriod=2026-09-01
 ```
 
-### Success response — `200 OK`
+### Response thành công — `200 OK`
 
 ```json
 {
   "success": true,
   "data": {
-    "invoice": { "...": "same shape as POST's invoice" },
-    "items": [ "...": "same shape as POST's items, ORDER BY display_order ASC" ],
+    "invoice": { "...": "cùng hình dạng invoice của POST" },
+    "items": [ "...": "cùng hình dạng items của POST, ORDER BY display_order ASC" ],
     "billingDifference": "6.12"
   }
 }
 ```
 
-`billingDifference` is computed on demand from the two persisted values
-(`invoice.calculatedTotal`, `invoice.actualChargedAmount`) — it is
-**not** stored, and is `null` when `actualChargedAmount` is `null`.
+`billingDifference` được tính theo yêu cầu từ hai giá trị đã lưu
+(`invoice.calculatedTotal`, `invoice.actualChargedAmount`) — nó
+**không** được lưu trữ, và là `null` khi `actualChargedAmount` là
+`null`.
 
-## Error responses
+## Response lỗi
 
 ```json
 { "success": false, "error": { "code": "ROOM_NOT_FOUND", "message": "Không tìm thấy room với id = 1." } }
 ```
 
-### HTTP status mapping
+### Ánh xạ HTTP status
 
-A small, explicit table, now shared by every HTTP module in the backend
-(`backend/src/shared/http/result-error-status.ts`,
-`mapResultErrorCodeToHttpStatus` — the invoice module's own
-`invoice.http.ts` re-exports it unchanged so existing imports keep
-working) — not a generic error framework. Any `Result` error code not
-listed here maps to `500` (never guessed as a 4xx for an unrecognized
-situation).
+Một bảng nhỏ, tường minh, nay dùng chung bởi mọi module HTTP trong
+backend (`backend/src/shared/http/result-error-status.ts`,
+`mapResultErrorCodeToHttpStatus` — file `invoice.http.ts` của chính
+module invoice re-export nó nguyên vẹn để các import sẵn có vẫn hoạt
+động) — không phải một framework lỗi tổng quát. Bất kỳ mã lỗi `Result`
+nào không có trong bảng này ánh xạ thành `500` (không bao giờ đoán mò
+thành 4xx cho một tình huống không nhận diện được).
 
-| Status | Codes |
+| Status | Mã lỗi |
 |---|---|
 | `400` | `VALIDATION_ERROR`, `INVALID_ACTUAL_CHARGED_AMOUNT` |
 | `404` | `ROOM_NOT_FOUND`, `METER_READING_NOT_FOUND`, `TARIFF_NOT_FOUND`, `INVOICE_NOT_FOUND`, `PROPERTY_NOT_FOUND` |
 | `409` | `INVOICE_ALREADY_EXISTS`, `ROOM_ALREADY_EXISTS`, `METER_READING_ALREADY_EXISTS`, `METER_READING_IN_USE`, `TARIFF_ALREADY_EXISTS`, `TARIFF_PERIOD_OVERLAP`, `TARIFF_IN_USE` |
-| `422` | `AMBIGUOUS_TARIFF_CONFIGURATION`, `TARIFF_CONFIGURATION_INVALID`, `INVALID_QUOTA`, `INVALID_TENANT_COUNT`, `INVALID_PEOPLE_PER_QUOTA_UNIT`, `INVALID_METER_READING`, `INVALID_METER_MAXIMUM`, `METER_MAXIMUM_REQUIRED`, `FALLBACK_TIER_NOT_FOUND`, `INVALID_WATER_METHOD`, `INVALID_WATER_RATE`, `INVALID_VAT_RATE`, `INVALID_DECIMAL`, and the `validateElectricityConfig` tier-structure codes (`EMPTY_TARIFF`, `INVALID_TIER_NUMBER`, `DUPLICATE_TIER_NUMBER`, `INVALID_TIER_PRICE`, `INVALID_TIER_THRESHOLD`, `NO_UNLIMITED_TIER`, `MULTIPLE_UNLIMITED_TIERS`, `UNLIMITED_TIER_NOT_LAST`) |
-| `500` | `DATABASE_READ_FAILED`, `DATABASE_WRITE_FAILED`, `TRANSACTION_FAILED`, `INTERNAL_INVARIANT_VIOLATION`, `INTERNAL_ERROR` (unexpected throw caught at the Controller boundary), and any unrecognized code |
+| `422` | `AMBIGUOUS_TARIFF_CONFIGURATION`, `TARIFF_CONFIGURATION_INVALID`, `INVALID_QUOTA`, `INVALID_TENANT_COUNT`, `INVALID_PEOPLE_PER_QUOTA_UNIT`, `INVALID_METER_READING`, `INVALID_METER_MAXIMUM`, `METER_MAXIMUM_REQUIRED`, `FALLBACK_TIER_NOT_FOUND`, `INVALID_WATER_METHOD`, `INVALID_WATER_RATE`, `INVALID_VAT_RATE`, `INVALID_DECIMAL`, và các mã cấu trúc tier của `validateElectricityConfig` (`EMPTY_TARIFF`, `INVALID_TIER_NUMBER`, `DUPLICATE_TIER_NUMBER`, `INVALID_TIER_PRICE`, `INVALID_TIER_THRESHOLD`, `NO_UNLIMITED_TIER`, `MULTIPLE_UNLIMITED_TIERS`, `UNLIMITED_TIER_NOT_LAST`) |
+| `500` | `DATABASE_READ_FAILED`, `DATABASE_WRITE_FAILED`, `TRANSACTION_FAILED`, `INTERNAL_INVARIANT_VIOLATION`, `INTERNAL_ERROR` (throw bất ngờ bị bắt tại ranh giới Controller), và bất kỳ mã không nhận diện được nào |
 
-The `404`/`409`/`422` codes added in this row (`PROPERTY_NOT_FOUND`,
+Các mã `404`/`409`/`422` thêm ở hàng này (`PROPERTY_NOT_FOUND`,
 `ROOM_ALREADY_EXISTS`, `METER_READING_ALREADY_EXISTS`,
 `METER_READING_IN_USE`, `TARIFF_ALREADY_EXISTS`,
 `TARIFF_PERIOD_OVERLAP`, `TARIFF_IN_USE`, `INVALID_PEOPLE_PER_QUOTA_UNIT`,
-and the tier-structure codes) are only reachable through the management
-endpoints — see `docs/MANAGEMENT_API.md`.
+và các mã cấu trúc tier) chỉ có thể xảy ra qua các endpoint quản lý —
+xem `docs/MANAGEMENT_API.md`.
 
-`409 INVOICE_ALREADY_EXISTS` covers both the normal case (the Service's
-own pre-check) and the race-condition case (a real `SQLSTATE 23505`
-translated by `PostgresInvoiceRepository.createInvoice`) — see
-`docs/CREATE_INVOICE_WORKFLOW.md` "Duplicate invoice / race condition".
+`409 INVOICE_ALREADY_EXISTS` bao phủ cả trường hợp bình thường
+(pre-check của chính Service) lẫn trường hợp race condition (một
+`SQLSTATE 23505` thật được `PostgresInvoiceRepository.createInvoice`
+dịch lại) — xem `docs/CREATE_INVOICE_WORKFLOW.md` mục "Hoá đơn trùng
+lặp / race condition".
 
-### What is never sent to the client
+### Những gì không bao giờ được gửi cho client
 
-SQL text, PostgreSQL constraint names, `DATABASE_URL` or any connection
-detail, stack traces. An unexpected (non-`Result`) exception reaching
-the Controller is caught and turned into a generic
-`500 { "code": "INTERNAL_ERROR" }` — the real error is logged
-server-side only (`console.error`), never serialized into the response.
+Văn bản SQL, tên ràng buộc PostgreSQL, `DATABASE_URL` hay bất kỳ chi
+tiết kết nối nào, stack trace. Một exception bất ngờ (không phải
+`Result`) tới được Controller bị bắt và chuyển thành một
+`500 { "code": "INTERNAL_ERROR" }` chung — lỗi thật chỉ được log phía
+server (`console.error`), không bao giờ serialize vào response.
 
-## No SQL exposure / security notes
+## Ghi chú không lộ SQL / bảo mật
 
-- `express.json()` parses the request body; no other body-parsing
-  middleware is added.
-- Every value that reaches SQL is parameterized by Postgres.js
-  (`${value}` in a tagged template) — the Controller/Service layers
-  never see or construct SQL at all (`SQL_IN_CONTROLLER=0`,
-  `SQL_IN_SERVICE=0` — see the corrective task's audit).
-- Neither `invoice.controller.ts` nor `create-invoice.service.ts`/
-  `get-invoice.service.ts` imports Postgres.js or `DatabaseExecutor` —
-  only `backend/src/composition/invoice.composition.ts` (the
-  composition root) and the `postgres/postgres-*.repository.ts` files
-  do.
+- `express.json()` parse request body; không có middleware parse body
+  nào khác được thêm vào.
+- Mọi giá trị chạm tới SQL đều được Postgres.js tham số hoá (`${value}`
+  trong một tagged template) — tầng Controller/Service không bao giờ
+  thấy hay tự dựng SQL (`SQL_IN_CONTROLLER=0`, `SQL_IN_SERVICE=0` — xem
+  kiểm chứng của task đã đưa tầng này vào).
+- Cả `invoice.controller.ts` lẫn `create-invoice.service.ts`/
+  `get-invoice.service.ts` đều không import Postgres.js hay
+  `DatabaseExecutor` — chỉ
+  `backend/src/composition/invoice.composition.ts` (composition root)
+  và các file `postgres/postgres-*.repository.ts` mới làm điều đó.
 
-## Composition / dependency wiring
+## Nối composition / dependency
 
-`backend/src/composition/invoice.composition.ts` is the only place that
-constructs the real (Postgres-backed) `CreateInvoiceService`/
-`GetInvoiceService`. It is **lazy**: `getDatabaseClient()` is called
-only inside each factory function, and each factory function is called
-only *after* the Controller has finished validating the request — never
-at module-import time. This means:
+`backend/src/composition/invoice.composition.ts` là nơi DUY NHẤT dựng
+`CreateInvoiceService`/`GetInvoiceService` thật (chạy trên Postgres).
+Nó **lazy**: `getDatabaseClient()` chỉ được gọi bên trong mỗi hàm
+factory, và mỗi hàm factory chỉ được gọi *sau khi* Controller đã
+validate xong request — không bao giờ tại thời điểm import module.
+Điều này có nghĩa:
 
-- Importing `app.ts` (which mounts `invoice.routes.ts`, which imports
-  the composition module) never touches the database.
-- `GET /api/v1/health` keeps working with no `DATABASE_URL` set.
-- A malformed `POST`/`GET /api/v1/invoices` request (bad JSON shape,
-  bad `billingPeriod`) still returns a proper `400`, not a `500`, even
-  with no `DATABASE_URL` configured — because validation runs before
-  the Service is constructed.
-- Only a request that actually needs to read/write the database (valid
-  shape, reaches `service.execute(...)`) depends on `DATABASE_URL`
-  being configured; if it is not, that request gets a `500` (not a
-  crash).
+- Import `app.ts` (thứ mount `invoice.routes.ts`, thứ import module
+  composition) không bao giờ chạm database.
+- `GET /api/v1/health` vẫn hoạt động kể cả khi chưa đặt `DATABASE_URL`.
+- Một request `POST`/`GET /api/v1/invoices` sai định dạng (hình dạng
+  JSON sai, `billingPeriod` sai) vẫn trả về đúng `400`, không phải
+  `500`, kể cả khi chưa cấu hình `DATABASE_URL` — vì validate chạy
+  trước khi Service được dựng.
+- Chỉ request thực sự cần đọc/ghi database (hình dạng hợp lệ, tới được
+  `service.execute(...)`) mới phụ thuộc `DATABASE_URL` đã được cấu
+  hình; nếu chưa, request đó nhận `500` (không phải crash).
 
-## What is not implemented
+## Những gì chưa được cài đặt
 
-DELETE for any resource (by design — see `docs/MANAGEMENT_API.md` "No
-DELETE endpoints"), authentication, role-based authorization, and a
-separate role-gated admin/user area. Property/Room/MeterReading/Tariff
-management (list/create/update) **is** implemented — see
-`docs/MANAGEMENT_API.md` — and a full mandatory browser UI now consumes
-this API end to end, including tariff configuration — see
-`docs/FRONTEND.md`.
+DELETE cho bất kỳ tài nguyên nào (theo thiết kế — xem
+`docs/MANAGEMENT_API.md` mục "Không có endpoint DELETE"), xác thực,
+phân quyền theo vai trò, và một khu vực quản trị/người dùng riêng có
+kiểm soát quyền. Quản lý Property/Room/MeterReading/Tariff (list/
+create/update) **đã** được cài đặt — xem `docs/MANAGEMENT_API.md` —
+và một giao diện trình duyệt bắt buộc đầy đủ nay tiêu thụ API này từ
+đầu đến cuối, bao gồm cả cấu hình tariff — xem `docs/FRONTEND.md`.

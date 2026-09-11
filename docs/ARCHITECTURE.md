@@ -1,144 +1,143 @@
-# Architecture
+# Kiến trúc
 
-This document explains how OpenUtilityBill is structured, and why. It is
-written for the repository owner to reuse during the oral defense of this
-project — every decision here should be explainable, not just "how the
-starter kit did it."
+Tài liệu này giải thích OpenUtilityBill được tổ chức như thế nào, và vì
+sao. Tài liệu được viết để chủ dự án dùng lại khi bảo vệ (phỏng vấn)
+trực tiếp — mọi quyết định ở đây đều phải giải thích được, không chỉ là
+"starter kit làm vậy nên tôi làm theo".
 
 ## 1. Modular Monolith
 
-OpenUtilityBill is deployed as **one** backend application (one Node.js
-process) and **one** frontend application (one static build). This is what
-"monolith" refers to here: a deployment shape, not a judgement about code
-quality.
+OpenUtilityBill được triển khai như **một** ứng dụng backend (một
+process Node.js) và **một** ứng dụng frontend (một static build). Đây
+là ý nghĩa của "monolith" ở đây: một hình thức triển khai, không phải
+đánh giá về chất lượng code.
 
-Internally, the backend source code is organized into small, independent
-**modules** by business domain:
+Bên trong, mã nguồn backend được tổ chức thành các **module** nhỏ, độc
+lập theo domain nghiệp vụ:
 
 ```
 backend/src/modules/
   health/
-  property/      (future)
-  room/          (future)
-  meter-reading/ (future)
-  tariff/        (future)
-  invoice/       (future)
+  property/
+  room/
+  meter-reading/
+  tariff/
+  invoice/
 ```
 
-This is what "modular" refers to: internal source-code organization. Each
-module owns its own routes, controller, service, and (later) repository.
-Modules do not reach into each other's internals — if module A needs data
-owned by module B, it calls B's Service, not B's Repository directly.
+Đây là ý nghĩa của "modular": cách tổ chức mã nguồn nội bộ. Mỗi module
+sở hữu route, controller, service, và repository riêng của nó. Các
+module không được chạm vào phần nội bộ của nhau — nếu module A cần dữ
+liệu thuộc về module B, nó gọi Service của B, không gọi trực tiếp
+Repository của B.
 
-### Why not microservices
+### Vì sao không dùng microservices
 
-Microservices would mean multiple independently deployable processes,
-network calls between them, and infrastructure (service discovery, message
-queues, containers) to coordinate them. For a single-developer competition
-project with a small, well-understood domain (rental utility billing),
-that overhead would not buy anything — it would only add moving parts that
-are hard to run, debug, and explain in an oral defense. A Modular Monolith
-gives the same internal separation of concerns without the deployment and
-network complexity. See `docs/LEARNING_NOTES.md` for more on this
-trade-off.
+Microservices nghĩa là nhiều process triển khai độc lập, có gọi mạng
+giữa chúng, và cần hạ tầng (service discovery, message queue,
+container) để điều phối. Với một dự án thi cá nhân, domain nhỏ và đã
+hiểu rõ (tính hoá đơn tiện ích cho nhà trọ), chi phí đó không mang lại
+lợi ích gì — nó chỉ thêm nhiều thành phần khó chạy, khó debug, và khó
+giải thích khi bảo vệ trực tiếp. Modular Monolith mang lại cùng mức độ
+tách biệt trách nhiệm nội bộ mà không cần độ phức tạp triển khai và
+mạng đó. Xem `docs/LEARNING_NOTES.md` để biết thêm về đánh đổi này.
 
-## 2. MVC, extended with Service and Repository
+## 2. MVC, mở rộng thêm Service và Repository
 
-Plain MVC (Model–View–Controller) does not have a clear place for
-multi-step business workflows or for isolating database access. This
-project extends MVC with two additional layers:
+MVC thuần (Model–View–Controller) không có chỗ rõ ràng cho các workflow
+nghiệp vụ nhiều bước, hay để cô lập việc truy cập database. Dự án này
+mở rộng MVC với hai tầng bổ sung:
 
-| Layer | Responsibility | Must NOT do |
+| Tầng | Trách nhiệm | KHÔNG được làm |
 |---|---|---|
-| **View** | HTML, Bootstrap, custom CSS, browser-side TypeScript. Displays data, gathers input, calls the REST API. | Never runs SQL or talks to the database directly. |
-| **Controller** | Receives the HTTP request, parses it, calls a Service, translates the `Result` back into an HTTP response. | No calculation formulas. No raw SQL. |
-| **Service / Orchestrator** | Coordinates a business workflow: decides call order, calls business modules and Repositories. | Never renders HTML or touches `Request`/`Response` objects. |
-| **Repository** | Owns database access; contains or invokes SQL. | Never contains business/calculation logic. |
-| **Model / Types** | Domain data shapes and contracts (e.g. `Result<T>`). | — |
-| **Calculation Core** *(future)* | Pure TypeScript functions for tariff/quota/invoice math. | No dependency on Express, HTML, or Supabase. |
+| **View** | HTML, Bootstrap, CSS tự viết, TypeScript phía trình duyệt. Hiển thị dữ liệu, thu thập input, gọi REST API. | Không bao giờ chạy SQL hay nói chuyện trực tiếp với database. |
+| **Controller** | Nhận HTTP request, parse nó, gọi một Service, dịch `Result` trở lại thành HTTP response. | Không có công thức tính toán. Không có SQL thô. |
+| **Service / Orchestrator** | Điều phối một workflow nghiệp vụ: quyết định thứ tự gọi, gọi các business module và Repository. | Không bao giờ render HTML hay chạm vào object `Request`/`Response`. |
+| **Repository** | Sở hữu việc truy cập database; chứa hoặc gọi SQL. | Không bao giờ chứa business/calculation logic. |
+| **Model / Types** | Hình dạng dữ liệu domain và các hợp đồng (ví dụ `Result<T>`). | — |
+| **Calculation Core** | Các hàm TypeScript thuần cho phép tính biểu giá/định mức/hoá đơn. | Không phụ thuộc Express, HTML, hay Supabase. |
 
-### Why Service exists
+### Vì sao Service tồn tại
 
-Without a Service layer, Controllers end up doing validation, database
-lookups, and calculations all at once — the "bad example" documented in
-the project brief. A Service's only job is to decide *what happens in what
-order*. This keeps Controllers thin (HTTP-only) and keeps calculation
-logic (once added) independently testable without an HTTP server running.
+Nếu không có tầng Service, Controller sẽ phải làm cả validate, tra cứu
+database, và tính toán cùng lúc — "ví dụ xấu" được mô tả trong đề bài
+dự án. Việc duy nhất của một Service là quyết định *cái gì xảy ra theo
+thứ tự nào*. Điều này giữ Controller mỏng (chỉ lo HTTP) và giữ logic
+tính toán có thể unit-test độc lập mà không cần chạy HTTP server.
 
-### Why Repository exists
+### Vì sao Repository tồn tại
 
-Repositories isolate SQL and Supabase-specific access behind a small,
-purpose-named function set (e.g. `findRoomById`). This means:
+Repository cô lập SQL và các chi tiết truy cập đặc thù của Supabase
+đằng sau một tập hàm nhỏ, đặt tên theo đúng mục đích (ví dụ
+`findRoomById`). Điều này có nghĩa:
 
-- Business logic never depends on *how* data is stored.
-- The database technology could change without touching Services or
-  Controllers.
-- SQL is reviewable in one place per domain, instead of scattered across
-  Controllers.
+- Business logic không bao giờ phụ thuộc vào *cách* dữ liệu được lưu.
+- Công nghệ database có thể đổi mà không cần chạm vào Service hay
+  Controller.
+- SQL có thể review tập trung tại một chỗ cho mỗi domain, thay vì rải
+  rác khắp các Controller.
 
-### Why Calculation Core is isolated (future work)
+### Vì sao Calculation Core được cô lập
 
-Electricity/water tariff math is the core value of this application. It
-must be independently testable and independently explainable — it should
-not require an Express server, a database connection, or a browser to run
-or verify. This is why the future Calculation Core will be plain
-TypeScript functions with no dependency on `express`, HTML, or Supabase
-client libraries. **This foundation task does not implement any
-calculation logic** — it only reserves the boundary.
+Phép tính biểu giá điện/nước là giá trị cốt lõi của ứng dụng này. Nó
+phải test được độc lập và giải thích được độc lập — không cần một
+Express server, một kết nối database, hay một trình duyệt để chạy hay
+kiểm chứng. Đây là lý do Calculation Core là các hàm TypeScript thuần,
+không phụ thuộc `express`, HTML, hay thư viện client Supabase nào.
 
-## 3. Request flow
+## 3. Luồng request
 
 ```
-User
+Người dùng
  ↓
 View (HTML + Bootstrap)
  ↓
 Frontend TypeScript (api/ → controllers/ → views/)
  ↓
-REST API  (fetch to /api/v1/...)
+REST API  (fetch tới /api/v1/...)
  ↓
 Route            (backend/src/modules/<module>/<module>.routes.ts)
  ↓
 Controller       (backend/src/modules/<module>/<module>.controller.ts)
  ↓
 Service / Orchestrator   (backend/src/modules/<module>/<module>.service.ts)
- ├── Calculation Core (implemented, pure functions — backend/src/calculation/)
- ├── Repository (implemented for reads, and writes for Invoice — backend/src/repositories/)
- └── InvoiceUnitOfWork (implemented — backend/src/repositories/invoice-unit-of-work.ts,
-     wraps the transactional write path for CreateInvoice)
+ ├── Calculation Core (hàm thuần — backend/src/calculation/)
+ ├── Repository (backend/src/repositories/)
+ └── InvoiceUnitOfWork (backend/src/repositories/invoice-unit-of-work.ts,
+     bọc đường ghi transactional cho CreateInvoice)
           ↓
        PostgreSQL (Supabase)
 ```
 
-Note: every domain module now implements the full chain — `<module>
+Ghi chú: mọi domain module đều cài đặt đầy đủ chuỗi này — `<module>
 .routes.ts` → `<module>.controller.ts` → `<module>...service.ts` →
 Repository/Calculation Core (+ `InvoiceUnitOfWork`/
-`ElectricityTariffUnitOfWork` where an aggregate write must be atomic)
-→ PostgreSQL. Invoice (`POST`/`GET /api/v1/invoices`, see
-`docs/API.md`, `docs/CREATE_INVOICE_WORKFLOW.md`) and the management
-modules — property, room, meter-reading, tariff (electricity + water),
-see `docs/MANAGEMENT_API.md` — all follow this shape. Every Controller
-depends on its Service through a small `getService: () => Service`
-factory (dependency injection), and each concrete Postgres-backed
-Service is assembled by its own composition root under
-`backend/src/composition/` (one file per module), never by the
-Controller itself. `backend/src/shared/http/` and
-`backend/src/shared/validation/` hold small utilities (date parsing,
-error-code→HTTP-status mapping, ID/decimal-scale shape checks) shared
-across all of these modules, extracted from the invoice module once a
-second consumer needed the same logic — see `docs/MANAGEMENT_API.md`
-"Architecture notes specific to management" for the full list. DELETE
-is deliberately not implemented for any management resource (see that
-document's "No DELETE endpoints" section) — this is not a gap in the
-chain above, it is a scope decision.
+`ElectricityTariffUnitOfWork` ở nơi một aggregate cần ghi nguyên tử)
+→ PostgreSQL. Invoice (`POST`/`GET /api/v1/invoices`, xem
+`docs/API.md`, `docs/CREATE_INVOICE_WORKFLOW.md`) và các module quản lý
+— property, room, meter-reading, tariff (điện + nước), xem
+`docs/MANAGEMENT_API.md` — đều theo đúng hình dạng này. Mỗi Controller
+phụ thuộc Service của nó qua một factory nhỏ `getService: () =>
+Service` (dependency injection), và mỗi Service cụ thể chạy trên
+Postgres được lắp ráp bởi composition root riêng dưới
+`backend/src/composition/` (một file mỗi module), không bao giờ do bản
+thân Controller lắp ráp. `backend/src/shared/http/` và
+`backend/src/shared/validation/` chứa các tiện ích nhỏ (parse ngày, ánh
+xạ mã lỗi→HTTP status, kiểm tra hình dạng ID/scale thập phân) dùng
+chung cho tất cả các module này, được tách ra khỏi module invoice khi
+có consumer thứ hai cần cùng logic — xem `docs/MANAGEMENT_API.md` mục
+"Ghi chú kiến trúc riêng cho quản lý" để biết danh sách đầy đủ. DELETE
+CỐ Ý chưa được cài đặt cho bất kỳ tài nguyên quản lý nào (xem mục
+"Không có endpoint DELETE" trong tài liệu đó) — đây không phải một lỗ
+hổng trong chuỗi trên, mà là một quyết định về phạm vi.
 
-Concrete example implemented in this foundation — the health check:
+Ví dụ cụ thể đã cài đặt — health check:
 
 ```
-Browser
+Trình duyệt
  ↓
 frontend/src/controllers/status.controller.ts
- ↓ calls
+ ↓ gọi
 frontend/src/api/health.api.ts  →  fetch("/api/v1/health")
  ↓
 backend/src/modules/health/health.routes.ts
@@ -147,77 +146,76 @@ backend/src/modules/health/health.controller.ts
  ↓
 backend/src/modules/health/health.service.ts
  ↓
-returns Result<HealthStatus> → Controller maps it to HTTP JSON
+trả về Result<HealthStatus> → Controller ánh xạ nó thành HTTP JSON
 ```
 
-## 4. Dependency direction
+## 4. Hướng phụ thuộc
 
-Dependencies must only point "downward":
+Phụ thuộc chỉ được phép trỏ "xuống dưới":
 
 ```
 Route → Controller → Service → Business Module / Repository → Database
 ```
 
-Explicitly forbidden directions (see `README.md` project rules):
+Các hướng bị cấm tường minh (xem quy tắc dự án trong `README.md`):
 
 - Repository → Controller
 - Calculation → Express
 - Calculation → Supabase
 - Database → View
 
-No circular dependencies are allowed between modules or layers. If two
-modules seem to need each other, the shared logic should be extracted into
-a third module both depend on, or the workflow should be re-modeled at the
-Service layer.
+Không cho phép phụ thuộc vòng tròn giữa các module hay các tầng. Nếu
+hai module có vẻ cần lẫn nhau, logic dùng chung nên được tách ra thành
+một module thứ ba mà cả hai cùng phụ thuộc, hoặc workflow nên được mô
+hình hoá lại ở tầng Service.
 
-## 5. REST boundary
+## 5. Ranh giới REST
 
-- All backend endpoints are versioned under `/api/v1`.
-- Requests and responses are JSON.
-- Every response follows the success/error contract described in
+- Mọi endpoint backend đều versioned dưới `/api/v1`.
+- Request và response đều là JSON.
+- Mọi response tuân theo hợp đồng thành công/lỗi được mô tả ở
   `docs/ERROR_HANDLING.md`.
-- The frontend never assumes a response shape beyond that contract.
+- Frontend không bao giờ giả định một hình dạng response ngoài hợp
+  đồng đó.
 
-## 6. Database boundary
+## 6. Ranh giới database
 
-- The database is PostgreSQL, hosted by Supabase.
-- Access is direct SQL via the **Postgres.js** client (no ORM) — see
-  `docs/LEARNING_NOTES.md` and `docs/DATABASE_ACCESS.md` for why.
-- All database access is isolated behind Repository interfaces
-  (`backend/src/repositories/*.repository.ts`) with Postgres
-  implementations under `backend/src/repositories/postgres/`. Controllers
-  and Services never import Postgres.js directly, and Calculation Core
-  never imports database code at all.
-- The connection adapter (`backend/src/database/postgres-client.ts`) and
-  the transaction boundary (`backend/src/database/transaction.ts`) are
-  the only places a Postgres.js client is created — see
+- Database là PostgreSQL, host bởi Supabase.
+- Truy cập bằng SQL trực tiếp qua client **Postgres.js** (không ORM) —
+  xem `docs/LEARNING_NOTES.md` và `docs/DATABASE_ACCESS.md` để biết vì
+  sao.
+- Mọi truy cập database được cô lập đằng sau interface Repository
+  (`backend/src/repositories/*.repository.ts`) với implementation
+  Postgres dưới `backend/src/repositories/postgres/`. Controller và
+  Service không bao giờ import Postgres.js trực tiếp, và Calculation
+  Core không bao giờ import bất kỳ code database nào.
+- Adapter kết nối (`backend/src/database/postgres-client.ts`) và ranh
+  giới transaction (`backend/src/database/transaction.ts`) là NƠI DUY
+  NHẤT một client Postgres.js được tạo ra — xem
   `docs/DATABASE_ACCESS.md`.
-- Schema: `database/migrations/001_initial_domain_schema.sql` and
-  `002_preserve_invoice_item_precision.sql` — see `database/README.md`.
+- Schema: `database/migrations/001_initial_domain_schema.sql` và
+  `002_preserve_invoice_item_precision.sql` — xem `database/README.md`.
 
-## 7. Why modules are intentionally small
+## 7. Vì sao module cố ý được giữ nhỏ
 
-A module here means "one responsibility, one clear input, one clear
-output, one clear success/failure path" — not "one giant handler that does
-everything." The project brief's example (`ValidateInvoiceInput`,
-`LoadRoom`, `CalculateElectricityTax`, etc.) is the intended shape for
-future invoice calculation work. Small modules are:
+Một module ở đây nghĩa là "một trách nhiệm, một đầu vào rõ ràng, một
+đầu ra rõ ràng, một đường thành công/thất bại rõ ràng" — không phải
+"một handler khổng lồ làm mọi thứ". Ví dụ trong đề bài dự án
+(`ValidateInvoiceInput`, `LoadRoom`, `CalculateElectricityTax`, v.v.)
+chính là hình dạng dự định cho phần tính toán hoá đơn. Module nhỏ thì:
 
-- Easier to unit test in isolation.
-- Easier to explain individually during review or oral defense.
-- Easier to change without breaking unrelated logic.
+- Dễ unit-test độc lập hơn.
+- Dễ giải thích riêng lẻ khi review hay bảo vệ trực tiếp hơn.
+- Dễ thay đổi mà không phá vỡ logic không liên quan hơn.
 
-This is **not** implemented yet — this foundation only documents the
-intended shape for when calculation work begins.
+## 8. Module và Service — thuật ngữ dùng trong dự án này
 
-## 8. Module vs. Service — terminology used in this project
+- **Module** (thư mục dưới `backend/src/modules/`): một nhóm domain
+  nghiệp vụ (ví dụ `health`, `room`, `tariff`). Chứa route/controller/
+  service/repository riêng của nó.
+- **Service** (file `.service.ts` bên trong một module): tầng điều
+  phối cho các workflow của module đó. "Service" luôn chỉ tầng cụ thể
+  này, không phải cả module.
 
-- **Module** (folder under `backend/src/modules/`): a business domain
-  grouping (e.g. `health`, future `room`, `tariff`). Contains its own
-  routes/controller/service/repository.
-- **Service** (a `.service.ts` file inside a module): the orchestration
-  layer for that module's workflows. "Service" always refers to this
-  specific layer, not the module as a whole.
-
-Calling a whole module a "service" (as in "microservice") would be
-misleading in this project, since modules are not independently deployed.
+Gọi cả một module là "service" (như trong "microservice") sẽ gây hiểu
+lầm trong dự án này, vì các module không được triển khai độc lập.

@@ -1,13 +1,13 @@
-# Development Guide
+# Hướng dẫn phát triển
 
-Commands below match this repository exactly as of the project-foundation
-task. `frontend/` and `backend/` are independent npm projects — there is
-no root-level `package.json`.
+Các lệnh dưới đây khớp CHÍNH XÁC với repository hiện tại. `frontend/` và
+`backend/` là hai dự án npm độc lập — không có `package.json` ở cấp
+gốc.
 
-## Prerequisites
+## Yêu cầu trước
 
-- Node.js (tested with v24.x)
-- npm (tested with v11.x)
+- Node.js (đã test với v24.x)
+- npm (đã test với v11.x)
 
 ## Clone
 
@@ -21,27 +21,27 @@ cd OpenUtilityBill
 ```bash
 cd backend
 npm install
-cp .env.example .env   # edit values if needed; PORT defaults to 3000
+cp .env.example .env   # sửa giá trị nếu cần; PORT mặc định 3000
 ```
 
-| Command | Purpose |
+| Lệnh | Mục đích |
 |---|---|
-| `npm run dev` | Start the backend with auto-reload (`tsx watch`). |
-| `npm run typecheck` | Run `tsc --noEmit` — type-check without emitting files. |
-| `npm run build` | Compile TypeScript to `backend/dist/`. |
-| `npm start` | Run the compiled server (`node dist/server.js`). Requires `npm run build` first. |
-| `npm test` | Run all backend tests (Node's built-in `node:test` runner, executed via `tsx` — no Jest/Vitest/Mocha). Covers `backend/src/**/*.test.ts`: Calculation Core (including the official competition test cases), database config/adapter unit tests, Repository row-mapping/error-semantics unit tests, every management/invoice Service's orchestration (fake Repositories, no PostgreSQL), and every module's HTTP layer (`*.http.ts` pure functions + `*.controller.ts` with a fake Service). Tests that need a real PostgreSQL connection (`*.integration.test.ts`) auto-**skip** (not fail) when `DATABASE_URL` is unset — this includes `invoice.api.integration.test.ts`, which drives the real Express app through a real HTTP round trip (`app.listen(0)` + built-in `fetch`, no `supertest`). **Known debt:** `backend/tsconfig.json` excludes `src/**/__tests__/**`, so this command does not itself type-check test files — see `docs/MANAGEMENT_API.md` "Known debt: test-file typechecking". |
+| `npm run dev` | Chạy backend với auto-reload (`tsx watch`). |
+| `npm run typecheck` | Chạy `tsc --noEmit` — kiểm tra kiểu mà không emit file. |
+| `npm run build` | Biên dịch TypeScript sang `backend/dist/`. |
+| `npm start` | Chạy server đã biên dịch (`node dist/server.js`). Cần chạy `npm run build` trước. |
+| `npm test` | Chạy toàn bộ test backend (test runner có sẵn của Node `node:test`, chạy qua `tsx` — không dùng Jest/Vitest/Mocha). Bao phủ `backend/src/**/*.test.ts`: Calculation Core (bao gồm cả các test case chính thức của kỳ thi), test unit cho config/adapter database, test unit cho việc ánh xạ dòng/ngữ nghĩa lỗi của Repository, mọi orchestration của Service quản lý/hoá đơn (dùng Repository giả, không có PostgreSQL), và tầng HTTP của mỗi module (hàm thuần `*.http.ts` + `*.controller.ts` với Service giả). Các test cần kết nối PostgreSQL thật (`*.integration.test.ts`) tự động **SKIP** (không FAIL) khi `DATABASE_URL` chưa đặt — bao gồm `invoice.api.integration.test.ts`, test này chạy thật app Express qua một round-trip HTTP thật (`app.listen(0)` + `fetch` có sẵn, không dùng `supertest`). **Nợ kỹ thuật đã biết:** `backend/tsconfig.json` loại trừ `src/**/__tests__/**`, nên lệnh này KHÔNG tự type-check các file test — xem `docs/MANAGEMENT_API.md` mục "Known debt: test-file typechecking". |
 
-Verify it works:
+Kiểm tra hoạt động:
 
 ```bash
 curl http://localhost:3000/api/v1/health
 # {"success":true,"data":{"status":"ok"}}
 ```
 
-With `DATABASE_URL` set (migration + seed already applied), try the
-invoice REST API — see [`docs/API.md`](API.md) for the full request/
-response contract:
+Với `DATABASE_URL` đã đặt (migration + seed đã chạy), thử REST API hoá
+đơn — xem [`docs/API.md`](API.md) để có hợp đồng request/response đầy
+đủ:
 
 ```bash
 curl -X POST http://localhost:3000/api/v1/invoices \
@@ -51,9 +51,8 @@ curl -X POST http://localhost:3000/api/v1/invoices \
 curl "http://localhost:3000/api/v1/invoices?roomId=1&billingPeriod=2026-09-01"
 ```
 
-The management API — properties, rooms, meter readings, and tariff
-configuration — is documented in
-[`docs/MANAGEMENT_API.md`](MANAGEMENT_API.md):
+Management API — property, room, meter reading, và cấu hình biểu giá —
+được mô tả trong [`docs/MANAGEMENT_API.md`](MANAGEMENT_API.md):
 
 ```bash
 curl -X POST http://localhost:3000/api/v1/properties \
@@ -70,56 +69,56 @@ cd frontend
 npm install
 ```
 
-| Command | Purpose |
+| Lệnh | Mục đích |
 |---|---|
-| `npm run dev` | Start the Vite dev server (proxies `/api` to `http://localhost:3000`, see `frontend/vite.config.ts`). |
-| `npm run typecheck` | Run `tsc --noEmit`. |
-| `npm run build` | Type-check, then produce a production build in `frontend/dist/`. |
+| `npm run dev` | Chạy Vite dev server (proxy `/api` tới `http://localhost:3000`, xem `frontend/vite.config.ts`). |
+| `npm run typecheck` | Chạy `tsc --noEmit`. |
+| `npm run build` | Type-check, rồi build production vào `frontend/dist/`. |
 
-No `npm test` script exists for the frontend — no test framework is
-included by design (see `docs/FRONTEND.md` "What was genuinely
-runtime-tested"). `npm run typecheck`/`npm run build` are the frontend's
-compile-time correctness check.
+Frontend không có script `npm test` — không có framework test nào được
+đưa vào theo chủ đích (xem `docs/FRONTEND.md` mục "Những gì thực sự
+được test runtime"). `npm run typecheck`/`npm run build` là bước kiểm
+tra đúng đắn tại compile-time của frontend.
 
-Open `http://localhost:5173` (or the next free port Vite reports) after
-`npm run dev`. For the backend-status badge in the sidebar to show
-"Backend hoạt động", the backend must also be running (`npm run dev` in
-`backend/`, in a separate terminal) — but the app shell, navigation, and
-every screen's forms still render even if the backend is unreachable;
-only the API calls each screen makes will fail (shown as an alert with
-the backend's own error message, or a safe generic message on a network
-failure — see `docs/FRONTEND.md` "API client boundary"). See
-[`docs/FRONTEND.md`](FRONTEND.md) for the full screen map and
-architecture.
+Mở `http://localhost:5173` (hoặc cổng trống kế tiếp mà Vite báo) sau
+khi chạy `npm run dev`. Để badge trạng thái backend trong sidebar hiển
+thị "Backend hoạt động", backend cũng phải đang chạy (`npm run dev`
+trong `backend/`, ở một terminal khác) — nhưng khung ứng dụng, điều
+hướng, và mọi màn hình vẫn render kể cả khi không gọi được backend; chỉ
+các lời gọi API của mỗi màn hình sẽ thất bại (hiển thị dưới dạng một
+alert kèm message lỗi từ chính backend, hoặc một message chung an toàn
+khi lỗi mạng — xem `docs/FRONTEND.md` mục "Ranh giới API client"). Xem
+[`docs/FRONTEND.md`](FRONTEND.md) để có sơ đồ màn hình/kiến trúc đầy
+đủ.
 
-## Environment setup
+## Thiết lập môi trường
 
-- Backend environment variables are documented in `backend/.env.example`.
-  Copy it to `backend/.env` and edit locally — `.env` is git-ignored and
-  must never be committed.
-- `DATABASE_URL` is required to run anything that touches the database:
-  the Repository layer, every REST endpoint under `/api/v1` except
-  `/health` (`npm run dev`/`start`), and the `*.integration.test.ts`
-  tests. The health endpoint (`GET /api/v1/health`) still does **not**
-  touch the database and works with no `DATABASE_URL` set — see
-  `docs/DATABASE_ACCESS.md`. Request validation on every endpoint
-  (malformed body, bad date shape, ...) also does **not** need
-  `DATABASE_URL` — only a request that actually reaches
-  Repository/Calculation Core does (see `docs/API.md`,
-  `docs/MANAGEMENT_API.md`). Never put a real Supabase connection
-  string in a committed file.
+- Biến môi trường backend được ghi trong `backend/.env.example`. Copy
+  nó thành `backend/.env` rồi sửa tại máy local — `.env` bị git-ignore
+  và không bao giờ được commit.
+- `DATABASE_URL` là bắt buộc để chạy bất cứ thứ gì chạm tới database:
+  tầng Repository, mọi REST endpoint dưới `/api/v1` trừ `/health`
+  (`npm run dev`/`start`), và các test `*.integration.test.ts`. Health
+  endpoint (`GET /api/v1/health`) vẫn KHÔNG chạm database và hoạt động
+  kể cả khi chưa đặt `DATABASE_URL` — xem `docs/DATABASE_ACCESS.md`.
+  Validate request ở mọi endpoint (body sai định dạng, hình dạng ngày
+  sai, ...) cũng KHÔNG cần `DATABASE_URL` — chỉ request thực sự chạm
+  tới Repository/Calculation Core mới cần (xem `docs/API.md`,
+  `docs/MANAGEMENT_API.md`). Không bao giờ đặt một connection string
+  Supabase thật vào một file đã commit.
 
-## Repository layout
+## Cấu trúc repository
 
 ```
 OpenUtilityBill/
-  backend/     Node.js + TypeScript + Express REST API,
-               domain models, Calculation Core, database adapter
-               and Repository layer
-  frontend/    Vite + TypeScript + Bootstrap client — api/, types/,
-               utils/, controllers/, views/ (see docs/FRONTEND.md)
-  database/    PostgreSQL schema (migrations/), seed data (seeds/),
-               and runtime validation SQL (validation/) — Supabase-hosted
-  docs/        Architecture, database access, calculation, API/
-               management API, frontend, and learning documentation
+  backend/     REST API Node.js + TypeScript + Express, domain model,
+               Calculation Core (backend/src/calculation/), adapter
+               database (backend/src/database/), tầng Repository
+               (backend/src/repositories/)
+  frontend/    Client Vite + TypeScript + Bootstrap — api/, types/,
+               utils/, controllers/, views/ (xem docs/FRONTEND.md)
+  database/    Schema PostgreSQL (migrations/), dữ liệu seed (seeds/),
+               và SQL kiểm chứng runtime (validation/)
+  docs/        Tài liệu kiến trúc, truy cập database, tính toán, API/
+               API quản lý, frontend, và tài liệu học tập
 ```

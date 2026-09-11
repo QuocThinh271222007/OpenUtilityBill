@@ -1,4 +1,4 @@
-# Numeric Precision
+# Độ chính xác số (Numeric Precision)
 
 Tài liệu này giải thích chiến lược số học của Calculation Core — vì sao
 dự án không dùng `number` (JavaScript floating-point) cho các phép tính
@@ -248,9 +248,11 @@ luôn là số nguyên).
 Ràng buộc này CHỈ tồn tại trong Calculation Core (một quyết định của
 tầng tính toán) — cột `electricity_tariffs.people_per_quota_unit` trong
 database vẫn giữ nguyên `CHECK (people_per_quota_unit > 0)`, KHÔNG bị
-thắt chặt thêm. Việc validate `peoplePerQuotaUnit` một cách chặt hơn ở
-form quản trị tariff (Service/Admin layer) là quyết định của một task
-sau, khi giao diện đó thực sự được xây dựng.
+thắt chặt thêm. Giao diện quản lý biểu giá điện (đã cài đặt — xem
+`docs/FRONTEND.md`, `docs/MANAGEMENT_API.md`) không tự validate chặt
+hơn `peoplePerQuotaUnit` ở tầng frontend; ràng buộc "chỉ ước nguyên tố
+2/5" nêu trên chỉ được Calculation Core kiểm tra tại thời điểm tính
+hoá đơn.
 
 ## 14. Tóm tắt
 

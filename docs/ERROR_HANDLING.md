@@ -1,20 +1,20 @@
-# Error Handling
+# Xử lý lỗi
 
-This document describes how OpenUtilityBill represents success and
-failure, and why. It intentionally stays small — see
-`docs/LEARNING_NOTES.md` for the reasoning behind avoiding a bigger error
-framework.
+Tài liệu này mô tả cách OpenUtilityBill biểu diễn thành công và thất
+bại, và vì sao. Tài liệu cố ý được giữ nhỏ gọn — xem
+`docs/LEARNING_NOTES.md` để biết lý do tránh dùng một framework lỗi lớn
+hơn.
 
-## 1. The problem with `return false`
+## 1. Vấn đề với `return false`
 
-A function that returns `false` on failure throws away the *reason* for
-the failure. Callers cannot distinguish "room not found" from "database
-unreachable" from "invalid input" without inventing ad-hoc conventions.
-This project avoids that pattern for any meaningful failure.
+Một hàm trả về `false` khi thất bại sẽ vứt bỏ *lý do* thất bại. Caller
+không thể phân biệt "không tìm thấy room" với "không kết nối được
+database" với "input không hợp lệ" nếu không tự bịa ra quy ước riêng.
+Dự án này tránh mẫu đó cho mọi thất bại có ý nghĩa.
 
-## 2. The `Result<T>` contract
+## 2. Hợp đồng `Result<T>`
 
-Defined once, in `backend/src/shared/result.ts`:
+Định nghĩa đúng một lần, tại `backend/src/shared/result.ts`:
 
 ```ts
 export interface ResultError {
@@ -27,20 +27,20 @@ export type Result<T> =
   | { success: false; error: ResultError };
 ```
 
-Every Service, business module, and Repository function that can fail
-meaningfully returns `Result<T>` instead of throwing, returning `null`, or
-returning `false`. This forces callers to check `success` before touching
-`data` — TypeScript's discriminated union narrowing makes the unchecked
-case a compile error in strict mode.
+Mọi hàm Service, business module, và Repository có thể thất bại có ý
+nghĩa đều trả về `Result<T>` thay vì throw, trả `null`, hay trả
+`false`. Điều này buộc caller phải kiểm tra `success` trước khi chạm
+vào `data` — cơ chế thu hẹp discriminated union của TypeScript khiến
+trường hợp không kiểm tra trở thành lỗi compile ở chế độ strict.
 
-Two small helpers keep call sites readable:
+Hai helper nhỏ giữ cho nơi gọi dễ đọc:
 
 ```ts
 ok(data)                    // → { success: true, data }
 fail(code, message)         // → { success: false, error: { code, message } }
 ```
 
-## 3. Success contract (HTTP)
+## 3. Hợp đồng thành công (HTTP)
 
 ```json
 {
@@ -49,7 +49,7 @@ fail(code, message)         // → { success: false, error: { code, message } }
 }
 ```
 
-## 4. Failure contract (HTTP)
+## 4. Hợp đồng thất bại (HTTP)
 
 ```json
 {
@@ -61,20 +61,21 @@ fail(code, message)         // → { success: false, error: { code, message } }
 }
 ```
 
-## 5. Error code naming
+## 5. Cách đặt tên mã lỗi
 
-Error codes are `UPPER_SNAKE_CASE`, domain-specific, and describe *what*
-failed, not *how* (no HTTP status codes or stack traces embedded in the
-code). The REST API (`docs/API.md`, `docs/MANAGEMENT_API.md`) now wires
-all of these to real logic — every endpoint maps its `Result` errors to
-an HTTP status via one shared table
-(`backend/src/shared/http/result-error-status.ts`,
-`mapResultErrorCodeToHttpStatus` — see `docs/API.md` "HTTP status
-mapping" for the full table, including Calculation Core's own
-`INVALID_*`/tier-structure codes not repeated here):
+Mã lỗi dùng `UPPER_SNAKE_CASE`, riêng theo domain, và mô tả *cái gì*
+thất bại, không phải *thất bại như thế nào* (không nhúng HTTP status
+hay stack trace vào mã lỗi). REST API (`docs/API.md`,
+`docs/MANAGEMENT_API.md`) nay đã nối toàn bộ các mã này với logic thật
+— mỗi endpoint ánh xạ lỗi `Result` của nó thành một HTTP status qua một
+bảng dùng chung (`backend/src/shared/http/result-error-status.ts`,
+`mapResultErrorCodeToHttpStatus` — xem `docs/API.md` mục "HTTP status
+mapping" để có bảng đầy đủ, bao gồm cả các mã `INVALID_*`/cấu trúc tier
+riêng của Calculation Core không lặp lại ở đây):
 
-- `VALIDATION_ERROR` — Service-level input shape validation (e.g.
-  `roomId`, `billingPeriod`, billing methods, decimal-scale checks).
+- `VALIDATION_ERROR` — validate hình dạng input ở tầng Service (ví dụ
+  `roomId`, `billingPeriod`, phương pháp tính, kiểm tra scale thập
+  phân).
 - `ROOM_NOT_FOUND` / `ROOM_ALREADY_EXISTS`
 - `PROPERTY_NOT_FOUND`
 - `METER_READING_NOT_FOUND` / `METER_READING_ALREADY_EXISTS` /
@@ -84,33 +85,34 @@ mapping" for the full table, including Calculation Core's own
   / `TARIFF_IN_USE`
 - `AMBIGUOUS_TARIFF_CONFIGURATION` / `TARIFF_CONFIGURATION_INVALID`
 - `INVOICE_ALREADY_EXISTS`
-- `INVOICE_NOT_FOUND` — `GetInvoiceService`, no persisted invoice for
-  the given (roomId, billingPeriod).
+- `INVOICE_NOT_FOUND` — `GetInvoiceService`, không có invoice nào đã
+  lưu cho (roomId, billingPeriod) đã cho.
 - `TRANSACTION_FAILED`
 - `DATABASE_READ_FAILED` / `DATABASE_WRITE_FAILED`
-- `INTERNAL_ERROR` — an unexpected (non-`Result`) exception caught at
-  the Controller boundary; never a raw stack trace in the response.
+- `INTERNAL_ERROR` — một exception bất ngờ (không phải `Result`) bị bắt
+  tại ranh giới Controller; không bao giờ trả stack trace thô trong
+  response.
 
-## 6. Fail-fast pipeline
+## 6. Pipeline fail-fast
 
-A Service coordinating multiple steps stops at the first failure and
-returns it immediately — it never lets a later step run on top of a
-failed earlier step:
+Một Service điều phối nhiều bước sẽ dừng lại ở thất bại đầu tiên và trả
+về ngay lập tức — nó không bao giờ để một bước sau chạy trên một bước
+trước đã thất bại:
 
 ```
 Module A → PASS
 Module B → PASS
 Module C → FAIL
-STOP. Return Module C's error. Do not run Module D.
+DỪNG. Trả về lỗi của Module C. Không chạy Module D.
 ```
 
-Concretely in TypeScript, this looks like an early return on every
-intermediate `Result`:
+Cụ thể trong TypeScript, điều này trông giống như return sớm ở mỗi
+`Result` trung gian:
 
 ```ts
 const roomResult = await loadRoom(roomId);
 if (!roomResult.success) {
-  return roomResult; // stop the pipeline, propagate the exact error
+  return roomResult; // dừng pipeline, lan truyền đúng lỗi đó
 }
 
 const tariffResult = await loadTariff(roomResult.data.tariffId);
@@ -118,41 +120,44 @@ if (!tariffResult.success) {
   return tariffResult;
 }
 
-// continue only once every required step has succeeded
+// chỉ tiếp tục khi MỌI bước bắt buộc đã thành công
 ```
 
-This is why the health Controller
-(`backend/src/modules/health/health.controller.ts`) checks
-`result.success` before reading `result.data`, even though the current
-health Service cannot actually fail yet — the pattern is established here
-so every future module follows the same shape.
+Đây là lý do Controller của health
+(`backend/src/modules/health/health.controller.ts`) kiểm tra
+`result.success` trước khi đọc `result.data`, dù Service health hiện
+tại chưa thể thất bại — mẫu này được thiết lập sẵn ở đây để mọi module
+sau này theo đúng cùng hình dạng.
 
-## 7. Expected vs. unexpected errors
+## 7. Lỗi mong đợi và lỗi không mong đợi
 
-- **Expected / domain errors** (e.g. room not found, invalid tariff
-  configuration): represented as `Result` failures with a specific error
-  code. These are normal outcomes of a workflow, not bugs.
-- **Unexpected / internal errors** (e.g. a thrown exception from a
-  library, a programming mistake): not modelled as domain `Result`
-  failures. They should be caught at the Controller boundary and turned
-  into a generic `500` response with a generic code (e.g.
-  `INTERNAL_ERROR`), never re-thrown into the HTTP response as a stack
-  trace.
+- **Lỗi mong đợi / lỗi domain** (ví dụ không tìm thấy room, cấu hình
+  biểu giá không hợp lệ): biểu diễn dưới dạng `Result` thất bại với một
+  mã lỗi cụ thể. Đây là kết quả bình thường của một workflow, không
+  phải bug.
+- **Lỗi không mong đợi / lỗi nội bộ** (ví dụ một exception bị throw từ
+  thư viện, một lỗi lập trình): không được mô hình hoá thành `Result`
+  thất bại theo domain. Chúng nên được bắt tại ranh giới Controller và
+  chuyển thành một response `500` chung với một mã lỗi chung (ví dụ
+  `INTERNAL_ERROR`), không bao giờ re-throw vào HTTP response dưới dạng
+  stack trace.
 
-## 8. User-facing message vs. developer diagnostic
+## 8. Message hiển thị cho người dùng và thông tin chẩn đoán cho developer
 
-- The `message` field in an error response must be understandable by an
-  end user (or at least not alarming/technical).
-- The `code` field is what developers and support use to identify exactly
-  which check failed, without needing to parse the message text.
-- Stack traces and internal exception details are never sent to the
-  client. They belong in server-side logs only.
+- Field `message` trong một response lỗi phải hiểu được với người dùng
+  cuối (hoặc ít nhất không gây hoang mang/quá kỹ thuật).
+- Field `code` là thứ developer và support dùng để xác định chính xác
+  bước kiểm tra nào đã thất bại, mà không cần đọc nội dung message.
+- Stack trace và chi tiết exception nội bộ không bao giờ được gửi cho
+  client. Chúng chỉ thuộc về log phía server.
 
-## 9. What this project deliberately does not do
+## 9. Những gì dự án này cố ý không làm
 
-- No custom `Error` subclass hierarchy (e.g. `RoomNotFoundError extends
-  DomainError extends AppError`). A plain `{ code, message }` object is
-  enough to identify and communicate a failure, and is far easier to read
-  in a review or an oral defense than a class tree.
-- No global exception-handling framework or decorators. Controllers use
-  a plain early-return check on `result.success`.
+- Không có hệ thống class `Error` con tuỳ biến (ví dụ
+  `RoomNotFoundError extends DomainError extends AppError`). Một object
+  `{ code, message }` thuần là đủ để xác định và truyền đạt một thất
+  bại, và dễ đọc hơn nhiều khi review hay bảo vệ trực tiếp so với một
+  cây class.
+- Không có framework xử lý exception toàn cục hay decorator nào.
+  Controller dùng một kiểm tra early-return thuần trên
+  `result.success`.

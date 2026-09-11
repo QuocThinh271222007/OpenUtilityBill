@@ -1,4 +1,4 @@
-# Learning Notes
+# Ghi chú học tập
 
 Tài liệu này ghi lại **lý do** đằng sau các lựa chọn công nghệ và kiến
 trúc của OpenUtilityBill, viết cho chính chủ repository để ôn lại khi bảo

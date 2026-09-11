@@ -1,55 +1,57 @@
-# Third-Party Notices
+# Third-Party Notices (Thông báo bên thứ ba)
 
-This file documents every direct (non-transitive) third-party dependency
-in this repository, plus the runtime/hosting platforms the application
-depends on. License information for npm packages was verified against
-each installed package's own `package.json` metadata, not assumed.
+File này ghi lại mọi dependency bên thứ ba trực tiếp (không transitive)
+trong repository này, cộng với các nền tảng runtime/hosting mà ứng
+dụng phụ thuộc. Thông tin license cho các package npm đã được kiểm
+chứng từ chính metadata `package.json` của từng package đã cài, không
+phải giả định.
 
 ## Backend (`backend/`)
 
-| Package | Version installed | Purpose | Project URL | License |
+| Package | Phiên bản đã cài | Mục đích | URL dự án | License |
 |---|---|---|---|---|
-| express | 4.22.2 | Minimal HTTP framework used for routing and the REST API surface. | https://expressjs.com/ | MIT |
-| postgres | 3.4.9 | PostgreSQL client ("Postgres.js") used by the Repository layer to run parameterized SQL against Supabase-hosted PostgreSQL. This is a database *client*, not an ORM/query-builder — see `docs/DATABASE_ACCESS.md`. | https://github.com/porsager/postgres | Unlicense |
-| @types/express | (dev) | TypeScript type definitions for Express. | https://www.npmjs.com/package/@types/express | MIT |
-| @types/node | (dev) | TypeScript type definitions for the Node.js runtime. | https://www.npmjs.com/package/@types/node | MIT |
-| tsx | 4.23.13 (dev) | Runs TypeScript directly with auto-reload during `npm run dev`, and executes `.test.ts` files for `npm test` — avoiding a manual build step. | https://github.com/privatenumber/tsx | MIT |
-| typescript | 5.9.3 (dev) | Static typing and compilation for the backend source. | https://www.typescriptlang.org/ | Apache-2.0 |
+| express | 4.22.2 | Framework HTTP tối giản dùng cho routing và bề mặt REST API. | https://expressjs.com/ | MIT |
+| postgres | 3.4.9 | Client PostgreSQL ("Postgres.js") được tầng Repository dùng để chạy SQL tham số hoá trên PostgreSQL host bởi Supabase. Đây là một *client* database, không phải một ORM/query-builder — xem `docs/DATABASE_ACCESS.md`. | https://github.com/porsager/postgres | Unlicense |
+| @types/express | (dev) | Định nghĩa kiểu TypeScript cho Express. | https://www.npmjs.com/package/@types/express | MIT |
+| @types/node | (dev) | Định nghĩa kiểu TypeScript cho runtime Node.js. | https://www.npmjs.com/package/@types/node | MIT |
+| tsx | 4.23.13 (dev) | Chạy TypeScript trực tiếp với auto-reload trong `npm run dev`, và thực thi file `.test.ts` cho `npm test` — tránh một bước build thủ công. | https://github.com/privatenumber/tsx | MIT |
+| typescript | 5.9.3 (dev) | Kiểu tĩnh và biên dịch cho mã nguồn backend. | https://www.typescriptlang.org/ | Apache-2.0 |
 
 ## Frontend (`frontend/`)
 
-| Package | Version installed | Purpose | Project URL | License |
+| Package | Phiên bản đã cài | Mục đích | URL dự án | License |
 |---|---|---|---|---|
-| bootstrap | 5.3.8 | CSS component library used for layout and basic UI (badges, container, spacing). Imported as a package, not vendored into source. | https://getbootstrap.com/ | MIT |
-| vite | 6.4.3 (dev) | Development server and production bundler for the frontend TypeScript client. | https://vite.dev/ | MIT |
-| typescript | 5.9.3 (dev) | Static typing and compilation for the frontend source. | https://www.typescriptlang.org/ | Apache-2.0 |
+| bootstrap | 5.3.8 | Thư viện component CSS dùng cho layout và UI cơ bản (badge, container, spacing). Import như một package, không vendor vào mã nguồn. | https://getbootstrap.com/ | MIT |
+| vite | 6.4.3 (dev) | Dev server và bundler production cho client TypeScript frontend. | https://vite.dev/ | MIT |
+| typescript | 5.9.3 (dev) | Kiểu tĩnh và biên dịch cho mã nguồn frontend. | https://www.typescriptlang.org/ | Apache-2.0 |
 
-## Runtime / platform / hosted service (NOT npm dependencies)
+## Runtime / nền tảng / dịch vụ hosted (KHÔNG phải dependency npm)
 
-These are **not** packages installed into this repository — they are the
-runtime the code executes on, and a hosted third-party service the
-backend connects to over the network. None of them are bundled into, or
-distributed with, this repository's source code.
+Đây **không** phải các package cài vào repository này — đây là runtime
+mà code thực thi trên đó, và một dịch vụ bên thứ ba hosted mà backend
+kết nối tới qua mạng. Không cái nào trong số này được bundle vào, hay
+phân phối cùng, mã nguồn của repository này.
 
-| Name | Role in this project | Project/Vendor URL | License / Terms |
+| Tên | Vai trò trong dự án này | URL dự án/Vendor | License / Điều khoản |
 |---|---|---|---|
-| Node.js | JavaScript/TypeScript runtime the backend (and its build tooling) executes on. | https://nodejs.org/ | MIT |
-| PostgreSQL | The relational database engine storing all application data (see `database/migrations/`). | https://www.postgresql.org/ | PostgreSQL License (OSI-approved, permissive) |
-| Supabase | Hosting provider for this project's PostgreSQL database (managed infrastructure only — this project does not use Supabase Auth, Storage, or the `@supabase/supabase-js` client). | https://supabase.com/ | Supabase's own Terms of Service (hosted service, not an open-source license grant for this repository's code) |
+| Node.js | Runtime JavaScript/TypeScript mà backend (và công cụ build của nó) thực thi trên đó. | https://nodejs.org/ | MIT |
+| PostgreSQL | Engine database quan hệ lưu toàn bộ dữ liệu ứng dụng (xem `database/migrations/`). | https://www.postgresql.org/ | PostgreSQL License (được OSI công nhận, permissive) |
+| Supabase | Nhà cung cấp hosting cho database PostgreSQL của dự án này (chỉ hạ tầng quản lý — dự án này không dùng Supabase Auth, Storage, hay client `@supabase/supabase-js`). | https://supabase.com/ | Điều khoản dịch vụ (Terms of Service) riêng của Supabase (dịch vụ hosted, không phải một cấp phép mã nguồn mở cho mã của repository này) |
 
-## Notes
+## Ghi chú
 
-- Only direct npm dependencies are listed in the two package tables
-  above. Transitive dependencies are documented by the respective
-  `package-lock.json` files and are not duplicated here.
-- No dependency is vendored (copied) into this repository's source tree;
-  all are installed via `npm install` and excluded from version control
-  via `.gitignore` (`node_modules/`).
-- No ORM or query-builder (Drizzle, Prisma, TypeORM, Sequelize, Knex,
-  Kysely) is used — `postgres` is a client library; SQL is written
-  directly by the Repository layer (see `docs/DATABASE_ACCESS.md`).
-- A moderate-severity advisory exists in `qs` (a transitive dependency of
-  `express` 4.x) at the time of writing
-  (GHSA-x5fp-wj9c-mxmx, GHSA-4mjr-xmp4-gh2g). No fix is currently
-  available without an Express major-version upgrade, which is out of
-  scope for this task. Tracked for a future dependency review.
+- Chỉ dependency npm trực tiếp được liệt kê trong hai bảng package ở
+  trên. Dependency transitive được ghi lại bởi các file
+  `package-lock.json` tương ứng và không lặp lại ở đây.
+- Không có dependency nào được vendor (sao chép) vào cây mã nguồn của
+  repository này; tất cả được cài qua `npm install` và bị loại khỏi
+  version control qua `.gitignore` (`node_modules/`).
+- Không dùng ORM hay query-builder nào (Drizzle, Prisma, TypeORM,
+  Sequelize, Knex, Kysely) — `postgres` là một thư viện client; SQL
+  được tầng Repository viết trực tiếp (xem `docs/DATABASE_ACCESS.md`).
+- Một cảnh báo mức độ trung bình tồn tại trong `qs` (một dependency
+  transitive của `express` 4.x) tại thời điểm viết tài liệu này
+  (GHSA-x5fp-wj9c-mxmx, GHSA-4mjr-xmp4-gh2g). Hiện chưa có bản sửa nào
+  khả dụng mà không cần nâng phiên bản chính của Express, việc đó nằm
+  ngoài phạm vi task này. Được theo dõi cho một lần review dependency
+  trong tương lai.

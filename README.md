@@ -1,213 +1,217 @@
 # OpenUtilityBill
 
-Open-source web application for transparent electricity and water cost
-calculation and comparison for rental housing.
+Ứng dụng web mã nguồn mở giúp tính toán và so sánh chi phí điện/nước
+cho nhà trọ một cách minh bạch.
 
-## Problem statement
+## Bài toán
 
-Rental tenants frequently cannot verify how their electricity/water bills
-are calculated (tier allocation, quota rules, taxes/fees applied by the
-landlord). OpenUtilityBill aims to make that calculation transparent,
-explainable, and independently checkable.
+Người thuê trọ thường không thể kiểm chứng cách hoá đơn điện/nước của
+mình được tính ra (phân bổ theo bậc, quy tắc định mức, thuế/phí do chủ
+trọ áp dụng). OpenUtilityBill hướng tới việc làm cho phép tính đó minh
+bạch, có thể giải thích từng bước, và kiểm tra lại độc lập.
 
-## Goals
+## Mục tiêu
 
-- Calculate electricity and water costs from meter readings and published
-  tariff structures.
-- Explain each step of a bill's calculation, not just the final amount.
-- Allow comparison between billing periods or tariff scenarios.
+- Tính chi phí điện và nước từ chỉ số công tơ và biểu giá đã công bố.
+- Giải thích từng bước của phép tính hoá đơn, không chỉ đưa ra con số
+  cuối cùng.
+- Cho phép so sánh giữa các kỳ hoá đơn hoặc các kịch bản biểu giá khác
+  nhau.
 
-This is an individual entry for the 2026 Open Source Software Team
-Selection Contest. Every architectural and implementation decision is
-expected to be personally understood, explained, and defended by the
-repository owner — see `docs/LEARNING_NOTES.md`.
+Đây là bài dự thi cá nhân cho Kỳ thi tuyển chọn đội tuyển phần mềm mã
+nguồn mở 2026. Mọi quyết định kiến trúc và cài đặt đều phải được chính
+chủ dự án hiểu, giải thích, và bảo vệ được — xem `docs/LEARNING_NOTES.md`.
 
-## Architecture summary
+## Kiến trúc tổng quan
 
-- **Modular Monolith**: one deployable backend, internally organized into
-  small business-domain modules.
-- **MVC-oriented**, extended with a Service/Orchestrator layer and a
-  Repository layer that isolates database access.
-- **Calculation Core**: pure TypeScript, independent of Express, HTML,
-  and Supabase — meter usage, tiered/fallback electricity, water, and
-  invoice-total math, implemented and independently unit-tested (see
-  [`docs/CALCULATION_CORE.md`](docs/CALCULATION_CORE.md)).
-- **Result contract**: business logic returns `{ success, data }` or
-  `{ success: false, error: { code, message } }` instead of throwing or
-  returning `false`, enabling fail-fast error propagation.
+- **Modular Monolith**: một backend triển khai duy nhất, được tổ chức
+  nội bộ thành các module nghiệp vụ nhỏ.
+- **Hướng MVC**, mở rộng thêm tầng Service/Orchestrator và tầng
+  Repository cô lập việc truy cập database.
+- **Calculation Core**: TypeScript thuần, độc lập với Express, HTML, và
+  Supabase — thực hiện phép tính sản lượng công tơ, tiền điện theo bậc/
+  fallback, tiền nước, và tổng hoá đơn, đã cài đặt và unit-test độc lập
+  (xem [`docs/CALCULATION_CORE.md`](docs/CALCULATION_CORE.md)).
+- **Hợp đồng Result**: business logic trả về `{ success, data }` hoặc
+  `{ success: false, error: { code, message } }` thay vì throw hay trả
+  `false`, giúp lỗi được lan truyền theo kiểu fail-fast.
 
-Full details: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+Chi tiết đầy đủ: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
-## Technology stack
+## Công nghệ sử dụng
 
-| Layer | Technology |
+| Tầng | Công nghệ |
 |---|---|
 | Frontend | HTML5, TypeScript, Vite, Bootstrap |
 | Backend | Node.js, TypeScript, Express |
-| API | REST, JSON, versioned under `/api/v1` |
-| Database | PostgreSQL, hosted by Supabase (direct SQL via Postgres.js, no ORM) |
-| Source control | Git, Conventional Commits |
+| API | REST, JSON, versioned dưới `/api/v1` |
+| Database | PostgreSQL, host bởi Supabase (SQL trực tiếp qua Postgres.js, không ORM) |
+| Quản lý mã nguồn | Git, Conventional Commits |
 
-See [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) for the exact
-third-party packages in use and their licenses.
+Xem [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) để biết chính
+xác các package bên thứ ba đang dùng và giấy phép của chúng.
 
-## Current development status
+## Trạng thái hiện tại
 
-Foundation stage: repository structure, documentation, a minimal frontend
-page, a backend `GET /api/v1/health` endpoint, and now the domain model
-and database foundation — TypeScript domain types
-(`RentalProperty`, `Room`, `MeterReading`, `ElectricityTariff`,
-`ElectricityTariffTier`, `WaterTariff`, `Invoice`, `InvoiceItem`), an
-initial PostgreSQL schema, and the official competition default
-tariff configuration as seed data. See
-[`docs/DOMAIN_MODEL.md`](docs/DOMAIN_MODEL.md) and
-[`docs/DATABASE_DESIGN.md`](docs/DATABASE_DESIGN.md).
-
-Calculation Core is now implemented and independently tested: meter
-usage (including rollover), configurable quota-adjusted tier allocation,
-both electricity billing methods (`QUOTA_TIERED`, `FALLBACK_TIER_FLAT`),
-both water billing methods (`PER_CUBIC_METER`, `PER_PERSON`), invoice
-totaling, and actual-charge comparison — all pure TypeScript, using
-exact `BigInt`-based rational arithmetic (never floating-point) for
-every financial value, with no database or HTTP dependency. See
-[`docs/CALCULATION_CORE.md`](docs/CALCULATION_CORE.md) and
+Calculation Core đã cài đặt và test độc lập đầy đủ: sản lượng công tơ
+(bao gồm cả trường hợp tràn số/rollover), phân bổ bậc giá có điều chỉnh
+theo định mức, cả hai phương pháp tính điện (`QUOTA_TIERED`,
+`FALLBACK_TIER_FLAT`), cả hai phương pháp tính nước
+(`PER_CUBIC_METER`, `PER_PERSON`), tính tổng hoá đơn, và so sánh với số
+tiền thực thu — toàn bộ là TypeScript thuần, dùng số học phân số chính
+xác dựa trên `BigInt` (không bao giờ dùng dấu phẩy động) cho mọi giá
+trị tài chính, không phụ thuộc database hay HTTP. Xem
+[`docs/CALCULATION_CORE.md`](docs/CALCULATION_CORE.md) và
 [`docs/NUMERIC_PRECISION.md`](docs/NUMERIC_PRECISION.md).
 
-A persistence foundation now exists: a Postgres.js database adapter and
-transaction boundary (`backend/src/database/`), and Repository
-implementations for `RentalProperty`, `Room`, `MeterReading`,
-`ElectricityTariff` (with its tiers), `WaterTariff`, and `Invoice` —
-every one of these now supports both read AND write
-(`backend/src/repositories/`) — all parameterized SQL, no ORM,
-`NUMERIC` and `BIGINT` preserved as exact strings end to end. See
-[`docs/DATABASE_ACCESS.md`](docs/DATABASE_ACCESS.md).
+Nền tảng persistence đã có đầy đủ: một adapter database Postgres.js và
+ranh giới transaction (`backend/src/database/`), cùng các Repository
+implementation cho `RentalProperty`, `Room`, `MeterReading`,
+`ElectricityTariff` (kèm các bậc giá), `WaterTariff`, và `Invoice` —
+mỗi Repository đều hỗ trợ cả đọc VÀ ghi
+(`backend/src/repositories/`) — toàn bộ dùng SQL tham số hoá, không
+ORM, `NUMERIC` và `BIGINT` được giữ nguyên dưới dạng chuỗi chính xác từ
+đầu đến cuối. Xem [`docs/DATABASE_ACCESS.md`](docs/DATABASE_ACCESS.md).
 
-The invoice write workflow is implemented: `CreateInvoiceService`
-(`backend/src/modules/invoice/`) orchestrates Room/MeterReading/Tariff
-reads, Calculation Core, and a transactional `InvoiceUnitOfWork` to
-persist an invoice and its full breakdown atomically, with
-race-condition-safe duplicate protection. `GetInvoiceService` reads a
-persisted invoice back (no recalculation). See
+Luồng ghi hoá đơn đã cài đặt đầy đủ: `CreateInvoiceService`
+(`backend/src/modules/invoice/`) điều phối việc đọc Room/MeterReading/
+Tariff, gọi Calculation Core, và dùng `InvoiceUnitOfWork` (transaction)
+để lưu một hoá đơn cùng toàn bộ breakdown một cách nguyên tử, có bảo vệ
+chống trùng lặp an toàn với race condition. `GetInvoiceService` đọc lại
+một hoá đơn đã lưu (không tính lại). Xem
 [`docs/CREATE_INVOICE_WORKFLOW.md`](docs/CREATE_INVOICE_WORKFLOW.md).
 
-The full mandatory backend REST API now exists: invoice creation/
-readback (`POST`/`GET /api/v1/invoices`) plus management endpoints for
-properties, rooms, meter readings, and electricity/water tariff
-configuration (`docs/MANAGEMENT_API.md`) — enough for a future frontend
-to manage all required data and create/inspect invoices. Every endpoint
-is wired Route → Controller → Service with no business logic or SQL in
-the Controller, and each module has its own lazy composition root
-(`backend/src/composition/`) so `GET /api/v1/health` keeps working with
-no `DATABASE_URL` set. DELETE is deliberately not implemented for any
-resource yet (see `docs/MANAGEMENT_API.md` "No DELETE endpoints"). See
-[`docs/API.md`](docs/API.md) and
+Toàn bộ REST API backend bắt buộc đã có đầy đủ: tạo/đọc lại hoá đơn
+(`POST`/`GET /api/v1/invoices`) cùng các endpoint quản lý cho property,
+room, meter reading, và cấu hình biểu giá điện/nước
+(`docs/MANAGEMENT_API.md`) — đủ để một frontend quản lý toàn bộ dữ liệu
+cần thiết và tạo/xem hoá đơn. Mỗi endpoint được nối theo Route →
+Controller → Service, không có business logic hay SQL nào trong
+Controller, và mỗi module có composition root lazy riêng
+(`backend/src/composition/`) để `GET /api/v1/health` vẫn hoạt động dù
+chưa cấu hình `DATABASE_URL`. DELETE CỐ Ý chưa được cài đặt cho bất kỳ
+tài nguyên nào (xem `docs/MANAGEMENT_API.md` mục "Không có endpoint
+DELETE"). Xem [`docs/API.md`](docs/API.md) và
 [`docs/MANAGEMENT_API.md`](docs/MANAGEMENT_API.md).
 
-The full mandatory browser UI now exists: a Vite + TypeScript +
-Bootstrap single-page app (`frontend/src/`) with a hand-written
-hash-based router (no router library), covering the complete workflow —
-create/edit properties and rooms, set tenant count, enter and inspect
-monthly electricity/water readings, configure electricity (dynamic
-tiers, any count) and water tariffs, create an invoice and see its full
-breakdown, supply an actual charged amount and see the legal-vs-actual
-comparison, and re-open an already-created historical invoice. The
-frontend never computes billing money — every financial/measurement
-value is handled as a `string` end to end, matching the backend's own
-`NUMERIC`-as-string contract, and display-only VND formatting is done
-by string manipulation, never by converting through a JS `number`. See
+Giao diện trình duyệt bắt buộc đã có đầy đủ: một single-page app Vite +
+TypeScript + Bootstrap (`frontend/src/`) với router dựa trên hash tự
+viết (không dùng thư viện router), bao phủ toàn bộ luồng nghiệp vụ —
+tạo/sửa property và room, đặt số người ở, nhập và xem lại chỉ số công
+tơ điện/nước hàng tháng, cấu hình biểu giá điện (số bậc linh hoạt, bất
+kỳ số lượng nào) và biểu giá nước, tạo hoá đơn và xem breakdown đầy đủ,
+nhập số tiền thực thu và xem so sánh hợp pháp-thực thu, và xem lại một
+hoá đơn lịch sử đã tạo trước đó. Frontend không bao giờ tự tính tiền —
+mọi giá trị tài chính/đo lường được xử lý dưới dạng `string` từ đầu đến
+cuối, khớp với hợp đồng `NUMERIC`-dưới-dạng-chuỗi của backend, và định
+dạng VND chỉ để hiển thị được thực hiện bằng thao tác chuỗi, không bao
+giờ ép kiểu qua `number` của JS. Xem
 [`docs/FRONTEND.md`](docs/FRONTEND.md).
 
-The mandatory management UI, including electricity/water tariff
-configuration, is implemented (see above). Authentication, role-based
-authorization, a separate role-gated admin/user area, and a production
-deployment are not implemented — these are separate, later, reviewable
-tasks.
+Giao diện quản lý bắt buộc, bao gồm cấu hình biểu giá điện/nước, đã
+được cài đặt (xem ở trên). Xác thực, phân quyền theo vai trò, một khu
+vực quản trị/người dùng riêng có kiểm soát quyền, và triển khai lên môi
+trường production chưa được cài đặt — đây là các task riêng, sẽ thực
+hiện sau, cần được review độc lập.
 
-## Repository structure
+**Bằng chứng runtime thật:** toàn bộ backend đã được chạy thật với kết
+nối PostgreSQL thật (Supabase) — hành vi `NUMERIC`/`BIGINT` của
+Postgres.js, commit/rollback transaction, đọc/ghi Repository, và
+`POST`/`GET /api/v1/invoices` qua HTTP thật — đều đã được kiểm chứng
+bằng thực thi thật, không chỉ suy đoán. Kết quả: 320/320 test PASS,
+0 FAIL, 0 SKIP (không còn test tích hợp database nào bị bỏ qua). Việc
+click-through thủ công qua trình duyệt vẫn còn đang chờ chủ dự án tự
+xác nhận — xem [`docs/FINAL_SMOKE_CHECKLIST.md`](docs/FINAL_SMOKE_CHECKLIST.md).
+
+## Cấu trúc repository
 
 ```
 OpenUtilityBill/
-  backend/     Node.js + TypeScript + Express REST API, domain models,
-               Calculation Core (backend/src/calculation/), database
-               adapter (backend/src/database/), Repository layer
-               (backend/src/repositories/), and the composition root
-               that wires real Services to real Repositories
+  backend/     REST API Node.js + TypeScript + Express, domain model,
+               Calculation Core (backend/src/calculation/), adapter
+               database (backend/src/database/), tầng Repository
+               (backend/src/repositories/), và composition root nối
+               Service thật với Repository thật
                (backend/src/composition/)
-  frontend/    Vite + TypeScript + Bootstrap client — api/ (REST
-               calls), types/ (wire-contract mirrors), utils/ (pure
-               display/precision helpers), controllers/ (per-screen
-               orchestration), views/ (DOM rendering), and a small
-               hand-written hash router (frontend/src/controllers/
+  frontend/    Client Vite + TypeScript + Bootstrap — api/ (gọi REST),
+               types/ (mirror hợp đồng dữ liệu), utils/ (hàm hiển thị/
+               độ chính xác thuần), controllers/ (điều phối theo từng
+               màn hình), views/ (render DOM), và một router hash nhỏ
+               tự viết (frontend/src/controllers/
                navigation.controller.ts)
-  database/    PostgreSQL schema (migrations/), seed data (seeds/), and
-               runtime validation SQL (validation/)
-  docs/        Architecture, domain model, database access, calculation,
-               API/management API, and learning docs
+  database/    Schema PostgreSQL (migrations/), dữ liệu seed (seeds/),
+               và SQL kiểm chứng runtime (validation/)
+  docs/        Tài liệu kiến trúc, domain model, truy cập database,
+               tính toán, API/API quản lý, và tài liệu học tập
 ```
 
-## Quick start
+## Bắt đầu nhanh
 
-See [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) for install, run, build,
-and typecheck commands for both `backend/` and `frontend/`.
+Xem [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) để biết lệnh cài đặt,
+chạy, build, và typecheck cho cả `backend/` và `frontend/`.
 
-## Documentation
+## Tài liệu
 
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — architecture, request
-  flow, dependency direction, module boundaries.
-- [`docs/LEARNING_NOTES.md`](docs/LEARNING_NOTES.md) — reasoning behind
-  each technology and architectural decision (Vietnamese).
-- [`docs/ERROR_HANDLING.md`](docs/ERROR_HANDLING.md) — success/failure
-  contract, error codes, fail-fast pipeline.
-- [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) — setup and commands.
-- [`docs/FRONTEND.md`](docs/FRONTEND.md) — frontend architecture,
-  screen/navigation map, the API-client boundary, financial-string
-  rule, month↔billingPeriod conversion, and what was actually
-  runtime-tested.
-- [`docs/DOMAIN_MODEL.md`](docs/DOMAIN_MODEL.md) — business entities,
-  relationships, and the historical-snapshot principle.
-- [`docs/DATABASE_DESIGN.md`](docs/DATABASE_DESIGN.md) — schema
-  reasoning: normalization, keys, constraints, `NUMERIC` vs. `FLOAT`.
-- [`docs/TRANSACTIONS.md`](docs/TRANSACTIONS.md) — ACID guarantees and
-  transaction boundaries for future write workflows.
-- [`docs/CALCULATION_CORE.md`](docs/CALCULATION_CORE.md) — the billing
-  calculation pipeline, module responsibilities, fail-fast design.
-- [`docs/NUMERIC_PRECISION.md`](docs/NUMERIC_PRECISION.md) — why exact
-  `BigInt`-based rational arithmetic is used instead of floating-point.
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — kiến trúc, luồng
+  request, hướng phụ thuộc, ranh giới module.
+- [`docs/LEARNING_NOTES.md`](docs/LEARNING_NOTES.md) — lý do lựa chọn
+  từng công nghệ và quyết định kiến trúc.
+- [`docs/ERROR_HANDLING.md`](docs/ERROR_HANDLING.md) — hợp đồng thành
+  công/thất bại, mã lỗi, pipeline fail-fast.
+- [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) — cài đặt và các lệnh.
+- [`docs/FRONTEND.md`](docs/FRONTEND.md) — kiến trúc frontend, sơ đồ
+  màn hình/điều hướng, ranh giới API-client, quy tắc chuỗi tài chính,
+  chuyển đổi month↔billingPeriod, và những gì thực sự đã được test
+  runtime.
+- [`docs/DOMAIN_MODEL.md`](docs/DOMAIN_MODEL.md) — các thực thể nghiệp
+  vụ, quan hệ giữa chúng, và nguyên tắc snapshot lịch sử.
+- [`docs/DATABASE_DESIGN.md`](docs/DATABASE_DESIGN.md) — lý do thiết kế
+  schema: chuẩn hoá, khoá, ràng buộc, `NUMERIC` so với `FLOAT`.
+- [`docs/TRANSACTIONS.md`](docs/TRANSACTIONS.md) — đảm bảo ACID và
+  ranh giới transaction cho các luồng ghi.
+- [`docs/CALCULATION_CORE.md`](docs/CALCULATION_CORE.md) — pipeline
+  tính toán hoá đơn, trách nhiệm từng module, thiết kế fail-fast.
+- [`docs/NUMERIC_PRECISION.md`](docs/NUMERIC_PRECISION.md) — vì sao
+  dùng số học phân số chính xác dựa trên `BigInt` thay vì dấu phẩy
+  động.
 - [`docs/DATABASE_ACCESS.md`](docs/DATABASE_ACCESS.md) — Postgres.js,
-  the Repository boundary, parameterized queries, transactions, and the
-  `NUMERIC`/`BIGINT` precision boundary at the database adapter.
-- [`docs/CREATE_INVOICE_WORKFLOW.md`](docs/CREATE_INVOICE_WORKFLOW.md) —
-  the `CreateInvoiceService`/`GetInvoiceService` sequence: reads,
-  calculation, transactional write, duplicate/race protection, invoice
-  snapshot principle, persisted readback.
-- [`docs/API.md`](docs/API.md) — REST contract for
-  `POST`/`GET /api/v1/invoices`: request/response shape, the
-  `YYYY-MM-DD` date wire format, decimal-string financial contract,
-  HTTP status mapping, and the lazy database composition.
-- [`docs/MANAGEMENT_API.md`](docs/MANAGEMENT_API.md) — REST contract
-  for property/room/meter-reading/tariff management: numeric/date
-  contracts per resource, duplicate/overlap protection, historical
-  reference protection (why a referenced meter reading or tariff can't
-  be edited), and why DELETE is not implemented.
-- [`database/README.md`](database/README.md) — schema/seed files and how
-  to run them.
+  ranh giới Repository, query tham số hoá, transaction, và ranh giới độ
+  chính xác `NUMERIC`/`BIGINT` tại adapter database.
+- [`docs/CREATE_INVOICE_WORKFLOW.md`](docs/CREATE_INVOICE_WORKFLOW.md)
+  — trình tự `CreateInvoiceService`/`GetInvoiceService`: đọc dữ liệu,
+  tính toán, ghi transactional, chống trùng lặp/race condition, nguyên
+  tắc snapshot hoá đơn, đọc lại dữ liệu đã lưu.
+- [`docs/API.md`](docs/API.md) — hợp đồng REST cho
+  `POST`/`GET /api/v1/invoices`: hình dạng request/response, định dạng
+  ngày `YYYY-MM-DD`, hợp đồng chuỗi thập phân tài chính, ánh xạ HTTP
+  status, và composition database lazy.
+- [`docs/MANAGEMENT_API.md`](docs/MANAGEMENT_API.md) — hợp đồng REST
+  cho quản lý property/room/meter-reading/tariff: hợp đồng số/ngày theo
+  từng tài nguyên, chống trùng lặp/chồng lấn, bảo vệ tham chiếu lịch sử
+  (vì sao một meter reading hay tariff đã được tham chiếu không thể
+  sửa), và vì sao chưa cài đặt DELETE.
+- [`database/README.md`](database/README.md) — các file schema/seed và
+  cách chạy chúng.
+- [`docs/FINAL_SMOKE_CHECKLIST.md`](docs/FINAL_SMOKE_CHECKLIST.md) —
+  checklist smoke test thủ công (chủ dự án tự chạy trên trình duyệt)
+  trước khi phát hành.
 
-## License
+## Giấy phép
 
-MIT — see [`LICENSE`](LICENSE).
+MIT — xem [`LICENSE`](LICENSE).
 
-Calculation Core implements the official competition billing rules
-(meter usage, tiered/fallback electricity, water, invoice totals) and is
-covered by automated tests against the official published test cases
-(`cd backend && npm test`). A Repository layer over Postgres.js exists
-with read+write support for every domain (RentalProperty, Room,
-MeterReading, ElectricityTariff, WaterTariff, Invoice); a complete
-`CreateInvoiceService`/`GetInvoiceService` pair ties invoice creation/
-readback together transactionally; the full mandatory REST API (invoice
-workflow plus property/room/meter-reading/tariff management) exposes
-that through real endpoints (see `docs/API.md`, `docs/MANAGEMENT_API.md`);
-and a Vite + TypeScript + Bootstrap browser UI (`docs/FRONTEND.md`)
-consumes that API end to end for the full mandatory workflow, including
-the mandatory tariff-configuration management UI. DELETE, authentication,
-role-based authorization, and a production deployment are not
-implemented yet.
+Calculation Core cài đặt đúng quy tắc tính hoá đơn chính thức của kỳ
+thi (sản lượng công tơ, tiền điện theo bậc/fallback, tiền nước, tổng
+hoá đơn) và được bao phủ bởi test tự động đối chiếu với các case mẫu
+chính thức đã công bố (`cd backend && npm test`). Tầng Repository trên
+Postgres.js tồn tại với hỗ trợ đọc+ghi cho mọi domain (RentalProperty,
+Room, MeterReading, ElectricityTariff, WaterTariff, Invoice); cặp
+`CreateInvoiceService`/`GetInvoiceService` hoàn chỉnh nối việc tạo/đọc
+lại hoá đơn một cách transactional; toàn bộ REST API bắt buộc (luồng
+hoá đơn cộng quản lý property/room/meter-reading/tariff) phơi bày điều
+đó qua các endpoint thật (xem `docs/API.md`, `docs/MANAGEMENT_API.md`);
+và một giao diện trình duyệt Vite + TypeScript + Bootstrap
+(`docs/FRONTEND.md`) tiêu thụ API đó từ đầu đến cuối cho toàn bộ luồng
+bắt buộc, bao gồm giao diện quản lý cấu hình biểu giá bắt buộc. DELETE,
+xác thực, phân quyền theo vai trò, và triển khai production chưa được
+cài đặt.

@@ -1,168 +1,179 @@
-# Transactions
+# Transaction
 
-This document defines where ACID properties matter in OpenUtilityBill,
-and the transaction boundaries that future Service-layer workflows must
-respect. It complements
-[`docs/DOMAIN_MODEL.md`](DOMAIN_MODEL.md) and
+Tài liệu này định nghĩa nơi các thuộc tính ACID có ý nghĩa trong
+OpenUtilityBill, và các ranh giới transaction mà các workflow ở tầng
+Service phải tuân thủ. Tài liệu này bổ sung cho
+[`docs/DOMAIN_MODEL.md`](DOMAIN_MODEL.md) và
 [`docs/DATABASE_DESIGN.md`](DATABASE_DESIGN.md).
 
-**`CreateInvoice` is now implemented** (section A below) —
-`CreateInvoiceService`, see `docs/CREATE_INVOICE_WORKFLOW.md` for the
-full read/calculate/write sequence. Tariff configuration (section C)
-and delete operations (section B) remain *intended* transaction
-boundaries for a future task — no such workflow exists yet.
+**`CreateInvoice` (mục A) và cấu hình biểu giá điện (mục C) đều đã
+được cài đặt đầy đủ**, cả hai đều đã được kiểm chứng commit/rollback
+thật bằng PostgreSQL thật (xem `docs/CREATE_INVOICE_WORKFLOW.md` cho
+`CreateInvoice`). Thao tác xoá (mục B) vẫn là một ranh giới transaction
+*dự định* cho một task tương lai — chưa có workflow xoá nào được cài
+đặt, vì ứng dụng cố ý chưa có DELETE cho bất kỳ tài nguyên nào (xem
+`docs/MANAGEMENT_API.md` mục "Không có endpoint DELETE").
 
-## ACID, in the context of OpenUtilityBill
+## ACID, trong bối cảnh OpenUtilityBill
 
-**Atomicity** — a multi-step write either fully happens or fully does not
-happen. Example: creating an invoice writes one `invoices` row and
-several `invoice_items` rows. If the process crashes after the
-`invoices` row is written but before all `invoice_items` rows are, the
-user must never see that half-created invoice — either all of it exists,
-or none of it does.
+**Atomicity (nguyên tử)** — một thao tác ghi nhiều bước hoặc xảy ra
+toàn bộ, hoặc không xảy ra chút nào. Ví dụ: tạo một hoá đơn ghi một
+dòng `invoices` và nhiều dòng `invoice_items`. Nếu process crash sau
+khi dòng `invoices` đã ghi nhưng trước khi mọi dòng `invoice_items`
+được ghi xong, người dùng không bao giờ được thấy hoá đơn tạo dở dang
+đó — hoặc toàn bộ nó tồn tại, hoặc không có gì tồn tại cả.
 
-**Consistency** — every write leaves the database satisfying its
-constraints (foreign keys, `CHECK` constraints, `UNIQUE` constraints from
-`database/migrations/001_initial_domain_schema.sql`). Example: an invoice
-can never reference a `room_id` that does not exist, because the foreign
-key makes that state unreachable, not just "discouraged by application
-code."
+**Consistency (nhất quán)** — mọi thao tác ghi để lại database thoả mãn
+các ràng buộc của nó (khoá ngoại, ràng buộc `CHECK`, ràng buộc `UNIQUE`
+từ `database/migrations/001_initial_domain_schema.sql`). Ví dụ: một
+hoá đơn không bao giờ có thể tham chiếu một `room_id` không tồn tại, vì
+khoá ngoại khiến trạng thái đó không thể xảy ra, không chỉ là "bị code
+ứng dụng khuyến cáo không nên làm".
 
-**Isolation** — concurrent operations do not see each other's
-in-progress, uncommitted changes. Example: if two requests try to create
-an invoice for the same room and billing period at the same moment, each
-transaction's partial work is invisible to the other until it commits;
-the `UNIQUE (room_id, billing_period)` constraint then guarantees only
-one of them succeeds.
+**Isolation (cô lập)** — các thao tác đồng thời không thấy được thay
+đổi đang dang dở, chưa commit của nhau. Ví dụ: nếu hai request cùng cố
+tạo một hoá đơn cho cùng phòng và cùng kỳ billing tại cùng một thời
+điểm, phần việc dang dở của mỗi transaction vô hình với transaction kia
+cho tới khi commit; ràng buộc `UNIQUE (room_id, billing_period)` sau đó
+đảm bảo chỉ một trong hai thành công.
 
-**Durability** — once a transaction commits, the result survives a
-crash immediately afterward. This is provided by PostgreSQL itself (via
-Supabase); nothing in this project's code needs to implement it.
+**Durability (bền vững)** — một khi transaction commit, kết quả sống
+sót qua một lần crash ngay sau đó. Điều này do chính PostgreSQL cung
+cấp (qua Supabase); không có code nào trong dự án này cần tự cài đặt
+nó.
 
-## A. Create Invoice
+## A. Tạo hoá đơn (Create Invoice)
 
-**Implemented** — `CreateInvoiceService`
-(`backend/src/modules/invoice/create-invoice.service.ts`), see
-`docs/CREATE_INVOICE_WORKFLOW.md` for the full walkthrough. This is the
-actual transaction boundary it follows:
+**Đã cài đặt** — `CreateInvoiceService`
+(`backend/src/modules/invoice/create-invoice.service.ts`), xem
+`docs/CREATE_INVOICE_WORKFLOW.md` để có sơ đồ đầy đủ. Đây là ranh giới
+transaction thật mà nó tuân theo:
 
 ```
 BEGIN
 
-1. Verify required data exists and is valid (fail-fast, before any write):
-   - Room exists (roomId).
-   - The required electricity MeterReading exists for
+1. Kiểm tra dữ liệu bắt buộc tồn tại và hợp lệ (fail-fast, trước bất
+   kỳ thao tác ghi nào):
+   - Room tồn tại (roomId).
+   - MeterReading điện bắt buộc tồn tại cho
      (roomId, billingPeriod, 'ELECTRICITY').
-   - If waterBillingMethod = 'PER_CUBIC_METER', the required water
-     MeterReading exists for (roomId, billingPeriod, 'WATER').
-     (This is the cross-field rule docs/DATABASE_DESIGN.md documents as
-     deliberately NOT a database CHECK constraint — it is validated here,
-     in the Service layer, before any write.)
-   - ElectricityTariff and WaterTariff (the versions to apply) exist and
-     are effective for billingPeriod.
-   - No invoice already exists for (roomId, billingPeriod) — the
-     Service checks this explicitly so it can fail with a clear
-     INVOICE_ALREADY_EXISTS error rather than only relying on the
-     database UNIQUE constraint to reject the write.
+   - Nếu waterBillingMethod = 'PER_CUBIC_METER', MeterReading nước bắt
+     buộc tồn tại cho (roomId, billingPeriod, 'WATER').
+     (Đây là quy tắc liên-field mà docs/DATABASE_DESIGN.md ghi rõ là
+     CỐ Ý KHÔNG phải một ràng buộc CHECK của database — nó được
+     validate ở đây, tại tầng Service, trước bất kỳ thao tác ghi nào.)
+   - ElectricityTariff và WaterTariff (phiên bản sẽ áp dụng) tồn tại và
+     đang có hiệu lực tại billingPeriod.
+   - Chưa có invoice nào tồn tại cho (roomId, billingPeriod) — Service
+     kiểm tra điều này tường minh để có thể fail với một lỗi
+     INVOICE_ALREADY_EXISTS rõ ràng, thay vì chỉ trông cậy vào ràng
+     buộc UNIQUE của database để từ chối thao tác ghi.
 
-2. Run the calculation (Calculation Core, `backend/src/calculation/`).
-   This step reads configuration and readings but does not write
-   anything yet — it runs entirely OUTSIDE the transaction (see
-   `docs/DATABASE_ACCESS.md` "Transactions" for why).
+2. Chạy phép tính (Calculation Core, `backend/src/calculation/`). Bước
+   này đọc cấu hình và chỉ số nhưng chưa ghi gì cả — nó chạy HOÀN TOÀN
+   BÊN NGOÀI transaction (xem `docs/DATABASE_ACCESS.md` mục
+   "Transaction" để biết vì sao).
 
-3. Insert one row into `invoices`, snapshotting:
-   - tenant_count_used (Room.tenantCount at this moment)
-   - electricity_tariff_id / water_tariff_id (the exact versions used)
+3. Insert một dòng vào `invoices`, snapshot lại:
+   - tenant_count_used (Room.tenantCount tại thời điểm này)
+   - electricity_tariff_id / water_tariff_id (đúng phiên bản đã dùng)
    - electricity_billing_method / water_billing_method
    - electricity_reading_id / water_reading_id
    - calculated_total
 
-4. Insert one row into `invoice_items` per breakdown line the
-   calculation produced.
+4. Insert một dòng vào `invoice_items` cho mỗi dòng breakdown mà phép
+   tính tạo ra.
 
 COMMIT
 ```
 
-If **any** step from 3–4 fails (a constraint violation, a connection
-drop, an unexpected error), the transaction must `ROLLBACK` — the
-`invoices` row and any `invoice_items` rows written so far in that
-attempt disappear together. The user must never be shown, or query, an
-invoice that has a total but a missing or partial breakdown, or a
-breakdown pointing at an invoice that doesn't fully exist.
+Nếu **bất kỳ** bước nào từ 3–4 thất bại (vi phạm ràng buộc, mất kết
+nối, lỗi bất ngờ), transaction phải `ROLLBACK` — dòng `invoices` và bất
+kỳ dòng `invoice_items` nào đã ghi trong lần thử đó biến mất cùng nhau.
+Người dùng không bao giờ được thấy, hay truy vấn được, một hoá đơn có
+tổng nhưng breakdown bị thiếu hoặc dang dở, hay một breakdown trỏ tới
+một hoá đơn không tồn tại đầy đủ.
 
-**What happens when step 3 of 4 fails (concretely):** if inserting
-`invoice_items` fails partway through (e.g. a `CHECK`/`UNIQUE`
-constraint violation on one row, or the connection drops), PostgreSQL
-rolls back the entire transaction — including the `invoices` row
-inserted in step 3, and any `invoice_items` rows already inserted
-before the failing one. The caller receives a failure `Result` (see
-`docs/ERROR_HANDLING.md`); no invoice row is left behind for the caller
-to accidentally treat as valid. This exact scenario (a real
-`UNIQUE(invoice_id, display_order)` violation on the second
-`invoice_items` insert, after the first one already succeeded) has a
-`DATABASE_URL`-gated integration test proving it against real
-PostgreSQL —
+**Điều gì xảy ra khi bước 3/4 thất bại (cụ thể):** nếu insert
+`invoice_items` thất bại giữa chừng (ví dụ vi phạm ràng buộc
+`CHECK`/`UNIQUE` trên một dòng, hay mất kết nối), PostgreSQL rollback
+toàn bộ transaction — bao gồm cả dòng `invoices` đã insert ở bước 3, và
+bất kỳ dòng `invoice_items` nào đã insert trước dòng gây lỗi. Caller
+nhận một `Result` thất bại (xem `docs/ERROR_HANDLING.md`); không có
+dòng invoice nào bị bỏ lại để caller vô tình coi là hợp lệ. Chính kịch
+bản này (một vi phạm `UNIQUE(invoice_id, display_order)` THẬT ở dòng
+`invoice_items` thứ hai, sau khi dòng đầu đã thành công) có một
+integration test gated bởi `DATABASE_URL` chứng minh điều đó trên
+PostgreSQL thật —
 `backend/src/repositories/__tests__/postgres-invoice-unit-of-work.integration.test.ts`
-— see `docs/CREATE_INVOICE_WORKFLOW.md` for whether it has actually
-been executed in this repository's history so far (`TEST_IMPLEMENTED`
-vs. `TEST_RUNTIME_EXECUTED` — see `docs/DATABASE_ACCESS.md`
-"Transactions").
+— đã được thực thi thật (không chỉ cài đặt) trong lần chạy runtime
+closure gần nhất của repository này, với `TRANSACTION_COMMIT_RUNTIME=PASS`
+và `TRANSACTION_ROLLBACK_RUNTIME=PASS`.
 
-## B. Delete operations
+## B. Thao tác xoá
 
-No delete workflow exists yet (no CRUD is implemented in this task — see
-section 38 of the brief). When one is added, it must respect the
-`ON DELETE` policy already established in the schema (see
+Chưa có workflow xoá nào được cài đặt (ứng dụng cố ý chưa có DELETE cho
+bất kỳ tài nguyên nào — xem `docs/MANAGEMENT_API.md` mục "Không có
+endpoint DELETE"). Khi một workflow như vậy được thêm vào, nó phải tuân
+theo chính sách `ON DELETE` đã thiết lập sẵn trong schema (xem
 `docs/DATABASE_DESIGN.md`):
 
-- Deleting a `RentalProperty`, `Room`, tariff row, or `MeterReading` that
-  is still referenced by other data is `RESTRICT`ed by the database — the
-  delete will fail with a foreign-key violation, not silently cascade.
-  A future delete workflow must translate that into a clear domain error
-  (e.g. `ROOM_HAS_DEPENDENT_RECORDS`), not a raw database error surfaced
-  to the user (see `docs/ERROR_HANDLING.md` on user-facing vs.
-  developer-facing error detail).
-- Deleting an `Invoice` cascades to its `InvoiceItem` rows, because a
-  breakdown line has no meaning without its parent invoice — but
-  deleting an `Invoice` itself is a historical/financial record deletion
-  and should be treated as a deliberate, explicit, and likely
-  restricted administrative action once that workflow exists — not
-  something implemented casually. No such workflow is designed here.
+- Xoá một `RentalProperty`, `Room`, dòng biểu giá, hay `MeterReading`
+  vẫn còn được dữ liệu khác tham chiếu sẽ bị database `RESTRICT` — thao
+  tác xoá sẽ thất bại với lỗi vi phạm khoá ngoại, không tự động cascade
+  âm thầm. Một workflow xoá tương lai phải dịch điều đó thành một lỗi
+  domain rõ ràng (ví dụ `ROOM_HAS_DEPENDENT_RECORDS`), không phải để lộ
+  lỗi database thô ra cho người dùng (xem `docs/ERROR_HANDLING.md` về
+  chi tiết lỗi hiển thị cho người dùng so với cho developer).
+- Xoá một `Invoice` sẽ cascade tới các dòng `InvoiceItem` của nó, vì
+  một dòng breakdown không có ý nghĩa gì nếu thiếu invoice cha của nó —
+  nhưng bản thân việc xoá một `Invoice` là xoá một bản ghi lịch sử/tài
+  chính và nên được coi là một hành động quản trị cố ý, tường minh, và
+  nhiều khả năng bị hạn chế một khi workflow đó tồn tại — không phải
+  thứ được cài đặt tuỳ tiện. Chưa có workflow như vậy được thiết kế ở
+  đây.
 
-## C. Tariff configuration (future workflow)
+## C. Cấu hình biểu giá điện
 
-**Not implemented in this task.** Creating a new `ElectricityTariff`
-together with its tiers must be atomic — a tariff with only 3 of its 6
-tiers inserted is not a valid, usable configuration:
+**Đã cài đặt** —
+`ElectricityTariffUnitOfWork`/`PostgresElectricityTariffUnitOfWork`
+(`backend/src/repositories/electricity-tariff-unit-of-work.ts`,
+`backend/src/repositories/postgres/postgres-electricity-tariff-unit-of-work.ts`).
+Tạo một `ElectricityTariff` mới cùng các tier của nó phải nguyên tử —
+một biểu giá chỉ có 3 trong 6 tier được insert không phải một cấu hình
+hợp lệ, dùng được:
 
 ```
 BEGIN
 
-1. Insert one row into `electricity_tariffs`.
-2. Insert one row into `electricity_tariff_tiers` per tier.
+1. Insert một dòng vào `electricity_tariffs`.
+2. Insert một dòng vào `electricity_tariff_tiers` cho mỗi tier.
 
 COMMIT
 ```
 
-If step 2 fails partway through (e.g. a duplicate `tier_number`, a
-`threshold_kwh <= 0`), the transaction rolls back, including the
-`electricity_tariffs` row from step 1. A partially configured tariff —
-one that exists in `electricity_tariffs` but is missing tiers — must
-never become visible to the rest of the application (in particular, it
-must never be selectable as the `electricityTariffId` for an invoice,
-since Calculation Core would not know how to allocate usage across an
-incomplete tier list).
+Nếu bước 2 thất bại giữa chừng (ví dụ `tier_number` trùng lặp,
+`threshold_kwh <= 0`), transaction rollback, bao gồm cả dòng
+`electricity_tariffs` từ bước 1. Một biểu giá cấu hình dở dang — tồn
+tại trong `electricity_tariffs` nhưng thiếu tier — không bao giờ được
+để lộ ra cho phần còn lại của ứng dụng (đặc biệt, nó không bao giờ được
+chọn làm `electricityTariffId` cho một hoá đơn, vì Calculation Core sẽ
+không biết cách phân bổ sản lượng qua một danh sách tier không đầy đủ).
+Hành vi commit/rollback thật này đã được kiểm chứng bằng PostgreSQL
+thật —
+`backend/src/repositories/__tests__/postgres-electricity-tariff-unit-of-work.integration.test.ts`.
 
-The seed script (`database/seeds/001_competition_defaults.sql`) already
-follows this same pattern: one `BEGIN`/`COMMIT` around both the tariff
-insert and its six tier inserts.
+Script seed (`database/seeds/001_competition_defaults.sql`) đã theo
+đúng cùng mẫu này: một `BEGIN`/`COMMIT` bọc quanh cả insert biểu giá
+lẫn sáu insert tier của nó.
 
-## Where ACID matters most in this project
+## ACID quan trọng nhất ở đâu trong dự án này
 
-The transaction boundaries above (`CreateInvoice`, tariff configuration)
-are exactly the places where OpenUtilityBill's core promise —
-"a shown invoice/tariff is either fully correct, or not shown at all" —
-depends on the database, not just on careful application code. Every
-other read in this project (viewing a room, listing invoices) is a
-single-statement read and does not need an explicit transaction beyond
-what a single query already provides.
+Các ranh giới transaction ở trên (`CreateInvoice`, cấu hình biểu giá
+điện) chính xác là những nơi mà lời hứa cốt lõi của OpenUtilityBill —
+"một hoá đơn/biểu giá được hiển thị hoặc hoàn toàn đúng, hoặc không
+được hiển thị chút nào" — phụ thuộc vào database, không chỉ vào việc
+viết code ứng dụng cẩn thận. Mọi thao tác đọc khác trong dự án này (xem
+một phòng, liệt kê hoá đơn) là một câu lệnh đọc đơn và không cần một
+transaction tường minh nào ngoài những gì một query đơn đã cung cấp
+sẵn.

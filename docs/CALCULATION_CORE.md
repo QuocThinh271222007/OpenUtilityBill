@@ -1,35 +1,35 @@
 # Calculation Core
 
-This document explains the billing calculation pipeline implemented in
-`backend/src/calculation/`. It complements
-[`docs/NUMERIC_PRECISION.md`](NUMERIC_PRECISION.md) (the arithmetic
-strategy) and [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) (where this
-layer sits in the overall system).
+Tài liệu này giải thích pipeline tính hoá đơn được cài đặt trong
+`backend/src/calculation/`. Nó bổ sung cho
+[`docs/NUMERIC_PRECISION.md`](NUMERIC_PRECISION.md) (chiến lược số
+học) và [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) (tầng này nằm ở đâu
+trong hệ thống tổng thể).
 
-## What exists, and what does not (yet)
+## Có gì, và chưa có gì
 
-This is a **pure calculation layer** — it computes electricity/water
-charges from data passed in as function parameters. It does **not**:
+Đây là một **tầng tính toán thuần** — nó tính tiền điện/nước từ dữ liệu
+được truyền vào như tham số hàm. Nó **không**:
 
-- Read from or write to PostgreSQL/Supabase.
-- Know about Express, `Request`/`Response`, or HTTP at all.
-- Persist anything.
-- Provide a REST endpoint, Controller, Service, or Repository — those
-  are later, separate tasks.
+- Đọc từ hay ghi vào PostgreSQL/Supabase.
+- Biết gì về Express, `Request`/`Response`, hay HTTP.
+- Lưu trữ bất cứ thứ gì.
+- Cung cấp một REST endpoint, Controller, Service, hay Repository — đó
+  là các tầng khác, do các file khác đảm nhiệm.
 
-## ASCII pipeline
+## Sơ đồ pipeline (ASCII)
 
 ```
-Config / input (decimal strings, plain numbers)
+Config / input (chuỗi thập phân, số thuần)
           │
           ▼
    ┌─────────────────┐
-   │  calculateMeterUsage   │  previous, current, max → usage (handles rollover)
+   │  calculateMeterUsage   │  previous, current, max → usage (xử lý rollover)
    └─────────────────┘
           │ usageKwh
           ▼
    ┌───────────────────────┐
-   │ validateElectricityConfig │  tier list → sorted, checked tiers
+   │ validateElectricityConfig │  danh sách tier → tier đã sắp xếp, đã kiểm tra
    └───────────────────────┘
           │
           ▼
@@ -39,12 +39,12 @@ Config / input (decimal strings, plain numbers)
           │ quotaFactor
           ▼
    ┌───────────────────────────┐
-   │ allocateElectricityTiers    │  usage × quotaFactor-adjusted capacities
-   └───────────────────────────┘   → per-tier quantity/amount (iterative)
+   │ allocateElectricityTiers    │  usage × dung lượng tier đã điều chỉnh theo quota
+   └───────────────────────────┘   → số lượng/tiền mỗi tier (lặp)
           │
           ▼
    ┌─────────────────────────────┐      ┌──────────────────────────────┐
-   │ calculateTieredElectricity     │  OR  │ calculateFallbackElectricity    │
+   │ calculateTieredElectricity     │  HOẶC  │ calculateFallbackElectricity    │
    │ (QUOTA_TIERED)                 │      │ (FALLBACK_TIER_FLAT)            │
    └─────────────────────────────┘      └──────────────────────────────┘
           │ subtotal → VAT → exactTotal → roundedTotalVnd
@@ -52,12 +52,12 @@ Config / input (decimal strings, plain numbers)
    electricityExactTotal ───────────┐
                                      │
    ┌─────────────────────┐          │
-   │ calculateWaterCharge   │  base → VAT + environmental fee → exactTotal
+   │ calculateWaterCharge   │  base → VAT + phí môi trường → exactTotal
    └─────────────────────┘          │
           │ waterExactTotal         │
           ▼                         ▼
         ┌───────────────────────────────┐
-        │      calculateInvoiceTotal        │  sum exact totals FIRST, round ONCE
+        │      calculateInvoiceTotal        │  cộng các exact total TRƯỚC, làm tròn ĐÚNG MỘT LẦN
         └───────────────────────────────┘
                        │ roundedTotalVnd
                        ▼
@@ -66,130 +66,130 @@ Config / input (decimal strings, plain numbers)
         └───────────────────────────────────┘
 ```
 
-## Module responsibilities
+## Trách nhiệm từng module
 
-| Module | Responsibility |
+| Module | Trách nhiệm |
 |---|---|
-| `shared/exact-number.ts` | Exact rational arithmetic (`parseDecimal`, `add`, `subtract`, `multiply`, `divide`, `compare`, `min`, `toDecimalString`, `roundHalfUpToInteger`, `isFiniteDecimalDenominator`). See `docs/NUMERIC_PRECISION.md`. |
-| `meter/calculate-meter-usage.ts` | `previous`/`current`/`max` readings → usage, including rollover (`current < previous`). |
-| `electricity/validate-electricity-config.ts` | Checks a tier list is well-formed (non-empty, positive unique tier numbers, exactly one trailing unlimited tier, valid thresholds/prices) and sorts it deterministically. |
-| `electricity/calculate-quota-factor.ts` | `tenantCount / peoplePerQuotaUnit`, unrounded. Exports both `calculateQuotaFactorExact` (returns `ExactNumber`, for internal composition) and `calculateQuotaFactor` (a thin `string`-returning wrapper around it, for the public/test boundary). |
-| `electricity/allocate-electricity-tiers.ts` | Iteratively distributes usage across quota-adjusted tier capacities. |
-| `electricity/calculate-tiered-electricity.ts` | Orchestrates quota → allocation → subtotal → VAT → total for `QUOTA_TIERED`. |
-| `electricity/calculate-fallback-electricity.ts` | Prices the entire usage at one configured tier's unit price, for `FALLBACK_TIER_FLAT`. |
-| `water/calculate-water-charge.ts` | `PER_CUBIC_METER`/`PER_PERSON` base, then VAT + environmental fee (both from `base`, not from `base + VAT`). |
-| `invoice/calculate-invoice-total.ts` | Sums electricity + water exact totals, rounds once. |
-| `invoice/calculate-billing-difference.ts` | `actualCharged - legalRoundedTotal` (derived, never persisted). |
+| `shared/exact-number.ts` | Số học phân số chính xác (`parseDecimal`, `add`, `subtract`, `multiply`, `divide`, `compare`, `min`, `toDecimalString`, `roundHalfUpToInteger`, `isFiniteDecimalDenominator`). Xem `docs/NUMERIC_PRECISION.md`. |
+| `meter/calculate-meter-usage.ts` | Chỉ số `previous`/`current`/`max` → sản lượng, bao gồm cả trường hợp rollover (`current < previous`). |
+| `electricity/validate-electricity-config.ts` | Kiểm tra một danh sách tier hợp lệ (không rỗng, số tier dương và duy nhất, đúng một tier không giới hạn ở cuối, ngưỡng/giá hợp lệ) và sắp xếp nó một cách xác định. |
+| `electricity/calculate-quota-factor.ts` | `tenantCount / peoplePerQuotaUnit`, chưa làm tròn. Export cả `calculateQuotaFactorExact` (trả về `ExactNumber`, dùng nội bộ) và `calculateQuotaFactor` (một wrapper mỏng trả về `string` bọc quanh nó, dùng cho ranh giới public/test). |
+| `electricity/allocate-electricity-tiers.ts` | Phân bổ sản lượng qua các tier theo dung lượng đã điều chỉnh theo quota, bằng vòng lặp. |
+| `electricity/calculate-tiered-electricity.ts` | Điều phối quota → phân bổ → subtotal → VAT → tổng cho `QUOTA_TIERED`. |
+| `electricity/calculate-fallback-electricity.ts` | Tính giá toàn bộ sản lượng theo đơn giá của một tier được cấu hình, cho `FALLBACK_TIER_FLAT`. |
+| `water/calculate-water-charge.ts` | Cơ sở `PER_CUBIC_METER`/`PER_PERSON`, sau đó VAT + phí môi trường (cả hai đều tính từ `base`, không phải từ `base + VAT`). |
+| `invoice/calculate-invoice-total.ts` | Cộng exact total điện + nước, làm tròn đúng một lần. |
+| `invoice/calculate-billing-difference.ts` | `actualCharged - legalRoundedTotal` (chỉ tính ra, không bao giờ được lưu). |
 
-## Why each step is a separate module
+## Vì sao mỗi bước là một module riêng
 
-Each module answers exactly one question ("what is the usage?", "is this
-tier list valid?", "how is usage distributed across tiers?") with one
-clear input/output contract. This mirrors the project's general
-small-module principle (see `docs/ARCHITECTURE.md` §7): a bug in tier
-allocation can be isolated and unit-tested without touching quota or VAT
-logic, and each module can be explained on its own during review.
+Mỗi module trả lời đúng một câu hỏi ("sản lượng là bao nhiêu?", "danh
+sách tier này có hợp lệ không?", "sản lượng được phân bổ qua các tier
+như thế nào?") với một hợp đồng đầu vào/đầu ra rõ ràng. Điều này phản
+ánh nguyên tắc module nhỏ chung của dự án (xem `docs/ARCHITECTURE.md`
+mục 7): một lỗi trong phân bổ tier có thể được cô lập và unit-test mà
+không cần chạm vào logic quota hay VAT, và mỗi module có thể được giải
+thích độc lập khi review.
 
 ## Fail-fast
 
-Every module that can encounter a meaningful invalid input returns
-`Result<T>` (the project's existing contract — see
-`docs/ERROR_HANDLING.md`) instead of throwing. Orchestrating modules
-(`calculateTieredElectricity`, `calculateFallbackElectricity`,
-`calculateWaterCharge`) check each sub-step's `Result` and return
-immediately on the first failure — no later step runs on top of invalid
-data. This is the same fail-fast pattern already established for the
-Service layer, applied to Calculation Core's own internal pipeline.
+Mọi module có thể gặp input không hợp lệ có ý nghĩa đều trả về
+`Result<T>` (hợp đồng sẵn có của dự án — xem `docs/ERROR_HANDLING.md`)
+thay vì throw. Các module điều phối (`calculateTieredElectricity`,
+`calculateFallbackElectricity`, `calculateWaterCharge`) kiểm tra
+`Result` của từng bước con và trả về ngay khi gặp thất bại đầu tiên —
+không có bước sau nào chạy trên dữ liệu không hợp lệ. Đây là cùng mẫu
+fail-fast đã thiết lập cho tầng Service, áp dụng cho pipeline nội bộ
+của chính Calculation Core.
 
-Calculation Core does not assume any validation happened upstream (in a
-Controller, a Service, or the database). Every module re-validates its
-own inputs — see, for example, `calculateMeterUsage` re-checking
-`previousReading <= meterMaximumValue` even though the database already
-has that `CHECK` constraint.
+Calculation Core không giả định bất kỳ bước validate nào đã chạy trước
+đó (ở Controller, Service, hay database). Mỗi module tự validate lại
+input của chính nó — ví dụ, `calculateMeterUsage` tự kiểm tra lại
+`previousReading <= meterMaximumValue` dù database đã có ràng buộc
+`CHECK` đó.
 
-## Why iteration, not recursion
+## Vì sao dùng lặp, không dùng đệ quy
 
-`allocateElectricityTiers` walks a finite, linearly ordered list of
-tiers with a `for` loop. Tiers are not a tree or graph — there is
-nothing recursive about "the next tier in a sorted list" — so a loop is
-simpler to read, step through, and reason about than recursion would be.
-This is the same reasoning already documented in
-`docs/LEARNING_NOTES.md` ("Vì sao chưa dùng đệ quy"), now applied to a
-concrete implementation.
+`allocateElectricityTiers` duyệt qua một danh sách tier hữu hạn, có thứ
+tự tuyến tính, bằng vòng lặp `for`. Tier không phải là cây hay đồ thị —
+"tier tiếp theo trong một danh sách đã sắp xếp" không có gì mang tính
+đệ quy — nên một vòng lặp dễ đọc, dễ bước qua từng bước, và dễ suy luận
+hơn đệ quy. Đây là cùng lý do đã ghi trong `docs/LEARNING_NOTES.md`
+("Vì sao chưa dùng đệ quy"), nay áp dụng cho một cài đặt cụ thể.
 
-## Why Calculation Core has no database dependency
+## Vì sao Calculation Core không phụ thuộc database
 
-Electricity/water tariff math is this project's core value and the part
-most likely to be checked against hidden test cases. Keeping it as plain
-TypeScript with no dependency on Express, HTML, or a database client
-means:
+Phép tính biểu giá điện/nước là giá trị cốt lõi của dự án này và là
+phần nhiều khả năng nhất bị đối chiếu với các test case ẩn. Giữ nó là
+TypeScript thuần, không phụ thuộc Express, HTML, hay một client
+database nghĩa là:
 
-- It can be unit-tested in milliseconds, with no server or database
-  running.
-- The same input always produces the same output, regardless of
-  database state, server environment, or browser — exactly what a
-  hidden-test grader needs (deterministic, environment-independent
-  results).
-- A future Controller/Service layer can call these functions directly,
-  passing in whatever configuration it already loaded — Calculation Core
-  never reaches back into the database itself.
+- Có thể unit-test trong vài mili-giây, không cần chạy server hay
+  database.
+- Cùng một input luôn cho ra cùng một output, bất kể trạng thái
+  database, môi trường server, hay trình duyệt — đúng thứ mà một hệ
+  thống chấm test ẩn cần (kết quả xác định, không phụ thuộc môi
+  trường).
+- Một tầng Controller/Service có thể gọi trực tiếp các hàm này, truyền
+  vào bất kỳ cấu hình nào nó đã đọc sẵn — Calculation Core không bao
+  giờ tự quay lại đọc database.
 
-## Configuration-driven, not hard-coded
+## Cấu hình hoá, không hard-code
 
-No file under `backend/src/calculation/` (outside `__tests__/`) contains
-a contest-specific constant (`1984`, `0.08`, `8500`, ...). Every such
-value is a function parameter, sourced from tariff configuration that
-will eventually come from the database. The only place these constants
-exist is the test-only fixture,
-`backend/src/calculation/__tests__/fixtures/competition-defaults.ts` —
-see its header comment for why that boundary matters.
+Không có file nào dưới `backend/src/calculation/` (ngoài `__tests__/`)
+chứa hằng số riêng của đề thi (`1984`, `0.08`, `8500`, ...). Mọi giá
+trị như vậy đều là tham số hàm, lấy từ cấu hình biểu giá vốn sẽ đến từ
+database. Nơi duy nhất các hằng số này tồn tại là fixture chỉ-dùng-cho-
+test, `backend/src/calculation/__tests__/fixtures/competition-defaults.ts`
+— xem comment đầu file đó để biết vì sao ranh giới này quan trọng.
 
-## Zero tenant count
+## Số người ở bằng không
 
-The database schema allows `rooms.tenant_count = 0` (see
-`database/migrations/001_initial_domain_schema.sql`), but the
-competition specification does not define a quota rule for a zero-person
-room. Rather than inventing a product decision not present in the spec
-(e.g. "quota factor 0 means the bounded tiers get zero capacity"),
-`calculateQuotaFactor` rejects `tenantCount <= 0` explicitly with
-`INVALID_TENANT_COUNT`. This only affects `QUOTA_TIERED` electricity
-billing — `calculateWaterCharge`'s `PER_PERSON` method still accepts
-`tenantCount = 0` (a legitimate "empty room pays 0 for water" outcome,
-not a quota calculation).
+Schema database cho phép `rooms.tenant_count = 0` (xem
+`database/migrations/001_initial_domain_schema.sql`), nhưng đề thi
+không định nghĩa quy tắc định mức cho một phòng 0 người. Thay vì tự bịa
+ra một quyết định sản phẩm không có trong đề (ví dụ "quota factor 0
+nghĩa là các tier có giới hạn nhận dung lượng bằng 0"),
+`calculateQuotaFactor` từ chối tường minh `tenantCount <= 0` với mã lỗi
+`INVALID_TENANT_COUNT`. Điều này chỉ ảnh hưởng tới cách tính điện
+`QUOTA_TIERED` — phương pháp `PER_PERSON` của `calculateWaterCharge`
+vẫn chấp nhận `tenantCount = 0` (một kết quả hợp lệ "phòng trống trả 0
+tiền nước", không phải một phép tính định mức).
 
-## Quota configuration limit (1/3-style values)
+## Giới hạn cấu hình định mức (giá trị kiểu 1/3)
 
-`peoplePerQuotaUnit` must be a value whose only prime factors are 2
-and/or 5 (`1, 2, 4, 5, 8, 10, 16, 20, 25, ...`), checked by
-`isFiniteDecimalDenominator` *before* the division, independently of
-`tenantCount`. This guarantees `tenantCount / peoplePerQuotaUnit` is
-representable as a finite decimal for **every** tenant count a given
-tariff might ever be applied to — a config-level guarantee, not a
-per-computation coincidence. See `docs/NUMERIC_PRECISION.md` §13.6 for
-the full reasoning (including why the alternative — propagating exact
-rationals everywhere, with a fraction-based public contract — was
-considered and rejected as out of scope for this project). The database
-`CHECK (people_per_quota_unit > 0)` is deliberately left unchanged; this
-is a Calculation Core boundary, not a database restriction.
+`peoplePerQuotaUnit` phải là một giá trị mà thừa số nguyên tố duy nhất
+của nó chỉ là 2 và/hoặc 5 (`1, 2, 4, 5, 8, 10, 16, 20, 25, ...`), được
+kiểm tra bởi `isFiniteDecimalDenominator` *trước* phép chia, độc lập
+với `tenantCount`. Điều này đảm bảo `tenantCount / peoplePerQuotaUnit`
+luôn biểu diễn được dưới dạng thập phân hữu hạn cho **mọi** số người ở
+mà một biểu giá có thể từng được áp dụng — một đảm bảo ở mức cấu hình,
+không phải một sự trùng hợp theo từng phép tính. Xem
+`docs/NUMERIC_PRECISION.md` mục 13.6 để biết lý do đầy đủ (bao gồm vì
+sao phương án thay thế — lan truyền phân số chính xác khắp nơi, với một
+hợp đồng public dựa trên phân số — đã được cân nhắc và loại bỏ vì nằm
+ngoài phạm vi dự án này). Ràng buộc database `CHECK
+(people_per_quota_unit > 0)` cố ý được giữ nguyên không đổi; đây là
+ranh giới của Calculation Core, không phải một giới hạn của database.
 
-## No internal string round-trips
+## Không round-trip qua chuỗi ở nội bộ
 
-`calculateTieredElectricity` calls `calculateQuotaFactorExact` (which
-returns `ExactNumber`) directly, and uses that value immediately in
-`allocateElectricityTiers` — it does **not** call the string-returning
-`calculateQuotaFactor` and then re-`parseDecimal` the result just to
-keep calculating. Decimal strings are for module/API/database
-boundaries (see "Public numeric contract" below), not for passing values
-between two tightly-coupled steps inside the same pipeline. The
-string-returning `calculateQuotaFactor` still exists and is still
-public/tested — `calculateTieredElectricity` just doesn't route through
-it internally anymore.
+`calculateTieredElectricity` gọi trực tiếp `calculateQuotaFactorExact`
+(hàm trả về `ExactNumber`), và dùng ngay giá trị đó trong
+`allocateElectricityTiers` — nó **không** gọi `calculateQuotaFactor`
+(hàm trả về chuỗi) rồi `parseDecimal` lại kết quả chỉ để tiếp tục tính.
+Chuỗi thập phân dành cho ranh giới module/API/database (xem "Hợp đồng
+số public" bên dưới), không phải để truyền giá trị giữa hai bước gắn
+kết chặt bên trong cùng một pipeline. Hàm `calculateQuotaFactor` trả về
+chuỗi vẫn tồn tại và vẫn public/được test — `calculateTieredElectricity`
+chỉ đơn giản là không còn đi qua nó ở nội bộ nữa.
 
-## Public numeric contract
+## Hợp đồng số public
 
-Every public function in `electricity/`, `water/`, and `invoice/`
-accepts and returns **decimal strings** for measurement/financial
-values — never `ExactNumber` or `bigint`. See
-`docs/NUMERIC_PRECISION.md` §9 for why. This is verified by a dedicated
-test (`__tests__/public-json-safety.test.ts`) that `JSON.stringify`s
-every public result object and walks it recursively for any `bigint`.
+Mọi hàm public trong `electricity/`, `water/`, và `invoice/` nhận vào
+và trả về **chuỗi thập phân** cho các giá trị đo lường/tài chính —
+không bao giờ là `ExactNumber` hay `bigint`. Xem
+`docs/NUMERIC_PRECISION.md` mục 9 để biết vì sao. Điều này được kiểm
+chứng bởi một test riêng (`__tests__/public-json-safety.test.ts`)
+`JSON.stringify` mọi object kết quả public và duyệt đệ quy để tìm bất
+kỳ `bigint` nào còn sót lại.

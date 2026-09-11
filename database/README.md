@@ -1,42 +1,41 @@
 # Database
 
-This directory holds the PostgreSQL schema and configuration seed for
-OpenUtilityBill, hosted on [Supabase](https://supabase.com).
+Thư mục này chứa schema PostgreSQL và seed cấu hình cho
+OpenUtilityBill, host trên [Supabase](https://supabase.com).
 
-## Current status
+## Trạng thái hiện tại
 
-The initial domain schema, the competition default configuration seed,
-and a set of runtime validation scripts exist as SQL files (below).
-**None has been run against a live database from this session** — no
-`DATABASE_URL` or Supabase connection was available in this environment,
-and this project deliberately does not require or install a local
-PostgreSQL/Docker setup just to validate SQL (see `docs/TRANSACTIONS.md`
-and the "Runtime validation with Supabase SQL Editor" section below). The
-health endpoint (`GET /api/v1/health`) still does not touch the database.
-No backend Repository or database client exists yet — see
+Schema domain ban đầu, seed cấu hình mặc định của kỳ thi, và một bộ
+script kiểm chứng runtime tồn tại dưới dạng file SQL (bên dưới). Cả hai
+migration, seed, và toàn bộ backend REST API/frontend đã được chạy
+thật đối với một database PostgreSQL thật (Supabase) trong lần chạy
+runtime closure gần nhất — 320/320 test PASS, 0 SKIP, bao gồm cả
+transaction commit/rollback thật, đọc/ghi Repository thật, và
+`POST`/`GET /api/v1/invoices` qua HTTP thật. Health endpoint
+(`GET /api/v1/health`) vẫn cố ý không chạm database — xem
 `docs/ARCHITECTURE.md`.
 
-Running the validation scripts (manually, in the Supabase SQL Editor) is
-the way to turn "the schema looks correct" into "PostgreSQL confirmed the
-schema is correct" — see below.
+Chạy các script kiểm chứng (thủ công, trong Supabase SQL Editor) là
+cách biến "schema trông có vẻ đúng" thành "PostgreSQL đã xác nhận
+schema đúng" — xem bên dưới.
 
-## Structure
+## Cấu trúc
 
 ```
 database/
   migrations/
-    001_initial_domain_schema.sql          Tables, constraints, relationships
-    002_preserve_invoice_item_precision.sql  Widen invoice_items.quantity/amount to unconstrained NUMERIC
+    001_initial_domain_schema.sql          Bảng, ràng buộc, quan hệ
+    002_preserve_invoice_item_precision.sql  Nới invoice_items.quantity/amount thành NUMERIC không giới hạn
   seeds/
-    001_competition_defaults.sql           Official competition default tariffs
+    001_competition_defaults.sql           Biểu giá mặc định chính thức của kỳ thi
   validation/
-    001_domain_success_validation.sql      One run: schema/seed check + valid-data proof
-    002_domain_constraint_validation.sql   One block at a time: constraint rejection proof
-    003_validation_cleanup.sql             Safety net: delete only VALIDATION_* rows
-    004_invoice_item_precision_validation.sql  One run: proves quantity/amount preserve >2 decimal places
+    001_domain_success_validation.sql      Chạy một lần: kiểm tra schema/seed + chứng minh dữ liệu hợp lệ
+    002_domain_constraint_validation.sql   Chạy từng khối một: chứng minh ràng buộc từ chối dữ liệu sai
+    003_validation_cleanup.sql             Lưới an toàn: chỉ xoá các dòng VALIDATION_*
+    004_invoice_item_precision_validation.sql  Chạy một lần: chứng minh quantity/amount giữ được >2 chữ số thập phân
 ```
 
-## Running these files (once a real Supabase database is available)
+## Chạy các file này (khi có một database Supabase thật)
 
 ```bash
 psql "$DATABASE_URL" -f database/migrations/001_initial_domain_schema.sql
@@ -44,118 +43,124 @@ psql "$DATABASE_URL" -f database/migrations/002_preserve_invoice_item_precision.
 psql "$DATABASE_URL" -f database/seeds/001_competition_defaults.sql
 ```
 
-The seed is safe to re-run — see the idempotency notes at the top of
+Seed an toàn để chạy lại — xem ghi chú idempotency ở đầu
 `database/seeds/001_competition_defaults.sql`.
 
-## Runtime validation with Supabase SQL Editor
+## Kiểm chứng runtime với Supabase SQL Editor
 
-Static SQL review (balanced `BEGIN`/`COMMIT`, correct table creation
-order, etc.) is not the same as proof that PostgreSQL actually accepts
-this schema and enforces its constraints. The `database/validation/`
-files provide that proof by inserting both valid and intentionally
-invalid rows against a real database, then rolling all of it back.
+Review SQL tĩnh (`BEGIN`/`COMMIT` cân bằng, thứ tự tạo bảng đúng, v.v.)
+không giống với bằng chứng rằng PostgreSQL thực sự chấp nhận schema
+này và ép buộc các ràng buộc của nó. Các file `database/validation/`
+cung cấp bằng chứng đó bằng cách insert cả dòng hợp lệ lẫn dòng cố ý
+không hợp lệ vào một database thật, rồi rollback toàn bộ.
 
-Validation is split into two files with two different execution models,
-because they need different treatment in the SQL Editor:
+Việc kiểm chứng được tách thành hai file với hai mô hình thực thi khác
+nhau, vì chúng cần cách xử lý khác nhau trong SQL Editor:
 
-- **`001_domain_success_validation.sql`** contains **zero** intentionally
-  failing statements — safe to paste and run **completely, in one
-  execution**.
-- **`002_domain_constraint_validation.sql`** contains 18 numbered blocks
-  (`D1`–`D18`), each of which **deliberately** triggers one PostgreSQL
-  constraint error to prove that constraint actually rejects bad data.
-  **Run exactly one numbered block per "Run" click — never the whole
-  file at once.** A PostgreSQL client (including, possibly, the Supabase
-  SQL Editor) may stop executing a pasted batch as soon as one statement
-  in it errors — so a later block's cleanup statement might never run if
-  it were all sent together. Each block is self-contained (its own
-  `BEGIN`/setup/`ROLLBACK`) specifically so this isn't a problem: run one,
-  read its result, move to the next.
+- **`001_domain_success_validation.sql`** chứa **zero** câu lệnh cố ý
+  thất bại — an toàn để paste và chạy **toàn bộ, trong một lần thực
+  thi**.
+- **`002_domain_constraint_validation.sql`** chứa 18 khối đánh số
+  (`D1`–`D18`), mỗi khối **cố ý** kích hoạt một lỗi ràng buộc
+  PostgreSQL để chứng minh ràng buộc đó thực sự từ chối dữ liệu sai.
+  **Chạy đúng một khối đánh số cho mỗi lần bấm "Run" — không bao giờ
+  chạy cả file cùng lúc.** Một client PostgreSQL (kể cả, có thể, Supabase
+  SQL Editor) có thể dừng thực thi một batch đã paste ngay khi một câu
+  lệnh trong đó báo lỗi — nên câu lệnh dọn dẹp của một khối sau có thể
+  không bao giờ chạy nếu tất cả được gửi cùng nhau. Mỗi khối tự đủ (có
+  `BEGIN`/setup/`ROLLBACK` riêng) chính vì lý do đó để không phải là
+  vấn đề: chạy một khối, đọc kết quả, chuyển sang khối tiếp theo.
 
-No local PostgreSQL/Docker setup is required or expected. Steps, using
-the Supabase project's own SQL Editor:
+Không cần và không mong đợi một PostgreSQL/Docker local nào. Các bước,
+dùng chính SQL Editor của dự án Supabase:
 
-1. Create (or open) the Supabase project for this repository.
-2. Open **SQL Editor** in the Supabase dashboard.
-3. Paste and run `database/migrations/001_initial_domain_schema.sql`.
-   Expect: **PASS** (success, no errors).
-4. Paste and run `database/migrations/002_preserve_invoice_item_precision.sql`.
-   Expect: **PASS**.
-5. Paste and run `database/seeds/001_competition_defaults.sql`.
-   Expect: **PASS**.
-6. Paste and run `database/validation/001_domain_success_validation.sql`
-   **completely, in one execution**. Expect: **PASS** on every statement
-   — read each `-- Kỳ vọng:` comment and compare against the actual
-   result. Any error here means an actual problem, not an expected one.
-7. Open `database/validation/002_domain_constraint_validation.sql` and
-   run blocks `D1` through `D18` **one at a time**, in order or in any
-   order — they don't depend on each other. For each block: select just
-   that block's SQL (from its `-- ====` header down to its final
-   `ROLLBACK;`), run it, and compare the error PostgreSQL actually
-   returned against the block's `-- Kỳ vọng: FAIL — ...` comment. **A
-   constraint error here is the test passing, not failing.** Fill in the
-   PASS/FAIL checklist near the top of that file as you go.
-8. Paste and run `database/validation/004_invoice_item_precision_validation.sql`
-   **completely, in one execution** (no intentional errors, same model
-   as step 6). Expect: `quantity_text` = `'62.5125'` and `amount_text` =
-   `'124025.123456'` **exactly**, proving migration 002 actually
-   prevents silent rounding on real PostgreSQL, not just on paper.
-9. Optionally run `database/validation/003_validation_cleanup.sql` as a
-   safety net — it only deletes rows whose name starts with
-   `VALIDATION_SUCCESS_`, `VALIDATION_CONSTRAINT_`, or
-   `VALIDATION_PRECISION_`, and never touches `Competition Default ...`
-   rows. Under normal conditions (steps 6–8 run as documented) it will
-   find nothing to delete, since no validation file ever issues `COMMIT`.
-10. To prove seed idempotency: run `database/seeds/001_competition_defaults.sql`
-    a second time (expect: **PASS**, no error), then re-run the
-    "B. Competition seed verification" queries in
-    `001_domain_success_validation.sql` — every count must be unchanged
-    (1 electricity tariff, 6 tiers, 1 water tariff), proving the second
-    run created no duplicates.
-11. **Never** paste a real connection string, database password, or
-    Supabase service-role/anon key into any file in this repository —
-    only run these files directly inside the Supabase SQL Editor, where
-    credentials are handled by Supabase itself, not typed into a file.
+1. Tạo (hoặc mở) dự án Supabase cho repository này.
+2. Mở **SQL Editor** trong Supabase dashboard.
+3. Paste và chạy `database/migrations/001_initial_domain_schema.sql`.
+   Kỳ vọng: **PASS** (thành công, không lỗi).
+4. Paste và chạy `database/migrations/002_preserve_invoice_item_precision.sql`.
+   Kỳ vọng: **PASS**.
+5. Paste và chạy `database/seeds/001_competition_defaults.sql`.
+   Kỳ vọng: **PASS**.
+6. Paste và chạy `database/validation/001_domain_success_validation.sql`
+   **toàn bộ, trong một lần thực thi**. Kỳ vọng: **PASS** ở mọi câu
+   lệnh — đọc từng comment `-- Kỳ vọng:` và so sánh với kết quả thực
+   tế. Bất kỳ lỗi nào ở đây nghĩa là một vấn đề thật, không phải một
+   lỗi đã lường trước.
+7. Mở `database/validation/002_domain_constraint_validation.sql` và
+   chạy các khối `D1` tới `D18` **từng khối một**, theo thứ tự hoặc
+   thứ tự bất kỳ — chúng không phụ thuộc lẫn nhau. Với mỗi khối: chọn
+   đúng SQL của khối đó (từ header `-- ====` xuống tới `ROLLBACK;`
+   cuối cùng của nó), chạy nó, và so sánh lỗi PostgreSQL thực sự trả
+   về với comment `-- Kỳ vọng: FAIL — ...` của khối đó. **Một lỗi ràng
+   buộc ở đây là test PASS, không phải FAIL.** Điền vào checklist
+   PASS/FAIL gần đầu file đó khi bạn đi qua từng khối.
+8. Paste và chạy `database/validation/004_invoice_item_precision_validation.sql`
+   **toàn bộ, trong một lần thực thi** (không có lỗi cố ý, cùng mô
+   hình như bước 6). Kỳ vọng: `quantity_text` = `'62.5125'` và
+   `amount_text` = `'124025.123456'` **chính xác**, chứng minh
+   migration 002 thực sự ngăn làm tròn âm thầm trên PostgreSQL thật,
+   không chỉ trên giấy.
+9. Tuỳ chọn chạy `database/validation/003_validation_cleanup.sql` như
+   một lưới an toàn — nó chỉ xoá các dòng có tên bắt đầu bằng
+   `VALIDATION_SUCCESS_`, `VALIDATION_CONSTRAINT_`, hoặc
+   `VALIDATION_PRECISION_`, và không bao giờ chạm vào các dòng
+   `Competition Default ...`. Trong điều kiện bình thường (bước 6–8
+   chạy đúng như ghi rõ) nó sẽ không tìm thấy gì để xoá, vì không file
+   kiểm chứng nào từng gọi `COMMIT`.
+10. Để chứng minh seed idempotent: chạy
+    `database/seeds/001_competition_defaults.sql` lần thứ hai (kỳ
+    vọng: **PASS**, không lỗi), rồi chạy lại các query "B. Kiểm chứng
+    seed kỳ thi" trong `001_domain_success_validation.sql` — mọi số
+    đếm phải không đổi (1 tariff điện, 6 tier, 1 tariff nước), chứng
+    minh lần chạy thứ hai không tạo ra bản trùng lặp nào.
+11. **Không bao giờ** paste một connection string thật, mật khẩu
+    database, hay khoá service-role/anon của Supabase vào bất kỳ file
+    nào trong repository này — chỉ chạy các file này trực tiếp bên
+    trong Supabase SQL Editor, nơi credential được chính Supabase xử
+    lý, không gõ vào một file.
 
-### Why not one big file with `SAVEPOINT`
+### Vì sao không dùng một file lớn với `SAVEPOINT`
 
-An earlier version of this validation used a single file with
-`SAVEPOINT` / `ROLLBACK TO SAVEPOINT` around each intentional error,
-meant to be pasted and run once. `SAVEPOINT` itself is a real and correct
-PostgreSQL feature — it creates a recoverable point inside a transaction,
-so a later `ROLLBACK TO SAVEPOINT` can undo just the work since that
-point. The problem was never `SAVEPOINT`'s semantics: it was that
-`SAVEPOINT` only helps if the SQL client keeps sending the *next*
-statement (the `ROLLBACK TO SAVEPOINT`) after an error — and some SQL
-clients stop executing the rest of a pasted batch as soon as one
-statement in it fails. Relying on that continuation behavior made the
-proof fragile in a way that depended on Supabase SQL Editor's specific
-behavior rather than on PostgreSQL's actual guarantees. Splitting into
-independent, single-purpose blocks (`002_domain_constraint_validation.sql`)
-removes that dependency entirely: each block finishes (successfully or
-not) before the next one is even sent.
+Một phiên bản kiểm chứng trước đây dùng một file duy nhất với
+`SAVEPOINT` / `ROLLBACK TO SAVEPOINT` quanh mỗi lỗi cố ý, dự định paste
+và chạy một lần. Bản thân `SAVEPOINT` là một tính năng PostgreSQL thật
+và đúng đắn — nó tạo một điểm khôi phục được bên trong một transaction,
+để một `ROLLBACK TO SAVEPOINT` sau đó có thể hoàn tác chỉ phần việc kể
+từ điểm đó. Vấn đề chưa bao giờ nằm ở ngữ nghĩa của `SAVEPOINT`: nó
+nằm ở chỗ `SAVEPOINT` chỉ hữu ích nếu SQL client tiếp tục gửi câu lệnh
+*tiếp theo* (`ROLLBACK TO SAVEPOINT`) sau một lỗi — và một số SQL
+client dừng thực thi phần còn lại của một batch đã paste ngay khi một
+câu lệnh trong đó thất bại. Trông cậy vào hành vi tiếp tục đó khiến
+bằng chứng trở nên mong manh theo cách phụ thuộc vào hành vi cụ thể
+của Supabase SQL Editor thay vì vào các đảm bảo thật sự của PostgreSQL.
+Tách thành các khối độc lập, một mục đích duy nhất
+(`002_domain_constraint_validation.sql`) loại bỏ hoàn toàn phụ thuộc
+đó: mỗi khối kết thúc (thành công hay không) trước khi khối tiếp theo
+thậm chí được gửi đi.
 
-## Design documentation
+## Tài liệu thiết kế
 
-- [`docs/DOMAIN_MODEL.md`](../docs/DOMAIN_MODEL.md) — what each entity
-  means, its invariants, and why it exists separately.
-- [`docs/DATABASE_DESIGN.md`](../docs/DATABASE_DESIGN.md) — schema-level
-  reasoning: normalization, identity strategy, foreign keys, constraints,
-  `NUMERIC` vs. `FLOAT`, why no ORM/triggers/stored procedures yet.
-- [`docs/TRANSACTIONS.md`](../docs/TRANSACTIONS.md) — ACID guarantees and
-  transaction boundaries for future write workflows (`CreateInvoice`,
-  tariff configuration).
+- [`docs/DOMAIN_MODEL.md`](../docs/DOMAIN_MODEL.md) — mỗi thực thể
+  nghĩa là gì, bất biến của nó, và vì sao nó tồn tại riêng biệt.
+- [`docs/DATABASE_DESIGN.md`](../docs/DATABASE_DESIGN.md) — lý do ở
+  mức schema: chuẩn hoá, chiến lược định danh, khoá ngoại, ràng buộc,
+  `NUMERIC` so với `FLOAT`, vì sao chưa dùng ORM/trigger/stored
+  procedure.
+- [`docs/TRANSACTIONS.md`](../docs/TRANSACTIONS.md) — đảm bảo ACID và
+  ranh giới transaction cho các workflow ghi (`CreateInvoice`, cấu
+  hình tariff).
 
-## Planned approach (unchanged from the project foundation)
+## Cách tiếp cận
 
-- Access pattern: direct SQL, no ORM (see `docs/LEARNING_NOTES.md`).
-- Persistence isolation: all SQL will live behind Repository modules in
-  `backend/src/modules/<module>/`, never inside Controllers or Services
-  (see `docs/ARCHITECTURE.md`). No Repository exists yet — this task is
-  schema/domain design only.
-- Connection configuration: `DATABASE_URL` (see `backend/.env.example`).
-  No real credentials are ever committed to this repository.
+- Cách truy cập: SQL trực tiếp, không ORM (xem `docs/LEARNING_NOTES.md`).
+- Cô lập persistence: mọi SQL sống đằng sau các module Repository
+  trong `backend/src/repositories/`, không bao giờ bên trong Controller
+  hay Service (xem `docs/ARCHITECTURE.md`).
+- Cấu hình kết nối: `DATABASE_URL` (xem `backend/.env.example`). Không
+  bao giờ commit credential thật vào repository này.
 
-The database client, Repository implementations, and the `CreateInvoice`
-workflow described in `docs/TRANSACTIONS.md` are deferred to a future,
-separately reviewable task.
+Database client, các implementation Repository, và workflow
+`CreateInvoice` được mô tả trong `docs/TRANSACTIONS.md` nay đều đã
+được cài đặt đầy đủ — xem `docs/DATABASE_ACCESS.md` và
+`docs/CREATE_INVOICE_WORKFLOW.md`.

@@ -1,374 +1,371 @@
-# Database Design
+# Thiết kế Database
 
-This document explains the schema-level decisions behind
-`database/migrations/001_initial_domain_schema.sql`. It complements
-[`docs/DOMAIN_MODEL.md`](DOMAIN_MODEL.md) (what each entity means) and
-[`docs/TRANSACTIONS.md`](TRANSACTIONS.md) (transaction boundaries).
+Tài liệu này giải thích các quyết định ở mức schema đằng sau
+`database/migrations/001_initial_domain_schema.sql`. Tài liệu bổ sung
+cho [`docs/DOMAIN_MODEL.md`](DOMAIN_MODEL.md) (mỗi thực thể nghĩa là
+gì) và [`docs/TRANSACTIONS.md`](TRANSACTIONS.md) (ranh giới
+transaction).
 
-## Why a relational database
+## Vì sao dùng database quan hệ
 
-OpenUtilityBill's core data is inherently relational: a room belongs to
-exactly one property, an invoice references exactly one room, one
-electricity tariff, one water tariff, and one or two meter readings, and
-every one of those references must remain valid (an invoice must not
-point at a room that no longer exists). Foreign keys let PostgreSQL
-enforce that automatically. The billing domain also needs multi-step
-writes that must succeed or fail together (see `docs/TRANSACTIONS.md`) —
-a relational database with real transactions is a natural fit.
+Dữ liệu cốt lõi của OpenUtilityBill vốn mang tính quan hệ: một room
+thuộc đúng một property, một invoice tham chiếu đúng một room, một
+biểu giá điện, một biểu giá nước, và một hoặc hai chỉ số công tơ, và
+mọi tham chiếu đó phải luôn hợp lệ (một invoice không được trỏ tới một
+room không còn tồn tại). Khoá ngoại cho phép PostgreSQL tự ép buộc điều
+đó. Domain tính hoá đơn cũng cần các thao tác ghi nhiều bước phải cùng
+thành công hoặc cùng thất bại (xem `docs/TRANSACTIONS.md`) — một
+database quan hệ với transaction thật là lựa chọn tự nhiên.
 
-### Why not NoSQL
+### Vì sao không dùng NoSQL
 
-A document database (e.g. MongoDB) would need to either duplicate
-related data into every document (a tariff embedded in every invoice) or
-manage references manually without foreign-key enforcement. Given how
-central "this invoice must reference exactly this tariff version, and
-that reference must never dangle" is to this project's integrity, giving
-up database-enforced referential integrity would trade away exactly the
-guarantee this project needs most, for a flexibility (schema-less
-documents) this project does not need — the entities and their
-relationships are already well understood and stable.
+Một database document (ví dụ MongoDB) sẽ cần hoặc lặp lại dữ liệu liên
+quan vào mỗi document (một tariff nhúng vào mỗi invoice), hoặc tự quản
+lý tham chiếu thủ công mà không có sự ép buộc bằng khoá ngoại. Với mức
+độ trung tâm của nguyên tắc "invoice này phải tham chiếu đúng phiên bản
+tariff này, và tham chiếu đó không bao giờ được treo (dangle)" đối với
+tính toàn vẹn của dự án, từ bỏ sự toàn vẹn tham chiếu do database ép
+buộc sẽ đánh đổi đúng thứ đảm bảo mà dự án này cần nhất, để lấy một sự
+linh hoạt (document không schema) mà dự án này không cần — các thực thể
+và quan hệ giữa chúng đã được hiểu rõ và ổn định.
 
-## Normalization decisions
+## Các quyết định chuẩn hoá
 
-The schema is normalized to the point where duplicating data would cause
-real problems, and no further:
+Schema được chuẩn hoá tới mức mà việc lặp dữ liệu sẽ gây vấn đề thật
+sự, và không hơn:
 
-- `RentalProperty` and `Room` are separate tables (not `Room` columns
-  duplicated per property) because a property has many rooms.
-- `ElectricityTariff` and `ElectricityTariffTier` are separate tables
-  (not `tier1_price`...`tierN_price` columns) so the number of tiers is
-  data, not schema — see `docs/DOMAIN_MODEL.md`.
-- `MeterReading` uses one normalized shape for both utilities
-  (`utility_type` column) instead of two parallel tables with identical
-  structure.
+- `RentalProperty` và `Room` là hai bảng riêng biệt (không phải các cột
+  `Room` lặp lại theo từng property) vì một property có nhiều room.
+- `ElectricityTariff` và `ElectricityTariffTier` là hai bảng riêng biệt
+  (không phải các cột `tier1_price`...`tierN_price`) để số lượng tier
+  là dữ liệu, không phải schema — xem `docs/DOMAIN_MODEL.md`.
+- `MeterReading` dùng một hình dạng chuẩn hoá duy nhất cho cả hai loại
+  tiện ích (cột `utility_type`) thay vì hai bảng song song có cấu trúc
+  giống hệt nhau.
 
-Where duplication *does* appear (`Invoice.tenantCountUsed`,
-`InvoiceItem.unitPrice`, tariff references by ID rather than by "latest
-version"), it is intentional — see "Intentional historical snapshots"
-below. Normalization is a tool for avoiding update anomalies, not a rule
-to apply everywhere regardless of consequence.
+Ở những nơi việc lặp dữ liệu *thực sự* xuất hiện
+(`Invoice.tenantCountUsed`, `InvoiceItem.unitPrice`, tham chiếu tariff
+theo ID thay vì theo "phiên bản mới nhất"), đó là có chủ đích — xem
+"Snapshot lịch sử có chủ đích" bên dưới. Chuẩn hoá là một công cụ để
+tránh các bất thường khi cập nhật (update anomaly), không phải một quy
+tắc áp dụng ở mọi nơi bất kể hậu quả.
 
-## Intentional historical snapshots
+## Snapshot lịch sử có chủ đích
 
-See `docs/DOMAIN_MODEL.md` "Historical snapshot principle" for the full
-explanation with a table of examples. Summary: `Invoice` and
-`InvoiceItem` freeze the exact values used to calculate them
-(`tenantCountUsed`, tariff *version* IDs, `InvoiceItem.unitPrice`)
-precisely so that later edits to `Room`, `ElectricityTariff`, or
-`WaterTariff` cannot silently change an already-issued invoice. This is
-not "bad normalization" — normalization rules apply to *current,
-mutable* reference data; a historical record is deliberately supposed to
-stop tracking the current value at the moment it is written.
+Xem `docs/DOMAIN_MODEL.md` mục "Nguyên tắc snapshot lịch sử" để có giải
+thích đầy đủ kèm bảng ví dụ. Tóm tắt: `Invoice` và `InvoiceItem` đóng
+băng đúng các giá trị đã dùng để tính ra chúng (`tenantCountUsed`, ID
+*phiên bản* tariff, `InvoiceItem.unitPrice`) chính xác để những chỉnh
+sửa sau này trên `Room`, `ElectricityTariff`, hay `WaterTariff` không
+thể âm thầm thay đổi một hoá đơn đã phát hành. Đây không phải "chuẩn
+hoá sai" — quy tắc chuẩn hoá áp dụng cho dữ liệu tham chiếu *hiện tại,
+có thể thay đổi*; một bản ghi lịch sử cố ý ngừng theo dõi giá trị hiện
+tại ngay tại thời điểm nó được ghi.
 
-## Identity key strategy
+## Chiến lược khoá định danh
 
-Every primary key uses:
+Mọi khoá chính đều dùng:
 
 ```sql
 id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY
 ```
 
-This is PostgreSQL's standard auto-incrementing identity column
-(the modern replacement for `SERIAL`). It was chosen over UUIDs because:
+Đây là cột identity tự tăng chuẩn của PostgreSQL (bản thay thế hiện đại
+cho `SERIAL`). Nó được chọn thay vì UUID vì:
 
-- It requires no extension (`pgcrypto`/`uuid-ossp`) — fewer moving parts
-  to install/explain on Supabase.
-- It is trivially explainable: "the database assigns the next number."
-- Nothing in this schema needs UUID's actual benefits (merging rows from
-  multiple independent databases, hiding row counts from clients). This
-  is a single Postgres database with one write path (the backend), so
-  those benefits would be paid for without being used.
+- Không cần extension nào (`pgcrypto`/`uuid-ossp`) — ít thành phần hơn
+  để cài đặt/giải thích trên Supabase.
+- Dễ giải thích một cách tầm thường: "database tự gán số tiếp theo."
+- Không có gì trong schema này cần tới lợi ích thật sự của UUID (gộp
+  dòng từ nhiều database độc lập, giấu số lượng dòng khỏi client). Đây
+  là một database Postgres đơn, với một đường ghi duy nhất (backend),
+  nên những lợi ích đó sẽ phải trả giá mà không dùng tới.
 
-`BIGINT` (not `INTEGER`) was chosen simply to avoid ever worrying about
-the 32-bit integer ceiling, at negligible storage cost.
+`BIGINT` (không phải `INTEGER`) được chọn đơn giản để không bao giờ
+phải lo về trần số nguyên 32-bit, với chi phí lưu trữ không đáng kể.
 
-## Foreign keys
+## Khoá ngoại
 
-Every relationship in `docs/DOMAIN_MODEL.md`'s diagram is enforced with
-a `REFERENCES` foreign key — see the table-by-table breakdown in the
-main report and inline comments in the migration file for exactly why
-each one exists. In short: foreign keys are what makes "an invoice can
-never reference a room that was deleted" a database guarantee instead of
-an application convention someone could forget to check.
+Mọi quan hệ trong sơ đồ của `docs/DOMAIN_MODEL.md` đều được ép buộc
+bằng một khoá ngoại `REFERENCES` — xem phân tích từng bảng trong báo
+cáo chính và comment inline trong file migration để biết chính xác vì
+sao mỗi cái tồn tại. Tóm gọn: khoá ngoại là thứ khiến "một invoice
+không bao giờ có thể tham chiếu một room đã bị xoá" trở thành một đảm
+bảo của database thay vì một quy ước ứng dụng mà ai đó có thể quên
+kiểm tra.
 
-## Unique constraints
+## Ràng buộc UNIQUE
 
-| Constraint | Table | Why |
+| Ràng buộc | Bảng | Vì sao |
 |---|---|---|
-| `(name, effective_from)` | `electricity_tariffs`, `water_tariffs` | Supports idempotent seeding via `ON CONFLICT` (see `database/seeds/001_competition_defaults.sql`) and prevents two configuration rows with the same name and effective date. |
-| `(room_id, billing_period, utility_type)` | `meter_readings` | Exactly one reading per room, per month, per utility — the schema-level guarantee behind `docs/DOMAIN_MODEL.md`'s `MeterReading` invariant. |
-| `(tariff_id, tier_number)` | `electricity_tariff_tiers` | A tier number must not repeat within one tariff version. |
-| `(property_id, name)` | `rooms` | A room name/number must be unambiguous *within one property* (two "Room 101" rows in the same property would be confusing when picking a room to bill). This is **not** a global uniqueness rule — "Property A / 101" and "Property B / 101" are both valid, since they belong to different properties. |
-| `(room_id, billing_period)` | `invoices` | One invoice per room per month, for the initial mandatory scope (see "Invoice revision" below). |
-| `(invoice_id, display_order)` | `invoice_items` | Two breakdown lines on the same invoice must not claim the same display position. |
+| `(name, effective_from)` | `electricity_tariffs`, `water_tariffs` | Hỗ trợ seed idempotent qua `ON CONFLICT` (xem `database/seeds/001_competition_defaults.sql`) và ngăn hai dòng cấu hình cùng tên và cùng ngày hiệu lực. |
+| `(room_id, billing_period, utility_type)` | `meter_readings` | Đúng một reading cho mỗi room, mỗi tháng, mỗi loại tiện ích — đảm bảo ở mức schema đứng sau bất biến `MeterReading` của `docs/DOMAIN_MODEL.md`. |
+| `(tariff_id, tier_number)` | `electricity_tariff_tiers` | Một số tier không được lặp lại trong cùng một phiên bản tariff. |
+| `(property_id, name)` | `rooms` | Tên/số room phải không mơ hồ *trong phạm vi một property*. Đây **không** phải một quy tắc duy nhất toàn cục — "Property A / 101" và "Property B / 101" đều hợp lệ, vì chúng thuộc hai property khác nhau. |
+| `(room_id, billing_period)` | `invoices` | Một invoice cho mỗi room mỗi tháng, trong phạm vi bắt buộc ban đầu (xem "Sửa lại hoá đơn" bên dưới). |
+| `(invoice_id, display_order)` | `invoice_items` | Hai dòng breakdown trên cùng một invoice không được nhận cùng vị trí hiển thị. |
 
-## Check constraints
+## Ràng buộc CHECK
 
-Every simple, single-purpose invariant from the task's numeric/business
-rule list is enforced with a `CHECK`:
+Mọi bất biến đơn giản, một mục đích, từ danh sách quy tắc số/nghiệp vụ
+của đề bài đều được ép buộc bằng một `CHECK`:
 
 - `tenant_count >= 0`, `tenant_count_used >= 0`
 - `tier_number > 0`
-- `threshold_kwh > 0` when not `NULL`
+- `threshold_kwh > 0` khi không `NULL`
 - `unit_price >= 0`
 - `0 <= electricity_vat_rate <= 1`, `0 <= vat_rate <= 1`,
-  `0 <= environmental_fee_rate <= 1` — see "Rates are stored as decimal
-  fractions in [0, 1]" below
+  `0 <= environmental_fee_rate <= 1` — xem "Tỷ lệ được lưu dưới dạng
+  phân số thập phân trong [0, 1]" bên dưới
 - `previous_reading >= 0`, `current_reading >= 0`
-- `meter_maximum_value > 0` when provided
-- `previous_reading <= meter_maximum_value` and
-  `current_reading <= meter_maximum_value`, when `meter_maximum_value`
-  is provided — see "Meter maximum value" below
+- `meter_maximum_value > 0` khi có
+- `previous_reading <= meter_maximum_value` và
+  `current_reading <= meter_maximum_value`, khi `meter_maximum_value`
+  có giá trị — xem "Giá trị tối đa của công tơ" bên dưới
 - `calculated_total >= 0`
-- `actual_charged_amount >= 0` when provided
-- `effective_to >= effective_from` when `effective_to` is set (both
-  tariff tables)
-- `billing_period` is always the first day of its month
+- `actual_charged_amount >= 0` khi có
+- `effective_to >= effective_from` khi `effective_to` có giá trị (cả
+  hai bảng tariff)
+- `billing_period` luôn là ngày đầu tiên của tháng đó
   (`EXTRACT(DAY FROM billing_period) = 1`)
 - `utility_type`, `electricity_billing_method`, `water_billing_method`,
-  `invoice_items.category` are restricted to their documented value sets
-- `(property_id, name)` is unique per `rooms` row — see the unique
-  constraints table above
+  `invoice_items.category` bị giới hạn trong tập giá trị đã ghi rõ
+- `(property_id, name)` duy nhất cho mỗi dòng `rooms` — xem bảng ràng
+  buộc UNIQUE ở trên
 
-### Rates are stored as decimal fractions in [0, 1]
+### Tỷ lệ được lưu dưới dạng phân số thập phân trong [0, 1]
 
-`electricity_vat_rate`, `water_tariffs.vat_rate`, and
-`environmental_fee_rate` all represent a percentage as a decimal
-fraction: 8% is stored as `0.08`, not `8`. The `CHECK (rate >= 0 AND rate
-<= 1)` constraint exists specifically to catch the most common
-configuration mistake for this representation — entering the whole
-percentage number (`8`) instead of the fraction (`0.08`). This bound does
-**not** apply to price fields (`unit_price`, `price_per_cubic_meter`,
-`price_per_person`) — those are currency amounts, not rates, and have no
-natural upper bound.
+`electricity_vat_rate`, `water_tariffs.vat_rate`, và
+`environmental_fee_rate` đều biểu diễn một tỷ lệ phần trăm dưới dạng
+phân số thập phân: 8% được lưu là `0.08`, không phải `8`. Ràng buộc
+`CHECK (rate >= 0 AND rate <= 1)` tồn tại đặc biệt để bắt lỗi cấu hình
+phổ biến nhất cho cách biểu diễn này — nhập số phần trăm nguyên (`8`)
+thay vì phân số (`0.08`). Giới hạn này **không** áp dụng cho các field
+giá (`unit_price`, `price_per_cubic_meter`, `price_per_person`) — đó là
+số tiền tệ, không phải tỷ lệ, và không có giới hạn trên tự nhiên nào.
 
-### Meter maximum value
+### Giá trị tối đa của công tơ
 
-`meter_readings.meter_maximum_value` is optional (`NULL` when the meter
-has no known/relevant maximum). When it *is* provided, both
-`previous_reading` and `current_reading` must be `<=` it — a reading
-above a meter's own declared maximum is physically impossible and is
-rejected at the database level. This is **not** a rollover calculation:
-it says nothing about whether `current_reading < previous_reading` is a
-valid wraparound versus a data-entry mistake (see below) — it only
-rejects readings that could never be correct regardless of rollover.
+`meter_readings.meter_maximum_value` là tuỳ chọn (`NULL` khi công tơ
+không có mức tối đa xác định/liên quan). Khi nó *có* giá trị, cả
+`previous_reading` lẫn `current_reading` phải `<=` nó — một chỉ số
+vượt quá mức tối đa do chính công tơ khai báo là bất khả thi về mặt
+vật lý và bị từ chối ở mức database. Đây **không** phải một phép tính
+rollover: nó không nói gì về việc `current_reading < previous_reading`
+là một trường hợp tràn số (wraparound) hợp lệ hay một lỗi nhập liệu
+(xem bên dưới) — nó chỉ từ chối các chỉ số không bao giờ có thể đúng
+bất kể có rollover hay không.
 
-**Deliberately not a `CHECK` constraint:** "`water_reading_id` must be
-`NOT NULL` when `water_billing_method = 'PER_CUBIC_METER'`." This is a
-real business rule (see `docs/DOMAIN_MODEL.md`), but it is a *cross-field
-conditional* rule tied to a workflow decision, not a simple standalone
-invariant. Encoding it in a `CHECK` would blur the line this project
-draws between "database enforces basic shape and range" and "Service
-layer enforces business workflow rules" (see `docs/ARCHITECTURE.md`).
-This is deferred to the Service layer's fail-fast validation when the
-`CreateInvoice` workflow is implemented — see `docs/TRANSACTIONS.md`.
+**Cố ý KHÔNG phải một ràng buộc `CHECK`:** "`water_reading_id` phải
+`NOT NULL` khi `water_billing_method = 'PER_CUBIC_METER'`." Đây là một
+quy tắc nghiệp vụ thật (xem `docs/DOMAIN_MODEL.md`), nhưng nó là một
+quy tắc *điều kiện liên-field* gắn với một quyết định workflow, không
+phải một bất biến đơn lẻ đơn giản. Mã hoá nó trong một `CHECK` sẽ làm
+mờ ranh giới mà dự án này vạch ra giữa "database ép buộc hình dạng và
+phạm vi cơ bản" và "tầng Service ép buộc quy tắc workflow nghiệp vụ"
+(xem `docs/ARCHITECTURE.md`). Điều này được validate ở tầng Service
+theo kiểu fail-fast, đã cài đặt trong workflow `CreateInvoice` — xem
+`docs/TRANSACTIONS.md`.
 
-**Deliberately not constrained:** `previous_reading <= current_reading`.
-A meter that rolls over past `meter_maximum_value` can legitimately
-report a smaller `current_reading` than `previous_reading` (it wrapped
-back toward zero). Distinguishing "valid rollover" from "data entry
-error" needs more than a bounds check on each reading individually (it
-needs to reason about *how far* the readings are from
-`meter_maximum_value` and in which direction) — that is exactly the kind
-of calculation this project keeps out of the database (see "Why no
-triggers/stored procedures yet" below) — it will live in Calculation
-Core. What the database *does* reject is a reading that exceeds
-`meter_maximum_value` outright (see "Meter maximum value" above) —
-that is a simple bounds check, not a rollover calculation.
+**Cố ý KHÔNG bị ràng buộc:** `previous_reading <= current_reading`.
+Một công tơ rollover vượt qua `meter_maximum_value` có thể hợp lệ báo
+một `current_reading` nhỏ hơn `previous_reading` (nó đã vòng trở lại
+gần 0). Phân biệt "rollover hợp lệ" với "lỗi nhập liệu" cần nhiều hơn
+một kiểm tra biên trên từng chỉ số riêng lẻ (nó cần suy luận về *khoảng
+cách* của các chỉ số so với `meter_maximum_value` và theo hướng nào) —
+đó chính xác là kiểu phép tính mà dự án này giữ ngoài database (xem
+"Vì sao chưa dùng trigger/stored procedure" bên dưới) — nó thuộc về
+Calculation Core. Thứ mà database *thực sự* từ chối là một chỉ số vượt
+hẳn `meter_maximum_value` (xem "Giá trị tối đa của công tơ" ở trên) —
+đó là một kiểm tra biên đơn giản, không phải một phép tính rollover.
 
-## Derived values are not persisted
+## Giá trị suy ra không được lưu trữ
 
-`invoices` stores `calculated_total` and `actual_charged_amount`, but
-**not** a `difference_amount` column. The difference
-(`actual_charged_amount - calculated_total`) is fully derived from those
-two already-persisted values — it is not new information. Persisting it
-as a third column would create a consistency risk: if
-`actual_charged_amount` is corrected after the invoice is first created
-(e.g. reconciling with what the tenant actually paid), a separately
-stored `difference_amount` would need to be updated in lock-step, or it
-silently goes stale. The single source of truth stays exactly two
-columns; the future Service/Calculation layer computes the difference
-on demand whenever it needs to be displayed, rather than caching it in
-the database. This is the same "don't store what you can derive"
-principle applied to a case where the derived value would otherwise
-duplicate, rather than protect, historical meaning — contrast this with
-the *intentional* duplication in "Intentional historical snapshots"
-above, which exists specifically to prevent values from changing
-underneath an old invoice. A derived arithmetic result is not at risk of
-that problem, so there is no reason to snapshot it.
+`invoices` lưu `calculated_total` và `actual_charged_amount`, nhưng
+**không** có cột `difference_amount`. Chênh lệch
+(`actual_charged_amount - calculated_total`) hoàn toàn được suy ra từ
+hai giá trị đã lưu đó — nó không phải thông tin mới. Lưu nó thành một
+cột thứ ba sẽ tạo ra rủi ro nhất quán: nếu `actual_charged_amount` được
+sửa lại sau khi invoice được tạo lần đầu (ví dụ đối chiếu với số tiền
+người thuê thực sự đã trả), một `difference_amount` lưu riêng sẽ cần
+được cập nhật đồng bộ, nếu không nó sẽ âm thầm trở nên lỗi thời. Nguồn
+sự thật duy nhất vẫn chỉ là đúng hai cột; tầng Service/Calculation tính
+chênh lệch theo yêu cầu bất cứ khi nào cần hiển thị, thay vì cache nó
+trong database. Đây là cùng nguyên tắc "không lưu thứ có thể suy ra"
+áp dụng cho một trường hợp mà giá trị suy ra sẽ chỉ lặp lại, chứ không
+bảo vệ, ý nghĩa lịch sử — đối lập với sự trùng lặp *có chủ đích* trong
+"Snapshot lịch sử có chủ đích" ở trên, vốn tồn tại đặc biệt để ngăn giá
+trị thay đổi bên dưới một hoá đơn cũ. Một kết quả số học suy ra không
+có rủi ro đó, nên không có lý do gì để snapshot nó.
 
-## Deletion behavior (`ON DELETE` policy)
+## Hành vi xoá (chính sách `ON DELETE`)
 
-`ON DELETE CASCADE` is **not** used everywhere — each relationship was
-decided individually:
+`ON DELETE CASCADE` **không** được dùng ở mọi nơi — mỗi quan hệ được
+quyết định riêng lẻ:
 
-| Relationship | Behavior | Why |
+| Quan hệ | Hành vi | Vì sao |
 |---|---|---|
-| `rooms.property_id → rental_properties` | `RESTRICT` | A room is meaningful business data (and may have readings/invoices under it). Deleting a property must not silently delete its rooms — the owner must handle rooms explicitly first. |
-| `meter_readings.room_id → rooms` | `RESTRICT` | Meter readings are historical evidence for past invoices. A room must not disappear-and-take-its-reading-history-with-it. |
-| `invoices.room_id → rooms` | `RESTRICT` | Same reasoning: an invoice is a financial record; it must not vanish because someone deleted the room. |
-| `invoices.electricity_tariff_id / water_tariff_id → tariffs` | `RESTRICT` | A tariff version referenced by a historical invoice must remain available to explain that invoice, even after a newer tariff version is introduced. |
-| `invoices.electricity_reading_id / water_reading_id → meter_readings` | `RESTRICT` | The reading an invoice was calculated from must remain traceable. |
-| `electricity_tariff_tiers.tariff_id → electricity_tariffs` | `CASCADE` | A tier has no independent meaning without its parent tariff — it *is* part of that tariff's configuration, not a standalone record. Invoices reference the tariff as a whole (`electricity_tariff_id`), never an individual tier row, so cascading tier deletes cannot orphan or corrupt invoice history. |
-| `invoice_items.invoice_id → invoices` | `CASCADE` | An invoice item only exists to explain its parent invoice; deleting the invoice legitimately deletes its breakdown with it. |
+| `rooms.property_id → rental_properties` | `RESTRICT` | Một room là dữ liệu nghiệp vụ có ý nghĩa (và có thể có reading/invoice bên dưới nó). Xoá một property không được âm thầm xoá các room của nó — chủ trọ phải tự xử lý room tường minh trước. |
+| `meter_readings.room_id → rooms` | `RESTRICT` | Chỉ số công tơ là bằng chứng lịch sử cho các hoá đơn quá khứ. Một room không được biến mất và kéo theo lịch sử chỉ số của nó. |
+| `invoices.room_id → rooms` | `RESTRICT` | Cùng lý do: một invoice là một bản ghi tài chính; nó không được biến mất chỉ vì ai đó xoá room. |
+| `invoices.electricity_tariff_id / water_tariff_id → tariffs` | `RESTRICT` | Một phiên bản tariff được một hoá đơn lịch sử tham chiếu phải luôn sẵn có để giải thích hoá đơn đó, kể cả sau khi một phiên bản tariff mới hơn ra đời. |
+| `invoices.electricity_reading_id / water_reading_id → meter_readings` | `RESTRICT` | Chỉ số mà một hoá đơn được tính từ đó phải luôn truy vết được. |
+| `electricity_tariff_tiers.tariff_id → electricity_tariffs` | `CASCADE` | Một tier không có ý nghĩa độc lập nếu thiếu tariff cha của nó — nó *là* một phần cấu hình của tariff đó, không phải một bản ghi đứng riêng. Invoice tham chiếu cả tariff (`electricity_tariff_id`), không bao giờ tham chiếu một dòng tier riêng lẻ, nên cascade xoá tier không thể làm mồ côi hay hỏng lịch sử invoice. |
+| `invoice_items.invoice_id → invoices` | `CASCADE` | Một dòng invoice item chỉ tồn tại để giải thích invoice cha của nó; xoá invoice hợp lý sẽ xoá luôn breakdown của nó. |
 
-The general rule: **`RESTRICT` protects anything that is, or feeds,
-historical/financial record-keeping. `CASCADE` is reserved for rows that
-are purely a "part of" their parent and have no meaning or reference
-pointing at them independently.**
+Quy tắc chung: **`RESTRICT` bảo vệ bất cứ thứ gì là, hoặc nuôi dưỡng,
+việc lưu trữ bản ghi lịch sử/tài chính. `CASCADE` chỉ dành cho các dòng
+thuần tuý là "một phần của" cha của chúng và không có ý nghĩa hay tham
+chiếu nào trỏ tới chúng một cách độc lập.**
 
-## `NUMERIC` vs. `FLOAT`
+## `NUMERIC` so với `FLOAT`
 
-Every field representing money, a rate, a fee, or a calculated financial
-amount (`unit_price`, `electricity_vat_rate`, `vat_rate`,
+Mọi field biểu diễn tiền, một tỷ lệ, một phí, hay một số tiền tài chính
+đã tính (`unit_price`, `electricity_vat_rate`, `vat_rate`,
 `environmental_fee_rate`, `price_per_cubic_meter`, `price_per_person`,
 `calculated_total`, `actual_charged_amount`,
-`invoice_items.amount`/`unit_price`/`quantity`, `threshold_kwh`,
-meter readings) uses PostgreSQL `NUMERIC(precision, scale)`, never
-`REAL`/`FLOAT`/`DOUBLE PRECISION`.
+`invoice_items.amount`/`unit_price`/`quantity`, `threshold_kwh`, chỉ số
+công tơ) dùng `NUMERIC(precision, scale)` của PostgreSQL, không bao
+giờ `REAL`/`FLOAT`/`DOUBLE PRECISION`.
 
-`FLOAT`/`REAL` are IEEE-754 binary floating point — they cannot represent
-most decimal fractions (including money amounts like `0.10`) exactly,
-which can produce tiny rounding errors that compound across
-calculations. `NUMERIC` stores an exact decimal value, which is what a
-billing application needs: a VAT rate of `0.08` must mean exactly
-`0.08`, not `0.08000000000000000004`.
+`FLOAT`/`REAL` là dấu phẩy động nhị phân IEEE-754 — chúng không thể
+biểu diễn chính xác hầu hết phân số thập phân (bao gồm cả số tiền như
+`0.10`), có thể sinh ra sai số làm tròn nhỏ tích luỹ qua các phép tính.
+`NUMERIC` lưu một giá trị thập phân chính xác, đúng thứ một ứng dụng
+tính hoá đơn cần: một mức VAT `0.08` phải có nghĩa đúng là `0.08`,
+không phải `0.08000000000000000004`.
 
-### Database `NUMERIC` vs. TypeScript runtime representation
+### `NUMERIC` của database so với biểu diễn runtime của TypeScript
 
-Storing values as `NUMERIC` in PostgreSQL is a **database-layer**
-decision; it does not, by itself, decide how TypeScript code does
-arithmetic on those values — that is Calculation Core's decision (see
-`docs/NUMERIC_PRECISION.md`).
+Lưu giá trị dưới dạng `NUMERIC` trong PostgreSQL là một quyết định ở
+**tầng database**; tự nó không quyết định cách code TypeScript thực
+hiện phép tính trên các giá trị đó — đó là quyết định của Calculation
+Core (xem `docs/NUMERIC_PRECISION.md`).
 
-For domain model types (`backend/src/modules/*/*.model.ts`), every field
-backed by a `NUMERIC` column is typed as TypeScript `string`, matching
-how the standard PostgreSQL driver for Node.js (`pg`) returns `NUMERIC`
-by default — as strings, to avoid silently truncating precision by
-parsing into a JS `number` (IEEE-754 double, the same representation
-problem as `FLOAT`/`REAL`).
+Với các type domain model (`backend/src/modules/*/*.model.ts`), mọi
+field được cột `NUMERIC` hỗ trợ đều có kiểu TypeScript `string`, khớp
+với cách driver PostgreSQL chuẩn cho Node.js (`pg`) trả về `NUMERIC`
+theo mặc định — dưới dạng chuỗi, để tránh âm thầm cắt độ chính xác khi
+parse sang một `number` JS (IEEE-754 double, cùng vấn đề biểu diễn như
+`FLOAT`/`REAL`).
 
-Calculation Core (`backend/src/calculation/`) parses those strings into
-an exact rational (`ExactNumber`, built on `BigInt`) at its input
-boundary, does every intermediate operation on that exact representation
-(never `number`), and only produces a decimal string again at its output
-boundary. This is the same `string` ↔ exact-value ↔ `string` pattern on
-both sides of Calculation Core — the database and the calculation layer
-agree on the boundary representation. See `docs/NUMERIC_PRECISION.md`
-for the full reasoning, including why no `decimal.js`-style library was
-added.
+Calculation Core (`backend/src/calculation/`) parse các chuỗi đó thành
+một phân số chính xác (`ExactNumber`, xây trên `BigInt`) tại ranh giới
+input của nó, thực hiện mọi phép tính trung gian trên biểu diễn chính
+xác đó (không bao giờ trên `number`), và chỉ tạo lại một chuỗi thập
+phân tại ranh giới output của nó. Đây là cùng mẫu `string` ↔ giá-trị-
+chính-xác ↔ `string` ở cả hai phía của Calculation Core — database và
+tầng tính toán đồng thuận về biểu diễn ở ranh giới. Xem
+`docs/NUMERIC_PRECISION.md` để biết lý do đầy đủ, bao gồm vì sao không
+thêm một thư viện kiểu `decimal.js`.
 
-### Invoice item precision
+### Độ chính xác của invoice item
 
-`invoice_items.quantity` and `invoice_items.amount` were originally
-`NUMERIC(12, 2)`/`NUMERIC(14, 2)` (fixed to 2 decimal places) in
-`001_initial_domain_schema.sql`. This was a latent correctness bug:
-Calculation Core deliberately preserves intermediate precision beyond 2
-decimal places (e.g. a quota-adjusted tier capacity of `62.5125` kWh —
-see `docs/NUMERIC_PRECISION.md` §13.5), and a fixed-scale column would
-silently truncate that value the moment it was persisted, contradicting
-the "no intermediate rounding" rule at the one layer meant to store it
-faithfully.
+`invoice_items.quantity` và `invoice_items.amount` ban đầu là
+`NUMERIC(12, 2)`/`NUMERIC(14, 2)` (cố định 2 chữ số thập phân) trong
+`001_initial_domain_schema.sql`. Đây là một lỗ hổng đúng đắn (correctness
+bug) tiềm ẩn: Calculation Core cố ý giữ độ chính xác trung gian vượt
+quá 2 chữ số thập phân (ví dụ một dung lượng tier đã điều chỉnh theo
+quota là `62.5125` kWh — xem `docs/NUMERIC_PRECISION.md` mục 13.5), và
+một cột scale cố định sẽ âm thầm cắt giá trị đó ngay khi nó được lưu,
+mâu thuẫn với quy tắc "không làm tròn trung gian" tại chính tầng lẽ ra
+phải lưu nó trung thực.
 
-`002_preserve_invoice_item_precision.sql` widens both columns to
-unconstrained `NUMERIC` (no precision/scale limit). This is a safe,
-non-destructive `ALTER COLUMN ... TYPE NUMERIC` — every value that fit
-in the old fixed-scale column is still a valid value in the new
-unconstrained one, so no existing data can be lost or altered by the
-migration itself.
+`002_preserve_invoice_item_precision.sql` nới cả hai cột thành
+`NUMERIC` không giới hạn precision/scale. Đây là một `ALTER COLUMN ...
+TYPE NUMERIC` an toàn, không phá huỷ — mọi giá trị vừa trong cột scale
+cố định cũ vẫn là một giá trị hợp lệ trong cột không giới hạn mới, nên
+không có dữ liệu hiện có nào bị mất hay thay đổi bởi chính migration
+đó.
 
-`invoice_items.unit_price` was deliberately **not** widened: it is
-always a direct copy of `electricity_tariff_tiers.unit_price` or a
-`water_tariffs.price_per_*` column, both already `NUMERIC(14, 2)` at the
-source and never computed/multiplied before being snapshotted — so it
-can never carry more than 2 decimal places regardless of quota or
-threshold values, and widening it would protect nothing. `invoices.calculated_total`/`actual_charged_amount`
-were also left unchanged — they are **final**, already-rounded VND
-amounts (the output of `roundHalfUpToInteger`, see
-`docs/NUMERIC_PRECISION.md`), a different concern from preserving
-unrounded intermediate values.
+`invoice_items.unit_price` cố ý **không** được nới rộng: nó luôn là
+một bản sao chụp trực tiếp từ `electricity_tariff_tiers.unit_price`
+hay một cột `water_tariffs.price_per_*`, cả hai đều đã là
+`NUMERIC(14, 2)` tại nguồn và không bao giờ được tính/nhân trước khi
+snapshot — nên nó không bao giờ có thể mang nhiều hơn 2 chữ số thập
+phân bất kể giá trị quota hay ngưỡng, và nới rộng nó sẽ không bảo vệ
+được gì. `invoices.calculated_total`/`actual_charged_amount` cũng được
+giữ nguyên không đổi — đó là số tiền VNĐ **cuối cùng**, đã làm tròn
+(kết quả của `roundHalfUpToInteger`, xem `docs/NUMERIC_PRECISION.md`),
+một mối quan tâm khác với việc giữ nguyên giá trị trung gian chưa làm
+tròn.
 
-## Tariff versions and effective dates
+## Phiên bản tariff và ngày hiệu lực
 
-`ElectricityTariff` and `WaterTariff` both carry `effective_from` and
-`effective_to` (nullable — an open-ended/current version has no end
-date). This lets the system represent "the tariff that was in effect
-when this invoice's billing period occurred" as data, rather than
-assuming there is ever only one tariff. Overlap prevention between tariff
-versions (e.g. rejecting two active tariffs with overlapping date ranges)
-is **not** enforced in this schema — doing so with a simple `CHECK` is
-not possible (`CHECK` constraints cannot compare across rows), and a
-proper solution (an `EXCLUDE` constraint over a date range) requires the
-`btree_gist` extension, which this task avoids introducing without a
-concrete need
-(see "no unnecessary PostgreSQL extensions" in the task brief). If
-overlapping tariff versions become a real data-quality problem, that is
-a candidate for a future, explicitly justified migration.
+Cả `ElectricityTariff` và `WaterTariff` đều mang `effective_from` và
+`effective_to` (nullable — một phiên bản mở/hiện tại không có ngày kết
+thúc). Điều này cho phép hệ thống biểu diễn "biểu giá đang có hiệu lực
+khi kỳ billing của hoá đơn này xảy ra" như dữ liệu, thay vì giả định
+luôn chỉ có một biểu giá. Việc chống chồng lấn giữa các phiên bản
+tariff (ví dụ từ chối hai tariff đang hoạt động có khoảng ngày chồng
+lấn) **không** được ép buộc trong schema này — làm điều đó bằng một
+`CHECK` đơn giản là không thể (ràng buộc `CHECK` không thể so sánh giữa
+các dòng), và một giải pháp đúng đắn (một ràng buộc `EXCLUDE` trên một
+khoảng ngày) cần extension `btree_gist`, mà task này tránh đưa vào khi
+chưa có nhu cầu cụ thể. Nếu các phiên bản tariff chồng lấn trở thành
+một vấn đề chất lượng dữ liệu thật sự, đó là ứng viên cho một migration
+tương lai, được biện minh tường minh.
 
-### The seeded dates mean different things for electricity and water
+### Các ngày seed mang ý nghĩa khác nhau cho điện và nước
 
-`database/seeds/001_competition_defaults.sql` sets different
-`effective_from`/`effective_to` values for the two tariffs, and they are
-**not** interchangeable in meaning:
+`database/seeds/001_competition_defaults.sql` đặt các giá trị
+`effective_from`/`effective_to` khác nhau cho hai tariff, và chúng
+**không** thể hoán đổi ý nghĩa cho nhau:
 
-- **Electricity** (`effective_from = 2025-05-10`,
-  `effective_to = 2026-12-31`): `effective_from` is a real **legal**
-  effective date — the competition specification cites Decision
-  1279/QĐ-BCT as taking effect from 10/05/2025 for the underlying
-  electricity price schedule. `effective_to = 2026-12-31` does **not**
-  mean the electricity price itself expires on that date — it bounds
-  *this configuration row*, which also bundles the competition's 8%
-  electricity VAT setting, and the specification states that 8% VAT rate
-  applies only through 31/12/2026. Past that date, a new
-  `electricity_tariffs` row (e.g. with an updated VAT rate) would need
-  to be seeded/inserted — the schema already supports that as a new
-  row with a later `effective_from`, no migration required.
-- **Water** (`effective_from = 2026-09-06`, `effective_to = NULL`): the
-  competition specification does not cite any legal water-tariff
-  document with a real effective date. `2026-09-06` is documented as the
-  **competition configuration's activation/publication date** — the date
-  these fixed values were established for use in this project — not a
-  claim that a real local water utility's legal tariff took effect that
-  day. `effective_to` is `NULL` because there is no cited basis for an
-  end date.
+- **Điện** (`effective_from = 2025-05-10`,
+  `effective_to = 2026-12-31`): `effective_from` là một ngày hiệu lực
+  **pháp lý** thật — đề thi trích dẫn Quyết định 1279/QĐ-BCT có hiệu
+  lực từ 10/05/2025 cho biểu giá điện gốc. `effective_to = 2026-12-31`
+  **không** có nghĩa bản thân giá điện hết hạn vào ngày đó — nó chỉ
+  giới hạn *dòng cấu hình này*, vốn cũng gộp cả mức VAT điện 8% của đề
+  thi, và đề thi nêu rõ mức VAT 8% đó chỉ áp dụng tới hết 31/12/2026.
+  Qua ngày đó, một dòng `electricity_tariffs` mới (ví dụ với mức VAT
+  cập nhật) sẽ cần được seed/insert — schema đã hỗ trợ sẵn điều đó dưới
+  dạng một dòng mới với `effective_from` muộn hơn, không cần migration.
+- **Nước** (`effective_from = 2026-09-06`, `effective_to = NULL`): đề
+  thi không trích dẫn bất kỳ văn bản pháp lý biểu giá nước nào có ngày
+  hiệu lực thật. `2026-09-06` được ghi rõ là **ngày kích hoạt/công bố
+  của cấu hình kỳ thi** — ngày các giá trị cố định này được xác lập để
+  dùng trong dự án này — không phải một tuyên bố rằng một biểu giá nước
+  địa phương thật đã có hiệu lực đúng ngày đó. `effective_to` là `NULL`
+  vì không có căn cứ nào cho một ngày kết thúc.
 
-This distinction matters for the oral defense: `effective_from` on
-`electricity_tariffs` can be defended by citing an external legal
-document; `effective_from` on `water_tariffs` cannot, and should be
-explained as "when this competition's fixed configuration was adopted,"
-not "when a real water tariff took effect."
+Sự phân biệt này quan trọng khi bảo vệ trực tiếp: `effective_from`
+trên `electricity_tariffs` có thể bảo vệ được bằng cách trích dẫn một
+văn bản pháp lý bên ngoài; `effective_from` trên `water_tariffs` thì
+không, và nên được giải thích là "khi cấu hình cố định của kỳ thi này
+được áp dụng," không phải "khi một biểu giá nước thật có hiệu lực."
 
-## Why SQL stays readable and direct
+## Vì sao SQL được giữ dễ đọc và trực tiếp
 
-Every constraint above is visible directly in
-`database/migrations/001_initial_domain_schema.sql` as plain
-`CREATE TABLE` statements with inline `CHECK`/`REFERENCES` clauses — not
-generated by a tool, not hidden behind an ORM's model decorators. The
-repository owner can read the migration top to bottom and know exactly
-what the database will enforce, with no indirection to trace through
-during an oral defense.
+Mọi ràng buộc ở trên đều hiển thị trực tiếp trong
+`database/migrations/001_initial_domain_schema.sql` dưới dạng các câu
+lệnh `CREATE TABLE` thuần với mệnh đề `CHECK`/`REFERENCES` inline —
+không do một công cụ sinh ra, không ẩn sau các decorator model của một
+ORM. Chủ repository có thể đọc migration từ đầu tới cuối và biết chính
+xác database sẽ ép buộc điều gì, không có tầng gián tiếp nào cần lần
+theo khi bảo vệ trực tiếp.
 
-## Why no ORM
+## Vì sao không dùng ORM
 
-See `docs/LEARNING_NOTES.md` ("Vì sao dùng SQL trực tiếp, chưa dùng
-ORM") for the full reasoning. In short: an ORM's main value here (mapping
-rows to objects, generating queries) is not worth the cost of an
-additional abstraction layer to learn, explain, and debug, for a project
-whose owner needs to be able to explain every generated query personally.
-Direct SQL, isolated behind Repository modules once they exist, achieves
-the persistence-isolation goal without that added layer.
+Xem `docs/LEARNING_NOTES.md` ("Vì sao dùng SQL trực tiếp, chưa dùng
+ORM") để biết lý do đầy đủ. Tóm gọn: giá trị chính của một ORM ở đây
+(ánh xạ dòng thành object, tự sinh query) không đáng chi phí của một
+tầng trừu tượng bổ sung phải học, giải thích, và debug, với một dự án
+mà chủ của nó cần tự giải thích được mọi query được sinh ra. SQL trực
+tiếp, cô lập sau các module Repository, đạt được mục tiêu cô lập
+persistence mà không cần tầng bổ sung đó.
 
-## Why no triggers or stored procedures yet
+## Vì sao chưa dùng trigger hay stored procedure
 
-The task brief for this schema explicitly avoids both, and the reasoning
-holds beyond just "the brief said so": triggers and stored procedures
-move logic *into* the database, invisible to anyone reading the
-TypeScript codebase, and harder to unit test than a plain TypeScript
-function. This project's Calculation Core is deliberately kept as
-database-independent TypeScript specifically so calculation logic stays
-visible, testable, and debuggable in one place (see
-`docs/ARCHITECTURE.md`). The two cross-field business rules this schema
-does *not* enforce (`water_reading_id` required for
-`PER_CUBIC_METER`; rollover-aware reading comparisons) are exactly the
-kind of rule that would otherwise tempt a trigger — they are deferred to
-the Service layer instead, for the same reason.
+Đề bài cho schema này tường minh tránh cả hai, và lý do vẫn đúng ngoài
+việc "đề bài nói vậy": trigger và stored procedure đưa logic *vào
+trong* database, vô hình với bất kỳ ai đọc codebase TypeScript, và khó
+unit-test hơn một hàm TypeScript thuần. Calculation Core của dự án này
+cố ý được giữ là TypeScript độc lập với database chính vì để logic
+tính toán luôn hiển thị, test được, và debug được ở một chỗ (xem
+`docs/ARCHITECTURE.md`). Hai quy tắc nghiệp vụ liên-field mà schema này
+*không* ép buộc (`water_reading_id` bắt buộc cho `PER_CUBIC_METER`; so
+sánh chỉ số có nhận biết rollover) chính xác là kiểu quy tắc mà nếu
+không sẽ dụ dỗ dùng trigger — chúng được hoãn lại cho tầng Service, vì
+cùng lý do đó.

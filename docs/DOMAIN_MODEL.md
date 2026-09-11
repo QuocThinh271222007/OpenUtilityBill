@@ -1,18 +1,12 @@
 # Domain Model
 
-This document explains the business entities OpenUtilityBill represents,
-why each one exists, and how they relate. It complements
-[`docs/DATABASE_DESIGN.md`](DATABASE_DESIGN.md) (schema-level reasoning)
-and [`docs/TRANSACTIONS.md`](TRANSACTIONS.md) (transaction boundaries).
+Tài liệu này giải thích các thực thể nghiệp vụ mà OpenUtilityBill biểu
+diễn, vì sao mỗi thực thể tồn tại, và chúng liên hệ với nhau như thế
+nào. Tài liệu bổ sung cho
+[`docs/DATABASE_DESIGN.md`](DATABASE_DESIGN.md) (lý do ở mức schema)
+và [`docs/TRANSACTIONS.md`](TRANSACTIONS.md) (ranh giới transaction).
 
-This task introduces **domain types only**
-(`backend/src/modules/<domain>/<domain>.model.ts`) and the matching
-database schema. No Controller, Route, Service, or Repository exists yet
-for these domains — see `docs/ARCHITECTURE.md` for why that boundary
-matters, and section 38 of the task brief for what is deliberately not
-implemented yet.
-
-## ASCII domain diagram
+## Sơ đồ domain (ASCII)
 
 ```
 RentalProperty
@@ -21,7 +15,7 @@ RentalProperty
     │ N
    Room
     │
-    ├──── N MeterReading   (one per room + billing_period + utility_type)
+    ├──── N MeterReading   (một cho mỗi room + billing_period + utility_type)
     │
     └──── N Invoice
               │
@@ -33,239 +27,242 @@ ElectricityTariff
        │ N
 ElectricityTariffTier
 
-WaterTariff   (standalone — PER_CUBIC_METER and PER_PERSON both live here)
+WaterTariff   (độc lập — cả PER_CUBIC_METER và PER_PERSON đều nằm ở đây)
 
-Invoice ───references───▶ ElectricityTariff (electricityTariffId)
-Invoice ───references───▶ WaterTariff (waterTariffId)
-Invoice ───references───▶ MeterReading (electricityReadingId, required)
-Invoice ───references───▶ MeterReading (waterReadingId, optional)
+Invoice ───tham chiếu───▶ ElectricityTariff (electricityTariffId)
+Invoice ───tham chiếu───▶ WaterTariff (waterTariffId)
+Invoice ───tham chiếu───▶ MeterReading (electricityReadingId, bắt buộc)
+Invoice ───tham chiếu───▶ MeterReading (waterReadingId, tuỳ chọn)
 ```
 
-Relationships are expressed as **foreign key IDs** (`roomId: number`,
-`tariffId: number`, ...), never as nested/embedded objects. See
-"No circular dependencies" below.
+Quan hệ được biểu diễn dưới dạng **ID khoá ngoại** (`roomId: number`,
+`tariffId: number`, ...), không bao giờ dưới dạng object lồng
+nhau/nhúng vào nhau. Xem "Không có phụ thuộc vòng tròn" bên dưới.
 
 ## RentalProperty
 
 - **File:** `backend/src/modules/property/property.model.ts`
-- **Table:** `rental_properties`
-- **Responsibility:** represents one rental establishment (e.g. one
-  boarding house).
-- **Key fields:** `id`, `name`, `address` (nullable), `createdAt`.
-- **Relationships:** parent of `Room` (1 → N).
-- **Invariant:** `name` is required (`NOT NULL`).
-- **Why it exists separately:** it is the root of the property → room
-  hierarchy. Keeping it a distinct entity (rather than a free-text field
-  on `Room`) lets one property own many rooms without duplicating
-  property-level data (name, address) on every room row.
+- **Bảng:** `rental_properties`
+- **Trách nhiệm:** biểu diễn một cơ sở cho thuê trọ (ví dụ một khu
+  trọ).
+- **Field chính:** `id`, `name`, `address` (nullable), `createdAt`.
+- **Quan hệ:** cha của `Room` (1 → N).
+- **Bất biến:** `name` bắt buộc (`NOT NULL`).
+- **Vì sao tồn tại riêng:** nó là gốc của hệ phân cấp property → room.
+  Giữ nó là một thực thể riêng biệt (thay vì một field text tự do trên
+  `Room`) cho phép một property sở hữu nhiều room mà không lặp lại dữ
+  liệu cấp property (tên, địa chỉ) trên từng dòng room.
 
 ## Room
 
 - **File:** `backend/src/modules/room/room.model.ts`
-- **Table:** `rooms`
-- **Responsibility:** the actual billable unit — every meter reading and
-  invoice belongs to a room, not directly to a property.
-- **Key fields:** `id`, `propertyId`, `name`, `tenantCount`, `createdAt`.
-- **Relationships:** belongs to one `RentalProperty`; parent of
-  `MeterReading` and `Invoice` (1 → N each).
-- **Invariant:** `tenantCount >= 0`; `name` is unique *within its
-  property* (`UNIQUE (propertyId, name)`) — not globally unique. Two
-  different properties may each have a room named "101"; the same
-  property may not have two.
-- **Why it exists separately:** a `RentalProperty` is not itself
-  billable — a `Room` is. Splitting them lets a property have many
-  independently-billed rooms with their own tenant counts and reading
-  history.
+- **Bảng:** `rooms`
+- **Trách nhiệm:** đơn vị thực sự được tính tiền — mọi chỉ số công tơ
+  và hoá đơn thuộc về một room, không thuộc trực tiếp về một property.
+- **Field chính:** `id`, `propertyId`, `name`, `tenantCount`,
+  `createdAt`.
+- **Quan hệ:** thuộc về một `RentalProperty`; cha của `MeterReading` và
+  `Invoice` (mỗi loại 1 → N).
+- **Bất biến:** `tenantCount >= 0`; `name` duy nhất *trong phạm vi
+  property của nó* (`UNIQUE (propertyId, name)`) — không duy nhất toàn
+  cục. Hai property khác nhau có thể mỗi cái đều có một room tên
+  "101"; cùng một property thì không thể có hai.
+- **Vì sao tồn tại riêng:** bản thân một `RentalProperty` không thể
+  tính tiền — một `Room` mới có thể. Tách chúng ra cho phép một
+  property có nhiều room được tính tiền độc lập, mỗi room có số người ở
+  và lịch sử chỉ số riêng.
 
-**Important:** `tenantCount` is **current state**. It changes whenever
-the landlord updates it in the app. A historical invoice must not be
-affected by that change — see `Invoice.tenantCountUsed` below and
-"Historical snapshot principle" in `docs/DATABASE_DESIGN.md`.
+**Quan trọng:** `tenantCount` là **trạng thái hiện tại**. Nó thay đổi
+mỗi khi chủ trọ cập nhật trong ứng dụng. Một hoá đơn lịch sử không được
+bị ảnh hưởng bởi thay đổi đó — xem `Invoice.tenantCountUsed` bên dưới
+và "Nguyên tắc snapshot lịch sử" trong `docs/DATABASE_DESIGN.md`.
 
 ## MeterReading
 
 - **File:** `backend/src/modules/meter-reading/meter-reading.model.ts`
-- **Table:** `meter_readings`
-- **Responsibility:** the raw previous/current meter values for one room,
-  one utility (`ELECTRICITY` or `WATER`), one billing period.
-- **Key fields:** `id`, `roomId`, `billingPeriod`, `utilityType`,
+- **Bảng:** `meter_readings`
+- **Trách nhiệm:** giá trị công tơ thô trước/hiện tại cho một room, một
+  loại tiện ích (`ELECTRICITY` hoặc `WATER`), một kỳ billing.
+- **Field chính:** `id`, `roomId`, `billingPeriod`, `utilityType`,
   `previousReading`, `currentReading`, `meterMaximumValue` (nullable),
   `createdAt`.
-- **Relationships:** belongs to one `Room`; referenced by `Invoice`
+- **Quan hệ:** thuộc về một `Room`; được `Invoice` tham chiếu
   (`electricityReadingId`, `waterReadingId`).
-- **Invariant:** exactly one reading per
-  `(roomId, billingPeriod, utilityType)`; `billingPeriod` must be the
-  first day of its month; `previousReading >= 0`, `currentReading >= 0`,
-  `meterMaximumValue > 0` when present; when `meterMaximumValue` is
-  present, both `previousReading` and `currentReading` must be `<=` it
-  (a reading above the meter's own declared maximum is physically
-  impossible — this is a simple bounds check, not a rollover
-  calculation; see `docs/DATABASE_DESIGN.md` "Meter maximum value").
-- **Why it exists separately:** electricity and water both need "a
-  previous and current reading for a room in a month," differing only in
-  `utilityType`. A single normalized table avoids two near-duplicate
-  tables (`electricity_readings`, `water_readings`) or unrelated columns
-  crammed into one row.
+- **Bất biến:** đúng một reading cho mỗi
+  `(roomId, billingPeriod, utilityType)`; `billingPeriod` phải là ngày
+  đầu tiên của tháng đó; `previousReading >= 0`, `currentReading >= 0`,
+  `meterMaximumValue > 0` khi có; khi `meterMaximumValue` có giá trị,
+  cả `previousReading` lẫn `currentReading` phải `<=` giá trị đó (một
+  chỉ số vượt quá mức tối đa do chính công tơ khai báo là bất khả thi
+  về mặt vật lý — đây chỉ là kiểm tra biên đơn giản, không phải phép
+  tính rollover; xem `docs/DATABASE_DESIGN.md` mục "Giá trị tối đa của
+  công tơ").
+- **Vì sao tồn tại riêng:** cả điện lẫn nước đều cần "một chỉ số trước
+  và hiện tại cho một room trong một tháng", chỉ khác nhau ở
+  `utilityType`. Một bảng chuẩn hoá duy nhất tránh được hai bảng gần
+  như trùng lặp (`electricity_readings`, `water_readings`) hay các cột
+  không liên quan bị nhồi vào chung một dòng.
 
-**Deliberately not represented yet:** meter rollover calculation (what
-happens when `currentReading` wraps past `meterMaximumValue`). The schema
-keeps `meterMaximumValue` so Calculation Core can implement that later —
-this task only preserves the data, not the formula.
+**Cố ý chưa biểu diễn:** phép tính rollover công tơ (điều gì xảy ra khi
+`currentReading` vòng qua vượt `meterMaximumValue`). Schema giữ lại
+`meterMaximumValue` để Calculation Core có thể cài đặt điều đó sau này.
 
 ## ElectricityTariff
 
 - **File:** `backend/src/modules/tariff/tariff.model.ts`
-- **Table:** `electricity_tariffs`
-- **Responsibility:** one *version* of electricity billing configuration
-  — VAT rate, the quota parameter, and the fallback-method tier number.
-- **Key fields:** `id`, `name`, `effectiveFrom`, `effectiveTo` (nullable),
-  `electricityVatRate`, `peoplePerQuotaUnit`, `fallbackTierNumber`,
-  `createdAt`.
-- **Relationships:** parent of `ElectricityTariffTier` (1 → N);
-  referenced by `Invoice.electricityTariffId`.
-- **Invariant:** `effectiveTo >= effectiveFrom` when `effectiveTo` is
-  set; unique per `(name, effectiveFrom)`; `0 <= electricityVatRate <=
-  1` (a decimal fraction, e.g. `0.08` for 8% — see `docs/DATABASE_DESIGN.md`
-  "Rates are stored as decimal fractions in [0, 1]").
-- **Why it exists separately from ElectricityTariffTier:** the tariff
-  holds configuration that applies once per version (VAT, quota
-  parameter, fallback tier number); the tiers are a variable-length list
-  that belongs *under* a specific version. Keeping them separate is what
-  makes the tier count data-driven — see `ElectricityTariffTier` below.
+- **Bảng:** `electricity_tariffs`
+- **Trách nhiệm:** một *phiên bản* cấu hình tính tiền điện — mức VAT,
+  tham số định mức, và số tier dùng cho phương pháp fallback.
+- **Field chính:** `id`, `name`, `effectiveFrom`, `effectiveTo`
+  (nullable), `electricityVatRate`, `peoplePerQuotaUnit`,
+  `fallbackTierNumber`, `createdAt`.
+- **Quan hệ:** cha của `ElectricityTariffTier` (1 → N); được
+  `Invoice.electricityTariffId` tham chiếu.
+- **Bất biến:** `effectiveTo >= effectiveFrom` khi `effectiveTo` có
+  giá trị; duy nhất theo `(name, effectiveFrom)`; `0 <=
+  electricityVatRate <= 1` (một phân số thập phân, ví dụ `0.08` cho
+  8% — xem `docs/DATABASE_DESIGN.md` mục "Tỷ lệ được lưu dưới dạng
+  phân số thập phân trong [0, 1]").
+- **Vì sao tồn tại riêng biệt với ElectricityTariffTier:** tariff giữ
+  cấu hình áp dụng một lần cho mỗi phiên bản (VAT, tham số định mức, số
+  tier fallback); các tier là một danh sách độ dài biến đổi thuộc *bên
+  dưới* một phiên bản cụ thể. Tách riêng chúng là điều khiến số lượng
+  tier trở thành dữ liệu-điều-khiển — xem `ElectricityTariffTier` bên
+  dưới.
 
 ## ElectricityTariffTier
 
 - **File:** `backend/src/modules/tariff/tariff.model.ts`
-- **Table:** `electricity_tariff_tiers`
-- **Responsibility:** one pricing tier (threshold + unit price) within
-  one `ElectricityTariff`.
-- **Key fields:** `id`, `tariffId`, `tierNumber`, `thresholdKwh`
+- **Bảng:** `electricity_tariff_tiers`
+- **Trách nhiệm:** một bậc giá (ngưỡng + đơn giá) bên trong một
+  `ElectricityTariff`.
+- **Field chính:** `id`, `tariffId`, `tierNumber`, `thresholdKwh`
   (nullable), `unitPrice`.
-- **Relationships:** belongs to one `ElectricityTariff`.
-- **Invariant:** unique per `(tariffId, tierNumber)`; `tierNumber > 0`;
-  `thresholdKwh > 0` when not `NULL`.
-- **Why it exists separately:** if tier prices were columns
-  (`tier1_price`, `tier2_price`, ...) on `electricity_tariffs`, the
-  number of tiers would be fixed by the schema — changing it would mean
-  an `ALTER TABLE`. As a child table (one row per tier), the tier count
-  is entirely data: inserting or deleting a row changes it, with no code
-  or schema change. `thresholdKwh = NULL` is the documented convention
-  for "the final tier, unlimited remaining usage."
+- **Quan hệ:** thuộc về một `ElectricityTariff`.
+- **Bất biến:** duy nhất theo `(tariffId, tierNumber)`; `tierNumber >
+  0`; `thresholdKwh > 0` khi không `NULL`.
+- **Vì sao tồn tại riêng:** nếu giá các tier là các cột
+  (`tier1_price`, `tier2_price`, ...) trên `electricity_tariffs`, số
+  lượng tier sẽ bị cố định bởi schema — thay đổi nó nghĩa là phải
+  `ALTER TABLE`. Là một bảng con (một dòng cho mỗi tier), số lượng tier
+  hoàn toàn là dữ liệu: insert hay xoá một dòng thay đổi nó, không cần
+  đổi code hay schema. `thresholdKwh = NULL` là quy ước đã ghi rõ cho
+  "tier cuối cùng, sản lượng còn lại không giới hạn".
 
 ## WaterTariff
 
 - **File:** `backend/src/modules/tariff/tariff.model.ts`
-- **Table:** `water_tariffs`
-- **Responsibility:** one version of water billing configuration,
-  supporting both billing methods this competition requires.
-- **Key fields:** `id`, `name`, `effectiveFrom`, `effectiveTo`
+- **Bảng:** `water_tariffs`
+- **Trách nhiệm:** một phiên bản cấu hình tính tiền nước, hỗ trợ cả hai
+  phương pháp tính mà đề thi này yêu cầu.
+- **Field chính:** `id`, `name`, `effectiveFrom`, `effectiveTo`
   (nullable), `pricePerCubicMeter`, `pricePerPerson`, `vatRate`,
   `environmentalFeeRate`, `createdAt`.
-- **Relationships:** referenced by `Invoice.waterTariffId`.
-- **Invariant:** `effectiveTo >= effectiveFrom` when set; unique per
-  `(name, effectiveFrom)`; `0 <= vatRate <= 1` and
-  `0 <= environmentalFeeRate <= 1` (decimal fractions — see
-  `docs/DATABASE_DESIGN.md` "Rates are stored as decimal fractions in
-  [0, 1]"). `pricePerCubicMeter`/`pricePerPerson` are currency amounts,
-  not rates, and have no such upper bound.
-- **Why it exists separately (and why it isn't split further):**
-  `PER_CUBIC_METER` and `PER_PERSON` are two *billing methods* of the
-  same configuration version, not two independent systems — both share
-  the same VAT rate, environmental fee rate, and effective dates. One
-  table avoids duplicating that shared configuration into two tables
-  that would always need to change together.
+- **Quan hệ:** được `Invoice.waterTariffId` tham chiếu.
+- **Bất biến:** `effectiveTo >= effectiveFrom` khi có giá trị; duy
+  nhất theo `(name, effectiveFrom)`; `0 <= vatRate <= 1` và
+  `0 <= environmentalFeeRate <= 1` (phân số thập phân — xem
+  `docs/DATABASE_DESIGN.md` mục "Tỷ lệ được lưu dưới dạng phân số thập
+  phân trong [0, 1]"). `pricePerCubicMeter`/`pricePerPerson` là số tiền
+  tệ, không phải tỷ lệ, nên không có giới hạn trên như vậy.
+- **Vì sao tồn tại riêng (và vì sao không tách nhỏ hơn nữa):**
+  `PER_CUBIC_METER` và `PER_PERSON` là hai *phương pháp tính* của cùng
+  một phiên bản cấu hình, không phải hai hệ thống độc lập — cả hai
+  dùng chung mức VAT, phí môi trường, và ngày hiệu lực. Một bảng duy
+  nhất tránh lặp lại cấu hình dùng chung đó thành hai bảng vốn luôn
+  phải đổi cùng nhau.
 
 ## Invoice
 
 - **File:** `backend/src/modules/invoice/invoice.model.ts`
-- **Table:** `invoices`
-- **Responsibility:** the historical billing result for one room, one
-  billing period.
-- **Key fields:** `id`, `roomId`, `billingPeriod`, `tenantCountUsed`,
+- **Bảng:** `invoices`
+- **Trách nhiệm:** kết quả tính hoá đơn lịch sử cho một room, một kỳ
+  billing.
+- **Field chính:** `id`, `roomId`, `billingPeriod`, `tenantCountUsed`,
   `electricityTariffId`, `waterTariffId`, `electricityBillingMethod`,
   `waterBillingMethod`, `electricityReadingId`, `waterReadingId`
   (nullable), `calculatedTotal`, `actualChargedAmount` (nullable),
   `createdAt`.
-- **Relationships:** belongs to one `Room`; references one
-  `ElectricityTariff`, one `WaterTariff`, one electricity `MeterReading`,
-  and optionally one water `MeterReading`; parent of `InvoiceItem`
-  (1 → N).
-- **Invariant:** unique per `(roomId, billingPeriod)`; `calculatedTotal
-  >= 0`; `actualChargedAmount >= 0` when present.
-- **Why it exists separately:** it is the durable record of "what was
-  actually billed and why" — see "Historical snapshot principle" below.
-- **Why there is no `differenceAmount` field:** the difference between
-  what was actually charged and what was calculated
-  (`actualChargedAmount - calculatedTotal`) is fully derived from those
-  two persisted fields. Storing a third field for a derived value risks
-  it going stale — if `actualChargedAmount` is corrected later, a
-  previously stored `differenceAmount` would silently become wrong
-  unless something remembers to update it too. The single source of
-  truth is `calculatedTotal` and `actualChargedAmount`; the difference
-  is computed on demand by the Service/Calculation layer when needed for
-  display, not persisted. See "Derived values are not persisted" in
+- **Quan hệ:** thuộc về một `Room`; tham chiếu một `ElectricityTariff`,
+  một `WaterTariff`, một `MeterReading` điện, và tuỳ chọn một
+  `MeterReading` nước; cha của `InvoiceItem` (1 → N).
+- **Bất biến:** duy nhất theo `(roomId, billingPeriod)`;
+  `calculatedTotal >= 0`; `actualChargedAmount >= 0` khi có.
+- **Vì sao tồn tại riêng:** đây là bản ghi bền vững của "thực sự đã
+  tính tiền gì và vì sao" — xem "Nguyên tắc snapshot lịch sử" bên dưới.
+- **Vì sao không có field `differenceAmount`:** chênh lệch giữa số
+  tiền thực thu và số tiền đã tính (`actualChargedAmount -
+  calculatedTotal`) hoàn toàn được suy ra từ hai field đã lưu đó. Lưu
+  thêm một field thứ ba cho một giá trị suy ra có nguy cơ trở nên lỗi
+  thời — nếu `actualChargedAmount` được sửa lại sau này, một
+  `differenceAmount` đã lưu trước đó sẽ âm thầm trở nên sai trừ khi có
+  gì đó nhớ cập nhật nó theo. Nguồn sự thật duy nhất là
+  `calculatedTotal` và `actualChargedAmount`; chênh lệch được tính theo
+  yêu cầu bởi tầng Service/Calculation khi cần hiển thị, không được
+  lưu trữ. Xem mục "Giá trị suy ra không được lưu trữ" trong
   `docs/DATABASE_DESIGN.md`.
 
 ## InvoiceItem
 
 - **File:** `backend/src/modules/invoice/invoice.model.ts`
-- **Table:** `invoice_items`
-- **Responsibility:** one line of an invoice's breakdown (e.g. "Tier 2:
-  50 kWh × 2050 VND", "Electricity VAT: 8%").
-- **Key fields:** `id`, `invoiceId`, `category`, `tierNumber` (nullable),
-  `quantity` (nullable), `unitName` (nullable), `unitPrice` (nullable),
-  `amount`, `description` (nullable), `displayOrder`.
-- **Relationships:** belongs to one `Invoice`.
-- **Invariant:** unique per `(invoiceId, displayOrder)`; `tierNumber >
-  0` when present; `unitPrice >= 0` when present.
-- **Why it exists separately:** an `Invoice` only has a
-  `calculatedTotal` — a single number cannot explain itself. Splitting
-  the breakdown into relational rows (rather than one JSON column) keeps
-  it directly queryable and inspectable with plain SQL, per
+- **Bảng:** `invoice_items`
+- **Trách nhiệm:** một dòng trong breakdown của hoá đơn (ví dụ "Bậc 2:
+  50 kWh × 2050 VND", "VAT điện: 8%").
+- **Field chính:** `id`, `invoiceId`, `category`, `tierNumber`
+  (nullable), `quantity` (nullable), `unitName` (nullable), `unitPrice`
+  (nullable), `amount`, `description` (nullable), `displayOrder`.
+- **Quan hệ:** thuộc về một `Invoice`.
+- **Bất biến:** duy nhất theo `(invoiceId, displayOrder)`;
+  `tierNumber > 0` khi có; `unitPrice >= 0` khi có.
+- **Vì sao tồn tại riêng:** một `Invoice` chỉ có một
+  `calculatedTotal` — một con số đơn không thể tự giải thích chính nó.
+  Tách breakdown thành các dòng quan hệ (thay vì một cột JSON) giữ cho
+  nó truy vấn và kiểm tra được trực tiếp bằng SQL thuần, theo
   `docs/DATABASE_DESIGN.md`.
 
-## Historical snapshot principle
+## Nguyên tắc snapshot lịch sử
 
-Two kinds of data appear in this schema, and they are **not** the same
-thing even when they look similar:
+Hai loại dữ liệu xuất hiện trong schema này, và chúng **không** phải là
+một, dù trông có vẻ giống nhau:
 
-| Reference data (current state) | Historical snapshot (frozen at calculation time) |
+| Dữ liệu tham chiếu (trạng thái hiện tại) | Snapshot lịch sử (đóng băng tại thời điểm tính toán) |
 |---|---|
 | `Room.tenantCount` | `Invoice.tenantCountUsed` |
-| `ElectricityTariff` / `WaterTariff` rows (may be superseded by a newer version later) | `Invoice.electricityTariffId` / `waterTariffId` (points at the exact version used) |
-| — | `InvoiceItem.unitPrice` (the price actually applied to that line, at that time) |
+| Dòng `ElectricityTariff` / `WaterTariff` (có thể bị thay thế bởi phiên bản mới hơn sau này) | `Invoice.electricityTariffId` / `waterTariffId` (trỏ đúng phiên bản đã dùng) |
+| — | `InvoiceItem.unitPrice` (giá thực sự áp dụng cho dòng đó, tại thời điểm đó) |
 
-This is **intentional duplication**, not a normalization mistake. If
-`Invoice` only stored `roomId` and looked up "the current tenant count"
-or "the current tariff" every time it was displayed, editing the room or
-adding a new tariff version later would silently change the amount on an
-old, already-issued invoice. For a utility-billing transparency app, that
-would be a correctness bug, not a storage optimization. Snapshotting the
-values actually used at calculation time is what makes an invoice
-**historically stable** — see `docs/DATABASE_DESIGN.md` for the same
-principle applied at the schema/constraint level.
+Đây là **sự trùng lặp có chủ đích**, không phải một lỗi chuẩn hoá. Nếu
+`Invoice` chỉ lưu `roomId` và tra "số người ở hiện tại" hay "biểu giá
+hiện tại" mỗi lần được hiển thị, việc sửa room hay thêm một phiên bản
+tariff mới sau này sẽ âm thầm thay đổi số tiền trên một hoá đơn cũ đã
+phát hành. Với một ứng dụng minh bạch hoá đơn tiện ích, đó sẽ là một
+lỗi tính đúng đắn (correctness bug), không phải tối ưu lưu trữ.
+Snapshot lại các giá trị thực sự dùng tại thời điểm tính toán là điều
+khiến một hoá đơn **ổn định về mặt lịch sử** — xem `docs/DATABASE_DESIGN.md`
+để thấy cùng nguyên tắc này áp dụng ở mức schema/ràng buộc.
 
-## No circular dependencies
+## Không có phụ thuộc vòng tròn
 
-Every relationship above is expressed as a plain numeric ID
-(`roomId: number`, `tariffId: number`, ...), never as a nested/embedded
-object graph (`room.property.rooms[0].property...`). This keeps each
-model:
+Mọi quan hệ ở trên được biểu diễn dưới dạng một ID số thuần
+(`roomId: number`, `tariffId: number`, ...), không bao giờ dưới dạng
+một đồ thị object lồng nhau/nhúng vào nhau
+(`room.property.rooms[0].property...`). Điều này giữ cho mỗi model:
 
-- Independently serializable to JSON without cycles.
-- Independently understandable — reading `room.model.ts` never requires
-  also reading `property.model.ts`.
-- Free of import cycles between modules (`room.model.ts` does not import
-  `property.model.ts`, and vice versa; only `invoice.model.ts` imports
-  billing-method types from `tariff.model.ts`, a one-directional
-  dependency).
+- Serialize sang JSON độc lập mà không có chu trình.
+- Hiểu được độc lập — đọc `room.model.ts` không bao giờ cần đọc thêm
+  `property.model.ts`.
+- Không có chu trình import giữa các module (`room.model.ts` không
+  import `property.model.ts`, và ngược lại; chỉ `invoice.model.ts`
+  import các type phương pháp tính tiền từ `tariff.model.ts`, một phụ
+  thuộc một chiều).
 
-## Why recursion is unnecessary here
+## Vì sao không cần đệ quy ở đây
 
-None of these entities form a recursive/self-referential structure (no
-entity references "many of its own kind" the way a folder tree or a
-comment thread would). Every relationship is a flat foreign-key
-reference to a *different* entity type. TypeScript and SQL both support
-recursion, but there is nothing recursive to model — plain foreign keys
-are simpler and sufficient. See `docs/LEARNING_NOTES.md` for the same
-reasoning applied to tariff tier iteration.
+Không có thực thể nào trong số này tạo thành một cấu trúc đệ quy/tự
+tham chiếu (không có thực thể nào tham chiếu "nhiều bản thể cùng loại
+của chính nó" theo cách một cây thư mục hay một luồng bình luận sẽ
+làm). Mọi quan hệ đều là một tham chiếu khoá ngoại phẳng tới một *loại*
+thực thể *khác*. Cả TypeScript lẫn SQL đều hỗ trợ đệ quy, nhưng không
+có gì mang tính đệ quy để mô hình hoá ở đây — khoá ngoại thuần đơn giản
+hơn và đã đủ dùng. Xem `docs/LEARNING_NOTES.md` để thấy cùng lý do này
+áp dụng cho việc lặp qua các tier biểu giá.

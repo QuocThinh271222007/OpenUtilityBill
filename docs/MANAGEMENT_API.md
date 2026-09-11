@@ -1,49 +1,49 @@
 # Management API
 
-This document is the REST contract for the backend management
-endpoints — rental properties, rooms, meter readings, and tariff
-(electricity + water) configuration. It complements `docs/API.md`
-(the invoice workflow endpoints and shared conventions: base path,
-ID/decimal-string contract, success/error contract) — read that
-document first; this one only covers what is specific to management.
+Tài liệu này là hợp đồng REST cho các endpoint quản lý của backend —
+rental property, room, meter reading, và cấu hình tariff (điện + nước).
+Nó bổ sung cho `docs/API.md` (các endpoint workflow hoá đơn và các quy
+ước dùng chung: base path, hợp đồng ID/chuỗi thập phân, hợp đồng thành
+công/lỗi) — hãy đọc tài liệu đó trước; tài liệu này chỉ bao phủ những gì
+riêng cho quản lý.
 
-**No frontend consumes this API yet.** These endpoints exist so a
-future frontend can create/edit properties and rooms, set tenant
-count, enter and inspect meter readings, and configure tariffs, then
-call the existing `POST`/`GET /api/v1/invoices` — implementing that
-frontend is a separate, later task.
+Các endpoint này tồn tại để một frontend có thể tạo/sửa property và
+room, đặt số người ở, nhập và xem chỉ số công tơ, và cấu hình tariff,
+rồi gọi `POST`/`GET /api/v1/invoices` sẵn có. Giao diện trình duyệt
+bắt buộc (`docs/FRONTEND.md`) nay tiêu thụ toàn bộ các endpoint này.
 
-## Endpoints
+## Các endpoint
 
-| Resource | List | Create | Update | Delete |
+| Tài nguyên | List | Create | Update | Delete |
 |---|---|---|---|---|
-| Properties | `GET /api/v1/properties` | `POST /api/v1/properties` | `PATCH /api/v1/properties/:propertyId` | not implemented |
-| Rooms | `GET /api/v1/rooms` (`?propertyId=` optional) | `POST /api/v1/rooms` | `PATCH /api/v1/rooms/:roomId` | not implemented |
-| Meter readings | `GET /api/v1/meter-readings?roomId=` (`&billingPeriod=` optional) | `POST /api/v1/meter-readings` | `PUT /api/v1/meter-readings/:readingId` | not implemented |
-| Electricity tariffs | `GET /api/v1/tariffs/electricity` | `POST /api/v1/tariffs/electricity` | `PUT /api/v1/tariffs/electricity/:tariffId` | not implemented |
-| Water tariffs | `GET /api/v1/tariffs/water` | `POST /api/v1/tariffs/water` | `PUT /api/v1/tariffs/water/:tariffId` | not implemented |
+| Properties | `GET /api/v1/properties` | `POST /api/v1/properties` | `PATCH /api/v1/properties/:propertyId` | chưa cài đặt |
+| Rooms | `GET /api/v1/rooms` (`?propertyId=` tuỳ chọn) | `POST /api/v1/rooms` | `PATCH /api/v1/rooms/:roomId` | chưa cài đặt |
+| Meter readings | `GET /api/v1/meter-readings?roomId=` (`&billingPeriod=` tuỳ chọn) | `POST /api/v1/meter-readings` | `PUT /api/v1/meter-readings/:readingId` | chưa cài đặt |
+| Electricity tariffs | `GET /api/v1/tariffs/electricity` | `POST /api/v1/tariffs/electricity` | `PUT /api/v1/tariffs/electricity/:tariffId` | chưa cài đặt |
+| Water tariffs | `GET /api/v1/tariffs/water` | `POST /api/v1/tariffs/water` | `PUT /api/v1/tariffs/water/:tariffId` | chưa cài đặt |
 
-## No DELETE endpoints (by design)
+## Không có endpoint DELETE (theo thiết kế)
 
-Rooms, meter readings, tariffs, and invoices form historical financial
-data relationships with `RESTRICT` foreign keys (see migration 001).
-Blind CRUD delete semantics would require product decisions this
-project has not made: deletion vs. archive, what happens to historical
-integrity when a referenced row is removed, whether a delete needs to
-be recoverable. None of those decisions are required for the mandatory
-contest scope, so DELETE is **deliberately not implemented** anywhere
-in this API — `DELETE_NOT_IMPLEMENTED_BY_DESIGN=true`. This is a
-management API for the fields the mandatory scope needs, not a claim of
-generic full CRUD.
+Room, meter reading, tariff, và invoice tạo thành các quan hệ dữ liệu
+tài chính lịch sử với khoá ngoại `RESTRICT` (xem migration 001). Ngữ
+nghĩa xoá CRUD mù quáng sẽ đòi hỏi các quyết định sản phẩm mà dự án này
+chưa đưa ra: xoá hẳn hay lưu trữ (archive), điều gì xảy ra với tính
+toàn vẹn lịch sử khi một dòng được tham chiếu bị xoá, một thao tác xoá
+có cần khôi phục được không. Không quyết định nào trong số đó là bắt
+buộc cho phạm vi kỳ thi, nên DELETE **cố ý chưa được cài đặt** ở bất kỳ
+đâu trong API này — `DELETE_NOT_IMPLEMENTED_BY_DESIGN=true`. Đây là một
+management API cho các field mà phạm vi bắt buộc cần, không phải một
+tuyên bố về CRUD đầy đủ tổng quát.
 
-## PATCH vs. PUT
+## PATCH so với PUT
 
-Properties and rooms use `PATCH` (partial update — only the fields
-present in the body change). Meter readings and tariffs use `PUT` (full
-replacement — the entire resource is re-specified), because a partial
-edit to a meter reading or a tariff's `tiers` array could easily create
-an inconsistent combination (e.g. changing only `currentReading` without
-re-checking it against an existing `meterMaximumValue`).
+Property và room dùng `PATCH` (cập nhật một phần — chỉ các field có
+mặt trong body mới thay đổi). Meter reading và tariff dùng `PUT` (thay
+thế toàn bộ — toàn bộ tài nguyên được chỉ định lại), vì một chỉnh sửa
+một phần cho một meter reading hay mảng `tiers` của một tariff có thể
+dễ dàng tạo ra một tổ hợp không nhất quán (ví dụ chỉ đổi
+`currentReading` mà không kiểm tra lại nó với `meterMaximumValue` sẵn
+có).
 
 ## Properties
 
@@ -53,16 +53,16 @@ re-checking it against an existing `meterMaximumValue`).
 { "name": "Khu trọ A", "address": "123 Đường X" }
 ```
 
-`address` may be `null`. Both `name` and `address` are trimmed;
-`PropertyManagementService` normalizes an empty/whitespace-only
-`address` (after trim) to `null` — an empty string and "no address"
-are the same thing, and the API does not keep two representations of
-it. `name` must not be empty after trim (`VALIDATION_ERROR`
-otherwise). Response `201`.
+`address` có thể là `null`. Cả `name` lẫn `address` đều được trim;
+`PropertyManagementService` chuẩn hoá một `address` rỗng/chỉ có
+khoảng trắng (sau trim) thành `null` — một chuỗi rỗng và "không có địa
+chỉ" là cùng một thứ, và API không giữ hai cách biểu diễn cho nó.
+`name` không được rỗng sau khi trim (`VALIDATION_ERROR` nếu không).
+Response `201`.
 
 ### `GET /api/v1/properties`
 
-Returns all properties, `ORDER BY id ASC` (deterministic — see
+Trả về mọi property, `ORDER BY id ASC` (xác định — xem
 `PropertyRepository.listAll`).
 
 ### `PATCH /api/v1/properties/:propertyId`
@@ -71,8 +71,8 @@ Returns all properties, `ORDER BY id ASC` (deterministic — see
 { "name": "Tên mới" }
 ```
 
-At least one of `name`/`address` must be present (`VALIDATION_ERROR`
-otherwise). `PROPERTY_NOT_FOUND` (`404`) when the id doesn't exist.
+Ít nhất một trong `name`/`address` phải có mặt (`VALIDATION_ERROR`
+nếu không). `PROPERTY_NOT_FOUND` (`404`) khi id không tồn tại.
 
 ## Rooms
 
@@ -82,17 +82,17 @@ otherwise). `PROPERTY_NOT_FOUND` (`404`) when the id doesn't exist.
 { "propertyId": "1", "name": "101", "tenantCount": 4 }
 ```
 
-`propertyId` must reference an existing property
-(`PROPERTY_NOT_FOUND`, checked before the write) — the Service does not
-rely on the foreign key failing to report this, since a clear
-not-found is more useful than a generic write error. `tenantCount` must
-be a JSON number that is a non-negative integer (`VALIDATION_ERROR`
-otherwise — never `Number(...)`-coerced from a string). Response `201`.
+`propertyId` phải tham chiếu một property đang tồn tại
+(`PROPERTY_NOT_FOUND`, kiểm tra trước khi ghi) — Service không trông
+cậy vào việc khoá ngoại thất bại để báo điều này, vì một not-found rõ
+ràng hữu ích hơn một lỗi ghi chung chung. `tenantCount` phải là một số
+JSON là số nguyên không âm (`VALIDATION_ERROR` nếu không — không bao
+giờ ép kiểu từ một chuỗi bằng `Number(...)`). Response `201`.
 
 ### `GET /api/v1/rooms` / `GET /api/v1/rooms?propertyId=1`
 
-`ORDER BY id ASC`. Without `propertyId`, returns every room across
-every property.
+`ORDER BY id ASC`. Không có `propertyId`, trả về mọi room qua mọi
+property.
 
 ### `PATCH /api/v1/rooms/:roomId`
 
@@ -100,31 +100,32 @@ every property.
 { "tenantCount": 5 }
 ```
 
-`propertyId` is **immutable** on `PATCH` — it does not appear in the
-update body's accepted fields at all. Moving a room between properties
-would introduce historical-reference questions (what happens to its
-past meter readings/invoices?) with no current requirement to justify
-the added complexity, so it is out of scope.
+`propertyId` **không đổi được** trên `PATCH` — nó hoàn toàn không xuất
+hiện trong tập field được chấp nhận của body update. Di chuyển một room
+giữa các property sẽ đặt ra các câu hỏi về tham chiếu lịch sử (điều gì
+xảy ra với các chỉ số công tơ/hoá đơn quá khứ của nó?) mà không có yêu
+cầu hiện tại nào đủ để biện minh cho độ phức tạp thêm vào, nên nó nằm
+ngoài phạm vi.
 
-### Duplicate room name protection
+### Chống trùng tên room
 
-`UNIQUE(property_id, name)` (migration 001) means a room name only has
-to be unique **within** one property — the same name in two different
-properties is fine. A violation on `create`/`PATCH` (renaming into a
-collision) is translated to `ROOM_ALREADY_EXISTS` (`409`), never a raw
-constraint error.
+`UNIQUE(property_id, name)` (migration 001) nghĩa là một tên room chỉ
+cần duy nhất **trong phạm vi** một property — cùng tên ở hai property
+khác nhau là ổn. Một vi phạm trên `create`/`PATCH` (đổi tên gây trùng)
+được dịch thành `ROOM_ALREADY_EXISTS` (`409`), không bao giờ là một lỗi
+ràng buộc thô.
 
-### Tenant count semantics — current state, not historical
+### Ngữ nghĩa số người ở — trạng thái hiện tại, không phải lịch sử
 
-`Room.tenantCount` is the room's **current** state. `PATCH`-ing it
-changes only that current value — it never rewrites any past invoice.
-`Invoice.tenantCountUsed` is the immutable historical snapshot taken at
-the moment that invoice was created (see
-`backend/src/modules/invoice/invoice.model.ts` "Why Invoice snapshots
-configuration" and `docs/CREATE_INVOICE_WORKFLOW.md` "Room snapshot").
-`RoomManagementService` never reads or writes the `invoices` table at
-all — this invariant holds simply because no code path here does the
-opposite, not because of an explicit guard.
+`Room.tenantCount` là trạng thái **hiện tại** của room. `PATCH` nó chỉ
+thay đổi giá trị hiện tại đó — nó không bao giờ ghi lại bất kỳ hoá đơn
+quá khứ nào. `Invoice.tenantCountUsed` là snapshot lịch sử bất biến
+chụp lại tại thời điểm hoá đơn đó được tạo (xem
+`backend/src/modules/invoice/invoice.model.ts` mục "Vì sao Invoice
+snapshot cấu hình" và `docs/CREATE_INVOICE_WORKFLOW.md` mục "Snapshot
+của room"). `RoomManagementService` không bao giờ đọc hay ghi bảng
+`invoices` — bất biến này đúng đơn giản vì không có đường code nào ở
+đây làm điều ngược lại, không phải vì một guard tường minh.
 
 ## Meter readings
 
@@ -141,72 +142,74 @@ opposite, not because of an explicit guard.
 }
 ```
 
-`billingPeriod` uses the **same strict `"YYYY-MM-DD"`, first-of-month**
-wire contract as invoices (`docs/API.md` "Date contract") — meter
-readings are billing-period-scoped data, unlike tariff effective dates
-(see "Tariff effective dates" below). `utilityType` is `"ELECTRICITY"`
-or `"WATER"`. Response `201`.
+`billingPeriod` dùng **cùng hợp đồng wire `"YYYY-MM-DD"` nghiêm ngặt,
+ngày đầu tháng** như invoice (`docs/API.md` mục "Hợp đồng ngày") — chỉ
+số công tơ là dữ liệu gắn theo kỳ billing, khác với ngày hiệu lực
+tariff (xem "Ngày hiệu lực tariff" bên dưới). `utilityType` là
+`"ELECTRICITY"` hoặc `"WATER"`. Response `201`.
 
-### Numeric contract (`NUMERIC(12, 2)`)
+### Hợp đồng số (`NUMERIC(12, 2)`)
 
-`previousReading`, `currentReading`, and `meterMaximumValue` (when not
-`null`) must be non-negative decimal strings with **at most 10 integer
-digits and 2 fractional digits** — matching `meter_readings`'s declared
-`NUMERIC(12, 2)` columns exactly, so nothing is silently rounded on
-write (the same class of defect fixed for invoices' `actualChargedAmount`
-— see `docs/CREATE_INVOICE_WORKFLOW.md` "actualChargedAmount scale
-corrective"). Never `Number(...)`/`parseFloat(...)`/`Math.round(...)`.
+`previousReading`, `currentReading`, và `meterMaximumValue` (khi khác
+`null`) phải là chuỗi thập phân không âm với **tối đa 10 chữ số nguyên
+và 2 chữ số thập phân** — khớp chính xác cột `NUMERIC(12, 2)` đã khai
+báo của `meter_readings`, để không có gì bị âm thầm làm tròn khi ghi
+(cùng loại lỗi đã sửa cho `actualChargedAmount` của invoice — xem
+`docs/CREATE_INVOICE_WORKFLOW.md` mục "Sửa lỗi scale
+actualChargedAmount"). Không bao giờ dùng
+`Number(...)`/`parseFloat(...)`/`Math.round(...)`.
 
-| Value | Result |
+| Giá trị | Kết quả |
 |---|---|
-| `"0"`, `"120"`, `"120.5"`, `"120.50"`, `"9999999999.99"` | valid |
+| `"0"`, `"120"`, `"120.5"`, `"120.50"`, `"9999999999.99"` | hợp lệ |
 | `"-1"`, `"12.345"`, `"10000000000"`, `"abc"` | `400 VALIDATION_ERROR` |
 
-### Rollover / reading-combination validity — reused, not reimplemented
+### Tính hợp lệ rollover / tổ hợp chỉ số — dùng lại, không cài đặt lại
 
-After the shape check above, `MeterReadingManagementService` calls the
-**existing** `calculateMeterUsage` (Calculation Core,
-`backend/src/calculation/meter/calculate-meter-usage.ts`) with the
-submitted `previousReading`/`currentReading`/`meterMaximumValue`, and
-discards the computed usage — it only needs to know whether the
-combination is valid (non-negative, `meterMaximumValue` positive when
-given, readings `<= meterMaximumValue`, rollover only accepted when
-`meterMaximumValue` is present). This is the exact same function
-`CreateInvoiceService` uses to compute real billing usage, so a reading
-accepted here is guaranteed usable by billing later — no second,
-possibly-divergent implementation of the rollover rule exists.
+Sau kiểm tra hình dạng ở trên, `MeterReadingManagementService` gọi
+`calculateMeterUsage` **sẵn có** (Calculation Core,
+`backend/src/calculation/meter/calculate-meter-usage.ts`) với
+`previousReading`/`currentReading`/`meterMaximumValue` đã submit, và bỏ
+qua sản lượng đã tính — nó chỉ cần biết tổ hợp đó có hợp lệ hay không
+(không âm, `meterMaximumValue` dương khi có, chỉ số `<=
+meterMaximumValue`, rollover chỉ được chấp nhận khi có
+`meterMaximumValue`). Đây chính xác là cùng một hàm mà
+`CreateInvoiceService` dùng để tính sản lượng tính tiền thật, nên một
+reading được chấp nhận ở đây được đảm bảo dùng được cho việc tính hoá
+đơn sau này — không có một cài đặt thứ hai, có thể lệch nhau, cho quy
+tắc rollover.
 
 ### `GET /api/v1/meter-readings?roomId=1` / `&billingPeriod=2026-09-01`
 
-Returns reading history for a room, `ORDER BY billing_period DESC,
-utility_type ASC, id ASC` — deterministic, never PostgreSQL's natural
-row order. The optional `billingPeriod` filter narrows to one period.
+Trả về lịch sử chỉ số cho một room, `ORDER BY billing_period DESC,
+utility_type ASC, id ASC` — xác định, không bao giờ dựa vào thứ tự
+hàng tự nhiên của PostgreSQL. Bộ lọc `billingPeriod` tuỳ chọn thu hẹp
+về một kỳ.
 
 ### `PUT /api/v1/meter-readings/:readingId`
 
-Full replacement — the same body shape as `POST`. Re-validated the same
-way (shape, then `calculateMeterUsage`).
+Thay thế toàn bộ — cùng hình dạng body như `POST`. Được validate lại
+theo cùng cách (hình dạng, rồi `calculateMeterUsage`).
 
-### Historical reference protection
+### Bảo vệ tham chiếu lịch sử
 
-Before writing a `PUT`, the Service checks
-`MeterReadingRepository.isReferencedByInvoice(id)` — `true` when this
-reading is any invoice's `electricity_reading_id` **or**
-`water_reading_id`. If so, the update is rejected with
-`METER_READING_IN_USE` (`409`). A meter reading that has already been
-used to legally calculate and persist a charged invoice must not
-silently change underneath that invoice — the invoice's evidentiary
-value depends on its source reading staying exactly what it was when
-the invoice was created. (`UNIQUE(room_id, billing_period,
-utility_type)` violations on `create`/`PUT` are separately translated
-to `METER_READING_ALREADY_EXISTS`, `409`.)
+Trước khi ghi một `PUT`, Service kiểm tra
+`MeterReadingRepository.isReferencedByInvoice(id)` — `true` khi reading
+này là `electricity_reading_id` **hoặc** `water_reading_id` của bất kỳ
+invoice nào. Nếu vậy, update bị từ chối với `METER_READING_IN_USE`
+(`409`). Một chỉ số công tơ đã được dùng để tính hợp pháp và lưu một
+hoá đơn đã tính tiền không được âm thầm thay đổi bên dưới hoá đơn đó —
+giá trị bằng chứng của hoá đơn phụ thuộc vào việc reading nguồn của nó
+giữ nguyên đúng như khi hoá đơn được tạo. (Vi phạm
+`UNIQUE(room_id, billing_period, utility_type)` trên `create`/`PUT`
+được dịch riêng thành `METER_READING_ALREADY_EXISTS`, `409`.)
 
 ## Electricity tariffs
 
-Electricity tariff configuration is an **aggregate**: one
-`electricity_tariffs` parent row plus N `electricity_tariff_tiers`
-child rows (data-driven — any number of tiers, no assumption of
-exactly 6). `create`/`update` write both atomically.
+Cấu hình tariff điện là một **aggregate**: một dòng cha
+`electricity_tariffs` cộng N dòng con `electricity_tariff_tiers` (dữ
+liệu-điều-khiển — bất kỳ số lượng tier nào, không giả định đúng 6).
+`create`/`update` ghi cả hai một cách nguyên tử.
 
 ### `POST /api/v1/tariffs/electricity`
 
@@ -225,17 +228,17 @@ exactly 6). `create`/`update` write both atomically.
 }
 ```
 
-No production default values — every price/rate/threshold in this
-example is illustrative input data, not a constant baked into
-production code (see "No hard-coded tariff constants" below). Response
-`201`, body includes the created tariff and its tiers (same shape as
-`GET`).
+Không có giá trị mặc định production nào — mọi giá/tỷ lệ/ngưỡng trong
+ví dụ này là dữ liệu input minh hoạ, không phải một hằng số đóng cứng
+trong code production (xem "Không hard-code hằng số tariff" bên dưới).
+Response `201`, body gồm tariff đã tạo và các tier của nó (cùng hình
+dạng với `GET`).
 
 ### `GET /api/v1/tariffs/electricity`
 
-Every tariff version, each with its ordered tiers:
-`ORDER BY effective_from DESC, id DESC` for tariffs, `ORDER BY
-tier_number ASC` for each tariff's tiers.
+Mọi phiên bản tariff, mỗi cái kèm các tier đã sắp xếp:
+`ORDER BY effective_from DESC, id DESC` cho tariff, `ORDER BY
+tier_number ASC` cho tier của mỗi tariff.
 
 ```json
 {
@@ -249,81 +252,85 @@ tier_number ASC` for each tariff's tiers.
 }
 ```
 
-`electricityVatRate`/`thresholdKwh`/`unitPrice` may come back at the
-column's declared `NUMERIC` scale (e.g. `"0.0800"`, `"50.00"`) — the
-same exact value, not reformatted (see `docs/API.md` "Financial
-values").
+`electricityVatRate`/`thresholdKwh`/`unitPrice` có thể trả về theo
+đúng scale đã khai báo của cột (ví dụ `"0.0800"`, `"50.00"`) — cùng
+một giá trị chính xác, không bị định dạng lại (xem `docs/API.md` mục
+"Giá trị tài chính").
 
 ### `PUT /api/v1/tariffs/electricity/:tariffId`
 
-Full replacement of the parent **and** the entire tier set: `name`,
+Thay thế toàn bộ cả parent **lẫn** toàn bộ tập tier: `name`,
 `effectiveFrom`, `effectiveTo`, `electricityVatRate`,
-`peoplePerQuotaUnit`, `fallbackTierNumber`, `tiers` (same body shape as
-`POST`). Only allowed when the tariff is not referenced by any invoice
-— see "Historical tariff protection" below.
+`peoplePerQuotaUnit`, `fallbackTierNumber`, `tiers` (cùng hình dạng
+body như `POST`). Chỉ được phép khi tariff chưa được bất kỳ invoice
+nào tham chiếu — xem "Bảo vệ tariff lịch sử" bên dưới.
 
-### Electricity tariff aggregate transaction
+### Transaction aggregate của tariff điện
 
-`ElectricityTariffManagementService.create`/`update` both write through
-`ElectricityTariffUnitOfWork.run(...)` — a small, single-method
-interface modeled directly on `InvoiceUnitOfWork`
-(`backend/src/repositories/invoice-unit-of-work.ts`). Inside one real
-PostgreSQL transaction:
+`ElectricityTariffManagementService.create`/`update` đều ghi qua
+`ElectricityTariffUnitOfWork.run(...)` — một interface nhỏ, một
+phương thức, mô phỏng trực tiếp theo `InvoiceUnitOfWork`
+(`backend/src/repositories/invoice-unit-of-work.ts`). Bên trong một
+transaction PostgreSQL thật:
 
 ```
 create:  INSERT electricity_tariffs (parent)
-         INSERT electricity_tariff_tiers (each tier)
+         INSERT electricity_tariff_tiers (mỗi tier)
 
-update:  UPDATE electricity_tariffs (parent, full replacement)
+update:  UPDATE electricity_tariffs (parent, thay thế toàn bộ)
          DELETE electricity_tariff_tiers WHERE tariff_id = :id
-         INSERT electricity_tariff_tiers (each new tier)
+         INSERT electricity_tariff_tiers (mỗi tier mới)
 ```
 
-Any failure at any step rolls back everything — there is no state where
-the parent is written but the tiers are only half-written, or where
-`update` leaves a mix of old and new tiers. See
+Bất kỳ thất bại nào ở bất kỳ bước nào đều rollback toàn bộ — không có
+trạng thái nào mà parent được ghi nhưng tier chỉ ghi được một nửa, hay
+`update` để lại một hỗn hợp tier cũ và mới. Xem
 `backend/src/repositories/postgres/postgres-electricity-tariff-unit-of-work.ts`.
 
-### Rate / quota / fallback-tier validation — reused, not reinvented
+### Validate tỷ lệ / định mức / tier fallback — dùng lại, không phát minh lại
 
-- **Tier structure** (non-empty, positive/unique `tierNumber`, exactly
-  one unbounded tier and it must be last): delegated entirely to the
-  **existing** `validateElectricityConfig`
+- **Cấu trúc tier** (không rỗng, `tierNumber` dương/duy nhất, đúng một
+  tier không giới hạn và nó phải ở cuối): giao hoàn toàn cho
+  `validateElectricityConfig` **sẵn có**
   (`backend/src/calculation/electricity/validate-electricity-config.ts`)
-  — the same function `CreateInvoiceService` uses. No second copy of
-  these rules exists.
-- **`electricityVatRate`**: must be an exact decimal string in `[0, 1]`
-  with at most 4 fractional digits (matches `NUMERIC(5, 4)`) — compared
-  using the Calculation Core's own exact-decimal primitives
-  (`parseDecimal`/`compare`/`ZERO`/`ONE`,
-  `backend/src/modules/tariff/tariff-rate-validation.ts`), never
-  `Number(...)`.
-- **`peoplePerQuotaUnit`**: validated by calling the **existing**
-  `calculateQuotaFactor` with `tenantCount = 1` (a safe positive probe
-  value, not a real room) — this reuses the project's actual rule that
-  `peoplePerQuotaUnit` must produce a finite decimal quota factor for
-  every tenant count (only prime factors 2 and/or 5), rather than
-  inventing a second, possibly looser rule for admin input. An invalid
-  value fails with `INVALID_PEOPLE_PER_QUOTA_UNIT`, propagated
-  unchanged from Calculation Core.
-- **`fallbackTierNumber`**: must equal some submitted tier's
-  `tierNumber`, checked explicitly at write time
-  (`TARIFF_CONFIGURATION_INVALID` otherwise) — `CreateInvoiceService`
-  is not the first place this mismatch is discovered.
+  — cùng hàm mà `CreateInvoiceService` dùng. Không có bản sao thứ hai
+  của các quy tắc này.
+- **`electricityVatRate`**: phải là một chuỗi thập phân chính xác
+  trong `[0, 1]` với tối đa 4 chữ số thập phân (khớp `NUMERIC(5, 4)`)
+  — so sánh bằng chính các hàm nguyên thuỷ thập phân chính xác của
+  Calculation Core (`parseDecimal`/`compare`/`ZERO`/`ONE`,
+  `backend/src/modules/tariff/tariff-rate-validation.ts`), không bao
+  giờ `Number(...)`.
+- **`peoplePerQuotaUnit`**: validate bằng cách gọi `calculateQuotaFactor`
+  **sẵn có** với `tenantCount = 1` (một giá trị dò dương an toàn,
+  không phải một room thật) — điều này dùng lại đúng quy tắc thật của
+  dự án rằng `peoplePerQuotaUnit` phải cho ra một hệ số định mức thập
+  phân hữu hạn với mọi số người ở (chỉ có ước nguyên tố 2 và/hoặc 5),
+  thay vì bịa ra một quy tắc thứ hai, có thể lỏng hơn, cho input quản
+  trị. Một giá trị không hợp lệ thất bại với
+  `INVALID_PEOPLE_PER_QUOTA_UNIT`, lan truyền nguyên vẹn từ Calculation
+  Core.
+- **`fallbackTierNumber`**: phải bằng `tierNumber` của một tier đã
+  submit, kiểm tra tường minh tại thời điểm ghi
+  (`TARIFF_CONFIGURATION_INVALID` nếu không) —
+  `CreateInvoiceService` không phải nơi đầu tiên phát hiện sai lệch
+  này.
 
-### Tier numeric contract
+### Hợp đồng số của tier
 
-- `thresholdKwh` (nullable): `NUMERIC(12, 2)` — at most 10 integer
-  digits, 2 fractional digits, positive when present.
-- `unitPrice`: `NUMERIC(14, 2)` — at most 12 integer digits, 2
-  fractional digits, non-negative.
+- `thresholdKwh` (nullable): `NUMERIC(12, 2)` — tối đa 10 chữ số
+  nguyên, 2 chữ số thập phân, dương khi có.
+- `unitPrice`: `NUMERIC(14, 2)` — tối đa 12 chữ số nguyên, 2 chữ số
+  thập phân, không âm.
 
-Both checked by shape (regex), never coerced through `Number(...)`.
+Cả hai đều kiểm tra bằng hình dạng (regex), không bao giờ ép kiểu qua
+`Number(...)`.
 
 ## Water tariffs
 
-`water_tariffs` is a single table (no tier aggregate), so `create`/
-`update` are one `INSERT`/`UPDATE` each — no Unit of Work needed.
+`water_tariffs` là một bảng đơn (không có aggregate tier), nên
+`create`/`update` mỗi cái là một `INSERT`/`UPDATE` — không cần Unit of
+Work.
 
 ### `POST /api/v1/tariffs/water`
 
@@ -339,11 +346,11 @@ Both checked by shape (regex), never coerced through `Number(...)`.
 }
 ```
 
-- `pricePerCubicMeter`/`pricePerPerson`: `NUMERIC(14, 2)` — at most 12
-  integer digits, 2 fractional digits, non-negative.
-- `vatRate`/`environmentalFeeRate`: `NUMERIC(5, 4)` — exact decimal in
-  `[0, 1]`, at most 4 fractional digits (same validation helper as
-  electricity's `electricityVatRate`).
+- `pricePerCubicMeter`/`pricePerPerson`: `NUMERIC(14, 2)` — tối đa 12
+  chữ số nguyên, 2 chữ số thập phân, không âm.
+- `vatRate`/`environmentalFeeRate`: `NUMERIC(5, 4)` — chuỗi thập phân
+  chính xác trong `[0, 1]`, tối đa 4 chữ số thập phân (cùng helper
+  validate như `electricityVatRate` của điện).
 
 Response `201`.
 
@@ -353,112 +360,116 @@ Response `201`.
 
 ### `PUT /api/v1/tariffs/water/:tariffId`
 
-Full replacement (same body shape as `POST`). Only allowed when the
-tariff is not referenced by any invoice.
+Thay thế toàn bộ (cùng hình dạng body như `POST`). Chỉ được phép khi
+tariff chưa được bất kỳ invoice nào tham chiếu.
 
-## Tariff effective dates — a different date rule than billingPeriod
+## Ngày hiệu lực tariff — quy tắc ngày khác với billingPeriod
 
-`effectiveFrom`/`effectiveTo` use the strict `"YYYY-MM-DD"` shape
-(rejects malformed strings, non-existent calendar dates, and timestamps
-with a time component) but — unlike `billingPeriod` — **do not** require
-the day to be `01`. The seeded competition electricity tariff's real
-`effectiveFrom` is `"2025-05-10"` (the actual legal effective date per
-Decision 1279/QĐ-BCT); forcing day-01 here would reject genuinely valid
-tariff data.
+`effectiveFrom`/`effectiveTo` dùng hình dạng `"YYYY-MM-DD"` nghiêm ngặt
+(từ chối chuỗi sai định dạng, ngày lịch không tồn tại, và timestamp có
+thành phần giờ) nhưng — khác với `billingPeriod` — **không** yêu cầu
+ngày phải là `01`. `effectiveFrom` thật của tariff điện seed của kỳ thi
+là `"2025-05-10"` (ngày hiệu lực pháp lý thật theo Quyết định
+1279/QĐ-BCT); ép ngày-01 ở đây sẽ từ chối dữ liệu tariff thực sự hợp
+lệ.
 
-This is implemented as two small, shared pure functions in
+Điều này được cài đặt bằng hai hàm thuần nhỏ, dùng chung trong
 `backend/src/shared/http/date-wire-format.ts`:
-`parseDateWireFormat` (any valid calendar date — used for
-`effectiveFrom`/`effectiveTo`) and `parseFirstOfMonthWireFormat` (adds
-the day-01 check — used for `billingPeriod`, and re-exported unchanged
-from `backend/src/modules/invoice/invoice.http.ts` as
-`parseBillingPeriodWireFormat` so the invoice module's existing imports
-and tests did not need to change).
+`parseDateWireFormat` (bất kỳ ngày lịch hợp lệ nào — dùng cho
+`effectiveFrom`/`effectiveTo`) và `parseFirstOfMonthWireFormat` (thêm
+kiểm tra ngày-01 — dùng cho `billingPeriod`, và được re-export nguyên
+vẹn từ `backend/src/modules/invoice/invoice.http.ts` dưới tên
+`parseBillingPeriodWireFormat` để các import/test sẵn có của module
+invoice không cần đổi).
 
-## Tariff period overlap validation
+## Validate chồng lấn kỳ hiệu lực tariff
 
-Before `create`/`update`, both `ElectricityTariffManagementService` and
-`WaterTariffManagementService` check whether the submitted
-`effectiveFrom`/`effectiveTo` range overlaps any *other* tariff version
-of the same type (excluding the tariff being updated, on `update`).
-Overlap is defined as: `A.effectiveFrom <= B.effectiveTo AND
-B.effectiveFrom <= A.effectiveTo`, with a `null` `effectiveTo` treated
-as unbounded future. A conflict returns `TARIFF_PERIOD_OVERLAP` (`409`).
+Trước `create`/`update`, cả `ElectricityTariffManagementService` lẫn
+`WaterTariffManagementService` đều kiểm tra khoảng
+`effectiveFrom`/`effectiveTo` đã submit có chồng lấn với bất kỳ phiên
+bản tariff *khác* cùng loại không (loại trừ chính tariff đang được
+update, khi `update`). Chồng lấn được định nghĩa: `A.effectiveFrom <=
+B.effectiveTo AND B.effectiveFrom <= A.effectiveTo`, với một
+`effectiveTo` là `null` được coi là không giới hạn ở tương lai. Một
+xung đột trả về `TARIFF_PERIOD_OVERLAP` (`409`).
 
-This is **application-level** validation
-(`backend/src/modules/tariff/tariff-period-overlap.ts`, shared by both
-Services) — the current schema (migration 001, unchanged in this task)
-has no `EXCLUDE` constraint for this, and adding one is out of scope
-here. It is normal admin-level conflict prevention, not a database
-guarantee: no `SERIALIZABLE` isolation or advisory lock was introduced
-to close the gap between the check and the write. `CreateInvoiceService`
-keeps its own independent, fail-closed second line of defense — if
-overlapping tariff data exists regardless (created before this
-validation existed, or inserted directly via SQL), invoice creation for
-an ambiguous period still fails loudly
-(`AMBIGUOUS_TARIFF_CONFIGURATION`) instead of silently picking one.
+Đây là validate ở **mức ứng dụng**
+(`backend/src/modules/tariff/tariff-period-overlap.ts`, dùng chung bởi
+cả hai Service) — schema hiện tại (migration 001, không đổi trong task
+này) không có ràng buộc `EXCLUDE` cho việc này, và thêm một cái nằm
+ngoài phạm vi ở đây. Đây là chống xung đột thông thường ở mức quản trị,
+không phải một đảm bảo của database: không có isolation `SERIALIZABLE`
+hay advisory lock nào được thêm để đóng khoảng hở giữa lúc kiểm tra và
+lúc ghi. `CreateInvoiceService` vẫn giữ tuyến phòng thủ thứ hai độc
+lập, fail-closed của riêng nó — nếu dữ liệu tariff chồng lấn vẫn tồn
+tại bất kể (được tạo trước khi validate này tồn tại, hoặc insert trực
+tiếp qua SQL), việc tạo invoice cho một kỳ mơ hồ vẫn thất bại rõ ràng
+(`AMBIGUOUS_TARIFF_CONFIGURATION`) thay vì âm thầm chọn đại một cái.
 
-## Historical tariff protection
+## Bảo vệ tariff lịch sử
 
-Before a `PUT` on either tariff type, the Service checks whether any
-invoice references the tariff (`electricity_tariff_id` or
-`water_tariff_id`). If so, the update is rejected with `TARIFF_IN_USE`
-(`409`). Editing a tariff version already used by a historical invoice
-would silently change what "this invoice used tariff version X" means
-— the fix is to create a **new** tariff version (a new effective-date
-range), not edit an old one. This is the same historical-snapshot
-principle documented for `Room.tenantCount`/`Invoice.tenantCountUsed`
-above, applied to tariffs.
+Trước một `PUT` trên bất kỳ loại tariff nào, Service kiểm tra xem có
+invoice nào tham chiếu tariff đó không (`electricity_tariff_id` hoặc
+`water_tariff_id`). Nếu có, update bị từ chối với `TARIFF_IN_USE`
+(`409`). Sửa một phiên bản tariff đã được một hoá đơn lịch sử dùng sẽ
+âm thầm thay đổi ý nghĩa của "hoá đơn này đã dùng phiên bản tariff X"
+— cách sửa đúng là tạo một phiên bản tariff **mới** (một khoảng ngày
+hiệu lực mới), không sửa cái cũ. Đây là cùng nguyên tắc snapshot lịch
+sử đã ghi cho `Room.tenantCount`/`Invoice.tenantCountUsed` ở trên, áp
+dụng cho tariff.
 
-## No hard-coded tariff constants
+## Không hard-code hằng số tariff
 
-None of the values from the competition's seed data (`1984`, `2050`,
+Không có giá trị nào từ dữ liệu seed của kỳ thi (`1984`, `2050`,
 `2380`, `2998`, `3350`, `3460`, `8500`, `80000`, `0.08`, `0.05`,
-`0.10`, ...) appear anywhere in the management Services/Controllers/
-Repositories — every price, rate, threshold, and quota configuration
-value is supplied by the request body and persisted as-is. The example
-JSON bodies in this document use those values only as realistic
-illustrations.
+`0.10`, ...) xuất hiện ở bất kỳ đâu trong Service/Controller/Repository
+quản lý — mọi giá, tỷ lệ, ngưỡng, và giá trị cấu hình định mức đều do
+request body cung cấp và lưu nguyên văn. Các body JSON ví dụ trong tài
+liệu này chỉ dùng những giá trị đó như minh hoạ thực tế.
 
-## Architecture notes specific to management
+## Ghi chú kiến trúc riêng cho quản lý
 
-- **Composition roots**: `backend/src/composition/{property,room,meter-reading,tariff}.composition.ts`
-  — one file per module, same lazy pattern as
-  `invoice.composition.ts` (`docs/API.md` "Composition / dependency
-  wiring"): `getDatabaseClient()` is called only inside each factory
-  function, never at module-import time, so `GET /api/v1/health` keeps
-  working with no `DATABASE_URL`, and a malformed management request
-  still returns `400` before any database dependency is touched.
-- **Shared HTTP utilities**: `backend/src/shared/http/` now holds
-  `date-wire-format.ts`, `result-error-status.ts`, and
-  `controller-helpers.ts` (the `isPlainRequestBody`/
-  `sendValidationError`/`sendInternalError` trio every Controller in
-  this API uses) — extracted from the invoice module during this task
-  so five modules do not each carry a near-duplicate copy. Invoice
-  behavior is unchanged; its own files re-export these where existing
-  imports needed to keep working.
-- **Shared validation primitives**: `backend/src/shared/validation/`
-  (`id.ts` — BIGINT id shape; `date.ts` — first-of-month check;
-  `decimal-scale.ts` — generic "exact decimal within N/M digits" check
-  used for every `NUMERIC(p, s)` field in this API).
-- **`backend/src/database/unique-violation.ts`**: the SQLSTATE 23505
-  structural check, extracted from `PostgresInvoiceRepository` (which
-  originally had the only copy) so `PostgresRoomRepository`,
+- **Composition root**: `backend/src/composition/{property,room,meter-reading,tariff}.composition.ts`
+  — một file cho mỗi module, cùng mẫu lazy như `invoice.composition.ts`
+  (`docs/API.md` mục "Nối composition / dependency"):
+  `getDatabaseClient()` chỉ được gọi bên trong mỗi hàm factory, không
+  bao giờ tại thời điểm import module, nên `GET /api/v1/health` vẫn
+  hoạt động khi chưa có `DATABASE_URL`, và một request quản lý sai
+  định dạng vẫn trả về `400` trước khi chạm bất kỳ phụ thuộc database
+  nào.
+- **Tiện ích HTTP dùng chung**: `backend/src/shared/http/` nay chứa
+  `date-wire-format.ts`, `result-error-status.ts`, và
+  `controller-helpers.ts` (bộ ba
+  `isPlainRequestBody`/`sendValidationError`/`sendInternalError` mà mọi
+  Controller trong API này dùng) — được tách ra từ module invoice
+  trong task đó để năm module không mỗi cái mang một bản gần-trùng-lặp.
+  Hành vi của invoice không đổi; các file của chính nó re-export những
+  thứ này ở nơi các import sẵn có cần tiếp tục hoạt động.
+- **Hàm nguyên thuỷ validate dùng chung**: `backend/src/shared/validation/`
+  (`id.ts` — hình dạng id BIGINT; `date.ts` — kiểm tra ngày đầu tháng;
+  `decimal-scale.ts` — kiểm tra tổng quát "chuỗi thập phân chính xác
+  trong N/M chữ số" dùng cho mọi field `NUMERIC(p, s)` trong API này).
+- **`backend/src/database/unique-violation.ts`**: kiểm tra cấu trúc
+  SQLSTATE 23505, được tách ra từ `PostgresInvoiceRepository` (nơi ban
+  đầu có bản duy nhất) để `PostgresRoomRepository`,
   `PostgresMeterReadingRepository`, `PostgresElectricityTariffRepository`,
-  and `PostgresWaterTariffRepository` can each translate their own
-  specific `UNIQUE` violation to the correct domain error code, without
-  a generic SQLSTATE-mapping framework.
+  và `PostgresWaterTariffRepository` mỗi cái có thể tự dịch vi phạm
+  `UNIQUE` cụ thể của mình thành đúng mã lỗi domain, mà không cần một
+  framework ánh xạ SQLSTATE tổng quát.
 
-## Known debt: test-file typechecking
+## Test-source typecheck: đã đóng (trước đây là nợ kỹ thuật)
 
-`backend/tsconfig.json` excludes `src/**/__tests__/**` from `npm run
-typecheck`, a convention that predates this task. This means the normal
-typecheck command never actually type-checks any `*.test.ts` file. For
-this task, every new/changed test file was additionally verified with
-an explicit one-off strict `tsc` invocation covering just those files
-(not part of the regular `npm` scripts) — this caught real type errors
-during development. This debt is unresolved and should be addressed in
-a future QA/release-hardening task (e.g. a second `tsconfig` dedicated
-to tests, or removing the exclusion once build-output pollution from
-test files is otherwise handled) — not fixed inline here, to avoid
-turning a management-API task into a TypeScript tooling redesign.
+`backend/tsconfig.json` loại trừ `src/**/__tests__/**` khỏi `npm run
+typecheck`, một quy ước có từ trước task này. Điều đó nghĩa là lệnh
+typecheck thông thường không bao giờ tự type-check bất kỳ file
+`*.test.ts` nào. Trước đây, mỗi file test mới/thay đổi chỉ được kiểm
+chứng riêng lẻ bằng một lần gọi `tsc` strict thủ công (không thuộc
+script `npm` thông thường). Trong lần chạy QA phát hành cuối cùng, toàn
+bộ `src/**/__tests__/**` đã được type-check tường minh bằng cùng cách
+đó và đạt **PASS hoàn toàn, 0 lỗi** (bao gồm cả việc sửa các fake
+Repository trong `backend/src/modules/invoice/__tests__/fakes.ts` để
+thoả mãn đầy đủ interface Repository mở rộng của chúng, không dùng
+`any`/`as unknown as`/`@ts-ignore`). Lệnh `npm run typecheck` bình
+thường vẫn không bao phủ test — vẫn cần chạy strict check thủ công đó
+mỗi khi test source thay đổi — nhưng khoảng nợ kỹ thuật cụ thể này (các
+fake không thoả mãn đầy đủ interface) đã được đóng.

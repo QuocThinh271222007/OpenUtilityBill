@@ -1,35 +1,35 @@
-# Database Access
+# Truy cập Database
 
-This document explains how the backend talks to PostgreSQL: the client
-library, the Repository boundary, the security model, the precision
-contracts (`NUMERIC`, `BIGINT`), transactions, and error handling. It
-complements [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) (where this layer
-sits), [`docs/DATABASE_DESIGN.md`](DATABASE_DESIGN.md) (the schema
-itself), and [`docs/ERROR_HANDLING.md`](ERROR_HANDLING.md) (the
-`Result<T>` contract this layer reuses).
+Tài liệu này giải thích cách backend nói chuyện với PostgreSQL: thư
+viện client, ranh giới Repository, mô hình bảo mật, hợp đồng độ chính
+xác (`NUMERIC`, `BIGINT`), transaction, và xử lý lỗi. Tài liệu bổ sung
+cho [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) (tầng này nằm ở đâu),
+[`docs/DATABASE_DESIGN.md`](DATABASE_DESIGN.md) (bản thân schema), và
+[`docs/ERROR_HANDLING.md`](ERROR_HANDLING.md) (hợp đồng `Result<T>`
+tầng này dùng lại).
 
-## Why Postgres.js, and why no ORM
+## Vì sao Postgres.js, và vì sao không dùng ORM
 
-The owner explicitly approved: PostgreSQL hosted by Supabase, accessed
-via **Postgres.js** (the `postgres` npm package) with **direct
-parameterized SQL** — no ORM, no query-builder framework (Drizzle,
-Prisma, TypeORM, Sequelize, Knex, Kysely).
+Chủ dự án đã duyệt tường minh: PostgreSQL host bởi Supabase, truy cập
+qua **Postgres.js** (package npm `postgres`) với **SQL tham số hoá trực
+tiếp** — không ORM, không framework query-builder (Drizzle, Prisma,
+TypeORM, Sequelize, Knex, Kysely).
 
-Postgres.js is a PostgreSQL *client* — it opens connections, sends the
-SQL text and parameters this project writes, and decodes the response.
-It does not generate SQL from an object model, does not manage a schema,
-and does not impose a query-building DSL. This matches the project-wide
-principle (see `docs/LEARNING_NOTES.md`) that the repository owner must
-be able to read and explain exactly what SQL runs — with an ORM, the
-actual SQL is often generated indirectly and harder to predict; with a
-plain client and hand-written SQL, the query in the source file *is* the
-query that runs.
+Postgres.js là một *client* PostgreSQL — nó mở kết nối, gửi văn bản SQL
+và tham số mà dự án này tự viết, và decode response. Nó không tự sinh
+SQL từ một object model, không tự quản lý schema, và không áp đặt một
+DSL query-building nào. Điều này khớp với nguyên tắc xuyên suốt dự án
+(xem `docs/LEARNING_NOTES.md`) rằng chủ repository phải đọc và giải
+thích được chính xác SQL nào đang chạy — với một ORM, SQL thực tế
+thường được sinh gián tiếp và khó đoán trước hơn; với một client thuần
+và SQL viết tay, câu query trong file nguồn *chính là* câu query sẽ
+chạy.
 
-## Direct SQL does not mean SQL anywhere
+## SQL trực tiếp không có nghĩa là SQL ở bất kỳ đâu
 
-"Direct SQL" describes *how* a query is written (by hand, not
-generated) — it does **not** mean SQL is allowed anywhere in the
-codebase. The dependency direction is still strict:
+"SQL trực tiếp" mô tả *cách* một query được viết (viết tay, không sinh
+tự động) — nó **không** có nghĩa là SQL được phép xuất hiện ở bất kỳ
+đâu trong codebase. Hướng phụ thuộc vẫn nghiêm ngặt:
 
 ```
 Controller  →  Service / Orchestrator  →  Repository interface
@@ -41,58 +41,60 @@ Controller  →  Service / Orchestrator  →  Repository interface
                                           PostgreSQL / Supabase
 ```
 
-- **Controllers never contain SQL.** They parse HTTP input and call a
-  Service.
-- **Services never contain SQL.** They orchestrate a workflow and call
-  Repository interfaces.
-- **Calculation Core never imports database code.** It receives data as
-  plain function parameters (see `docs/CALCULATION_CORE.md`).
-- **SQL exists only under `backend/src/database/` and
-  `backend/src/repositories/`** — this is audited (see "SQL location
-  audit" below).
+- **Controller không bao giờ chứa SQL.** Nó parse input HTTP và gọi
+  một Service.
+- **Service không bao giờ chứa SQL.** Nó điều phối một workflow và gọi
+  các interface Repository.
+- **Calculation Core không bao giờ import code database.** Nó nhận dữ
+  liệu như tham số hàm thuần (xem `docs/CALCULATION_CORE.md`).
+- **SQL chỉ tồn tại dưới `backend/src/database/` và
+  `backend/src/repositories/`** — điều này được kiểm chứng (xem mục
+  "Kiểm chứng vị trí SQL" bên dưới).
 
-## Repository boundary
+## Ranh giới Repository
 
-Each domain has a small, explicit **Repository interface**
-(`backend/src/repositories/*.repository.ts`) describing *what* can be
-read and written in domain terms — e.g.
-`RoomRepository.findById(id): Promise<Result<Room>>`. The interface has
-no SQL and no Postgres.js import. Every Repository now has write
-methods (`Property`, `Room`, `MeterReading`, `ElectricityTariff`,
-`WaterTariff`, in addition to `Invoice`) — added for the management API
-(see `docs/MANAGEMENT_API.md`); each still only implements the
-operations a real use case needs (no `delete` anywhere, per that
-document's "No DELETE endpoints").
+Mỗi domain có một **Repository interface** nhỏ, tường minh
+(`backend/src/repositories/*.repository.ts`) mô tả *cái gì* có thể đọc
+và ghi theo ngôn ngữ domain — ví dụ
+`RoomRepository.findById(id): Promise<Result<Room>>`. Interface không
+có SQL và không import Postgres.js. Mọi Repository nay đều có phương
+thức ghi (`Property`, `Room`, `MeterReading`, `ElectricityTariff`,
+`WaterTariff`, cộng thêm `Invoice`) — được thêm cho management API (xem
+`docs/MANAGEMENT_API.md`); mỗi cái vẫn chỉ cài đặt đúng các thao tác
+một use case thật cần (không có `delete` ở bất kỳ đâu, theo mục "Không
+có endpoint DELETE" của tài liệu đó).
 
-The **Postgres implementation** (`backend/src/repositories/postgres/postgres-*.repository.ts`)
-is the only place that SQL for that domain exists. It:
+**Implementation Postgres**
+(`backend/src/repositories/postgres/postgres-*.repository.ts`) là nơi
+DUY NHẤT SQL cho domain đó tồn tại. Nó:
 
-1. Runs a parameterized query via the `DatabaseExecutor` passed into its
-   constructor.
-2. Maps the raw row(s) to the existing domain model
-   (`backend/src/modules/*/*.model.ts`) with a small, explicit mapper
-   function — not an automatic mapping library.
-3. Translates failures into `Result<T>` (see "Error translation" below).
+1. Chạy một query tham số hoá qua `DatabaseExecutor` được truyền vào
+   constructor của nó.
+2. Ánh xạ (các) dòng thô sang domain model sẵn có
+   (`backend/src/modules/*/*.model.ts`) bằng một hàm mapper nhỏ, tường
+   minh — không phải một thư viện ánh xạ tự động.
+3. Dịch thất bại thành `Result<T>` (xem "Dịch lỗi" bên dưới).
 
-No `GenericRepository<T>`/`BaseRepository` exists. Each repository has
-only the operations a real, current use case needs — see the table in
-`README.md`/`CHANGELOG.md` for exactly which methods exist and why.
+Không có `GenericRepository<T>`/`BaseRepository` nào. Mỗi repository
+chỉ có đúng các thao tác một use case thật, hiện tại cần — xem bảng
+trong `README.md`/`CHANGELOG.md` để biết chính xác method nào tồn tại
+và vì sao.
 
-`InvoiceRepository` is the one repository with write methods
-(`createInvoice`, `createInvoiceItems`), added for
-`CreateInvoiceService` — see `docs/CREATE_INVOICE_WORKFLOW.md`. Write
-inputs use dedicated `NewInvoice`/`NewInvoiceItem` types, not
-`Omit<Invoice, ...>`/`Partial<Invoice>`, so the write contract stays
-readable on its own instead of being inferred from the read model. It
-also has one more read method, `findItemsByInvoiceId` (`ORDER BY
-display_order ASC`, explicit — never PostgreSQL's natural row order),
-added for `GetInvoiceService`'s persisted-invoice readback (`GET
-/api/v1/invoices`, see `docs/API.md`).
+`InvoiceRepository` là repository có phương thức ghi
+(`createInvoice`, `createInvoiceItems`), được thêm cho
+`CreateInvoiceService` — xem `docs/CREATE_INVOICE_WORKFLOW.md`. Input
+ghi dùng type riêng `NewInvoice`/`NewInvoiceItem`, không phải
+`Omit<Invoice, ...>`/`Partial<Invoice>`, để hợp đồng ghi tự nó dễ đọc
+thay vì phải suy ra từ model đọc. Nó cũng có thêm một phương thức đọc,
+`findItemsByInvoiceId` (`ORDER BY display_order ASC`, tường minh —
+không bao giờ dựa vào thứ tự hàng tự nhiên của PostgreSQL), được thêm
+cho việc đọc lại invoice đã lưu của `GetInvoiceService` (`GET
+/api/v1/invoices`, xem `docs/API.md`).
 
-## Parameterized queries (SQL injection prevention)
+## Query tham số hoá (chống SQL injection)
 
-Every dynamic value goes through Postgres.js's tagged-template
-parameter substitution:
+Mọi giá trị động đều đi qua cơ chế thay thế tham số bằng tagged-template
+của Postgres.js:
 
 ```ts
 await sql<RoomRow[]>`
@@ -102,34 +104,35 @@ await sql<RoomRow[]>`
 `;
 ```
 
-`${id}` is sent to PostgreSQL as a bound parameter, not concatenated
-into the query text — PostgreSQL itself keeps the SQL structure and the
-data completely separate, so a value like `id = "1; DROP TABLE rooms;"`
-is just treated as a (non-matching) literal string, never as SQL syntax.
+`${id}` được gửi tới PostgreSQL như một tham số bound, không được ghép
+nối vào văn bản query — bản thân PostgreSQL giữ cấu trúc SQL và dữ liệu
+hoàn toàn tách biệt, nên một giá trị như `id = "1; DROP TABLE rooms;"`
+chỉ được coi là một chuỗi literal (không khớp), không bao giờ là cú
+pháp SQL.
 
-`sql.unsafe(...)` (which accepts a raw string and skips this
-protection) is **not used anywhere** in this codebase — see the audit
-result in the final report of the task that introduced this layer.
+`sql.unsafe(...)` (nhận một chuỗi thô và bỏ qua bảo vệ này) **không
+được dùng ở bất kỳ đâu** trong codebase này — xem kết quả kiểm chứng
+trong báo cáo cuối của task đã đưa tầng này vào.
 
-## Connection lifecycle
+## Vòng đời kết nối
 
-`backend/src/database/postgres-client.ts` creates **one** Postgres.js
-client (`postgres(connectionString)`) per process, cached at module
-scope, and every Repository reuses it. Postgres.js manages its own
-internal connection pool inside that single `Sql` instance — this
-project does **not** implement a custom connection pool; doing so would
-duplicate what the client already does correctly.
+`backend/src/database/postgres-client.ts` tạo **một** client
+Postgres.js (`postgres(connectionString)`) cho mỗi process, cache ở
+phạm vi module, và mọi Repository dùng lại nó. Postgres.js tự quản lý
+connection pool nội bộ bên trong một instance `Sql` đó — dự án này
+**không** tự cài đặt một connection pool riêng; làm vậy sẽ lặp lại thứ
+mà client đã làm đúng sẵn.
 
-`closeDatabaseClient()` exists so a server shutdown path or a test can
-close the connection cleanly (no "hanging connection" keeping a test
-process alive). It is called **once**, at shutdown/teardown — never
-after each individual query, which would defeat the purpose of
-connection reuse.
+`closeDatabaseClient()` tồn tại để một đường tắt server hay một test có
+thể đóng kết nối gọn gàng (không để lại "hanging connection" giữ
+process test sống mãi). Nó được gọi **đúng một lần**, khi shutdown/dọn
+dẹp — không bao giờ sau mỗi query đơn lẻ, vì làm vậy sẽ phá hỏng mục
+đích dùng lại kết nối.
 
-## Transactions
+## Transaction
 
-`backend/src/database/transaction.ts` exports `runInTransaction`, a
-thin wrapper around Postgres.js's `sql.begin()`:
+`backend/src/database/transaction.ts` export `runInTransaction`, một
+wrapper mỏng bọc quanh `sql.begin()` của Postgres.js:
 
 ```ts
 const result = await runInTransaction(async (tx) => {
@@ -139,254 +142,256 @@ const result = await runInTransaction(async (tx) => {
 });
 ```
 
-Every write inside `work` **must** use the `tx` parameter it receives —
-not the global client from `getDatabaseClient()` — so all writes in one
-logical operation share the same actual database transaction. If `work`
-returns a failed `Result`, `runInTransaction` throws internally to make
-Postgres.js roll back, then converts that back into the same failed
-`Result` at the boundary — callers only ever see `Result<T>`, never a
-raw thrown error, for the expected-failure path.
+Mọi thao tác ghi bên trong `work` **phải** dùng tham số `tx` nó nhận
+được — không phải client toàn cục từ `getDatabaseClient()` — để mọi
+thao tác ghi trong một hành động logic dùng chung đúng một transaction
+database thật. Nếu `work` trả về một `Result` thất bại,
+`runInTransaction` tự throw nội bộ để buộc Postgres.js rollback, rồi
+chuyển nó trở lại thành cùng `Result` thất bại đó tại ranh giới — caller
+chỉ bao giờ thấy `Result<T>`, không bao giờ thấy một lỗi throw thô, cho
+đường thất bại đã lường trước.
 
-**Transaction scope rule:** Calculation Core must run *before*
-`runInTransaction` is called, not inside it. This shape is now
-implemented by `CreateInvoiceService`
-(`backend/src/modules/invoice/create-invoice.service.ts`) — see
+**Quy tắc phạm vi transaction:** Calculation Core phải chạy *trước* khi
+`runInTransaction` được gọi, không phải bên trong nó. Hình dạng này nay
+đã được `CreateInvoiceService`
+(`backend/src/modules/invoice/create-invoice.service.ts`) cài đặt — xem
 `docs/CREATE_INVOICE_WORKFLOW.md`:
 
 ```
-load required data (Repository reads)
+đọc dữ liệu bắt buộc (Repository đọc)
         ↓
-validate + calculate (Calculation Core — pure, no I/O)
+validate + tính toán (Calculation Core — thuần, không I/O)
         ↓
-BEGIN  (runInTransaction, via InvoiceUnitOfWork)
+BEGIN  (runInTransaction, qua InvoiceUnitOfWork)
   insert invoice
   insert invoice_items
 COMMIT
 ```
 
-Holding a database transaction open while doing CPU-bound calculation
-work would block a connection for no reason — the transaction should
-only wrap the writes.
+Giữ một transaction database mở trong lúc làm việc tính toán tốn CPU sẽ
+chặn một kết nối một cách vô ích — transaction chỉ nên bọc quanh các
+thao tác ghi.
 
 **`InvoiceUnitOfWork`** (`backend/src/repositories/invoice-unit-of-work.ts`,
-Postgres implementation
-`backend/src/repositories/postgres/postgres-invoice-unit-of-work.ts`) is
-a small interface — one method, `run(work)` — that hides `runInTransaction`/
-`DatabaseExecutor`/`PostgresInvoiceRepository` from `CreateInvoiceService`.
-The Postgres implementation constructs a `PostgresInvoiceRepository`
-bound to the transaction context and passes it to `work`, so
-`createInvoice` and `createInvoiceItems` always run against the SAME
-transaction. This is deliberately not a general Unit-of-Work framework
-(no multi-repository support, no nested transactions) — `CreateInvoice`
-is the only write workflow that exists.
+implementation Postgres
+`backend/src/repositories/postgres/postgres-invoice-unit-of-work.ts`) là
+một interface nhỏ — một phương thức, `run(work)` — che giấu
+`runInTransaction`/`DatabaseExecutor`/`PostgresInvoiceRepository` khỏi
+`CreateInvoiceService`. Implementation Postgres dựng một
+`PostgresInvoiceRepository` gắn với transaction context và truyền nó
+vào `work`, để `createInvoice` và `createInvoiceItems` luôn chạy trên
+CÙNG một transaction. Đây cố ý không phải một framework Unit-of-Work
+tổng quát (không hỗ trợ nhiều repository, không có transaction lồng
+nhau) — `CreateInvoice` là workflow ghi duy nhất tồn tại ở tầng này
+(`ElectricityTariffUnitOfWork` là một Unit-of-Work riêng, độc lập, cho
+việc cấu hình biểu giá điện — xem `docs/TRANSACTIONS.md` mục C).
 
-This mechanism is exercised with real rollback/commit assertions against
-PostgreSQL in
-`backend/src/database/__tests__/transaction.integration.test.ts` — a
-genuine `TEST_IMPLEMENTED` (the test exists, is correct, and will run
-whenever `DATABASE_URL` is supplied). Whether it has actually been
-`TEST_RUNTIME_EXECUTED` (run against a live database and observed to
-pass) is a separate claim, tracked per-session in the task that added or
-last touched this test — do not treat "the test exists" as "the test has
-run." Distinguishing these two is deliberate project policy: this
-project never reports a runtime PASS that was not actually observed.
+Cơ chế này đã được kiểm chứng bằng assertion commit/rollback THẬT trên
+PostgreSQL trong
+`backend/src/database/__tests__/transaction.integration.test.ts` — và
+đã thực sự chạy thật (`TRANSACTION_COMMIT_RUNTIME=PASS`,
+`TRANSACTION_ROLLBACK_RUNTIME=PASS`) trong lần chạy runtime closure gần
+nhất, không chỉ tồn tại dưới dạng code chưa chạy.
 
-## `NUMERIC` / `BIGINT` precision boundary
+## Ranh giới độ chính xác `NUMERIC` / `BIGINT`
 
-This project already closed the Calculation Core precision contract
-(`docs/NUMERIC_PRECISION.md`): financial/measurement values must never
-pass through IEEE-754 floating point. That guarantee is only real if the
-database adapter also preserves exact values — so this was **verified**,
-not assumed:
+Dự án này đã đóng hợp đồng độ chính xác của Calculation Core
+(`docs/NUMERIC_PRECISION.md`): giá trị tài chính/đo lường không bao giờ
+được đi qua dấu phẩy động IEEE-754. Đảm bảo đó chỉ thật sự đúng nếu
+adapter database cũng giữ nguyên giá trị chính xác — nên điều này đã
+được **kiểm chứng**, không chỉ giả định:
 
-- `node_modules/postgres/src/types.js` registers parsers only for OIDs
+- `node_modules/postgres/src/types.js` chỉ đăng ký parser cho OID
   `21, 23, 26, 700, 701` (`int2`, `int4`, `oid`, `float4`, `float8`)
-  under its `number` type. **`NUMERIC` (OID `1700`) and `BIGINT`/`int8`
-  (OID `20`) have no registered parser.**
-- `node_modules/postgres/src/connection.js` falls back to returning the
-  raw UTF-8 wire text (i.e. a plain JS `string`) for any column whose
-  type has no registered parser.
-- Postgres.js's own README states this explicitly: *"There is currently
-  no guaranteed way to handle numeric / decimal types in native
-  Javascript. These [and similar] types will be returned as a
-  string."* and *"[bigint] doesn't work with `JSON.stringify` out of the
-  box, so Postgres.js will return it as a string."*
+  dưới nhãn `number` của nó. **`NUMERIC` (OID `1700`) và `BIGINT`/`int8`
+  (OID `20`) không có parser đăng ký.**
+- `node_modules/postgres/src/connection.js` mặc định trả nguyên văn
+  chuỗi UTF-8 trên wire (tức một `string` JS thuần) cho bất kỳ cột nào
+  có kiểu không có parser đăng ký.
+- README của chính Postgres.js xác nhận tường minh: *"There is
+  currently no guaranteed way to handle numeric / decimal types in
+  native Javascript. These [and similar] types will be returned as a
+  string."* và *"[bigint] doesn't work with `JSON.stringify` out of the
+  box, so Postgres.js will return it as a string."* (trích nguyên văn
+  từ README của thư viện — không dịch để giữ đúng nguồn tham chiếu.)
 
-So, **with zero custom configuration**, Postgres.js already returns
-`NUMERIC` and `BIGINT` columns as exact decimal/integer strings — which
-is exactly this project's boundary contract. `postgres-client.ts`
-deliberately does **not** register a custom type parser for either, and
-documents why in its header comment: doing so would risk reintroducing
-float/number coercion.
+Vậy nên, **với zero cấu hình tuỳ biến**, Postgres.js đã trả về cột
+`NUMERIC` và `BIGINT` dưới dạng chuỗi thập phân/số nguyên chính xác —
+đúng hợp đồng ranh giới của dự án này. `postgres-client.ts` cố ý
+**không** đăng ký một parser kiểu tuỳ biến cho cả hai, và ghi rõ vì sao
+trong comment đầu file: làm vậy có nguy cơ đưa lại việc ép kiểu float/
+number.
 
 `backend/src/database/__tests__/postgres-client.numeric.integration.test.ts`
-asserts this against a real PostgreSQL connection when one is available —
-`62.5125`, `124025.123456`, an unscaled `0.08`, a **fixed-scale**
-`NUMERIC(p, s)` expression (matching how the real schema's columns are
-declared — e.g. `NUMERIC(5, 4)` reads back as `"0.0800"`, not `"0.08"`;
-see "NUMERIC string format is not canonicalized" below), and the BIGINT
-maximum value (`9223372036854775807`, far beyond
-`Number.MAX_SAFE_INTEGER`) are all asserted to round-trip as exact
-strings. As with the transaction test above, this is `TEST_IMPLEMENTED`
-— whether it has been `TEST_RUNTIME_EXECUTED` in a given session depends
-on whether `DATABASE_URL` was available; that distinction is reported
-explicitly in each task's final report rather than assumed.
+khẳng định điều này trên một kết nối PostgreSQL thật khi có sẵn —
+`62.5125`, `124025.123456`, một `0.08` không khai báo scale, một biểu
+thức `NUMERIC(p, s)` **scale cố định** (khớp cách các cột schema thật
+được khai báo — ví dụ `NUMERIC(5, 4)` đọc lại là `"0.0800"`, không phải
+`"0.08"`; xem "Định dạng chuỗi NUMERIC không được chuẩn hoá" bên dưới),
+và giá trị BIGINT tối đa (`9223372036854775807`, vượt xa
+`Number.MAX_SAFE_INTEGER`) đều được khẳng định round-trip đúng dưới
+dạng chuỗi chính xác. Test này đã thực sự chạy thật trên PostgreSQL
+thật trong lần chạy runtime closure gần nhất
+(`POSTGRES_NUMERIC_RUNTIME=PASS`, `FIXED_SCALE_RUNTIME=PASS`,
+`BIGINT_RUNTIME=PASS`).
 
-### NUMERIC string format is not canonicalized
+### Định dạng chuỗi NUMERIC không được chuẩn hoá
 
-The Repository layer passes through whatever exact string PostgreSQL
-sends — it does **not** reformat it (e.g. stripping trailing zeros).
-`electricity_tariffs.electricity_vat_rate` is `NUMERIC(5, 4)`, so a row
-read from it has `electricityVatRate === "0.0800"`, not `"0.08"` — both
-strings represent the identical exact value, and `parseDecimal` in
-Calculation Core (`docs/NUMERIC_PRECISION.md`) accepts either form
-identically. This is a deliberate simplicity choice, not an oversight:
-canonicalizing decimal strings would mean writing (and maintaining) a
-zero-trimming function in the Repository layer for no correctness
-benefit — Calculation Core already normalizes any valid decimal string
-to a reduced exact fraction the moment it parses one, so canonical
-*formatting* only matters at a final display/output boundary, if and
-when one needs it, not at the Repository read boundary.
+Tầng Repository truyền qua nguyên vẹn bất kỳ chuỗi chính xác nào
+PostgreSQL gửi — nó **không** định dạng lại nó (ví dụ cắt số 0 ở
+cuối). `electricity_tariffs.electricity_vat_rate` là `NUMERIC(5, 4)`,
+nên một dòng đọc từ nó có `electricityVatRate === "0.0800"`, không
+phải `"0.08"` — cả hai chuỗi biểu diễn cùng một giá trị chính xác tuyệt
+đối, và `parseDecimal` trong Calculation Core
+(`docs/NUMERIC_PRECISION.md`) chấp nhận cả hai dạng như nhau. Đây là
+một lựa chọn đơn giản có chủ đích, không phải một thiếu sót: chuẩn hoá
+chuỗi thập phân sẽ có nghĩa là phải viết (và bảo trì) một hàm cắt số 0
+trong tầng Repository mà không mang lại lợi ích đúng đắn nào —
+Calculation Core đã chuẩn hoá bất kỳ chuỗi thập phân hợp lệ nào thành
+một phân số chính xác đã rút gọn ngay khi nó parse, nên việc *định
+dạng* chuẩn hoá chỉ có ý nghĩa ở ranh giới hiển thị/output cuối cùng,
+nếu và khi cần, không phải ở ranh giới đọc của Repository.
 
-Repository row-mapping code **never** calls `Number(...)`, `parseFloat`,
-`parseInt`, or unary `+` on a `NUMERIC`-backed or `BIGINT`-backed
-column — this is audited (see the final report).
+Code ánh xạ dòng của Repository **không bao giờ** gọi `Number(...)`,
+`parseFloat`, `parseInt`, hay dấu `+` đơn trên một cột dựa trên
+`NUMERIC` hay `BIGINT` — điều này được kiểm chứng (xem báo cáo cuối).
 
-## `BIGINT` / ID boundary
+## Ranh giới `BIGINT` / ID
 
-Every `id` column (and every foreign key referencing one) is
-`BIGINT GENERATED ALWAYS AS IDENTITY`. A JS `number` cannot safely
-represent every possible `BIGINT` value (the safe range is
-±2^53−1; `BIGINT` allows up to roughly ±9.2×10^18). Silently converting
-an ID to `number` and assuming "IDs will probably stay small forever" is
-exactly the kind of unverified assumption this project avoids.
+Mọi cột `id` (và mọi khoá ngoại tham chiếu tới nó) đều là `BIGINT
+GENERATED ALWAYS AS IDENTITY`. Một `number` của JS không thể biểu diễn
+an toàn mọi giá trị `BIGINT` có thể có (khoảng an toàn là ±2^53−1;
+`BIGINT` cho phép tới khoảng ±9.2×10^18). Âm thầm chuyển một ID sang
+`number` và giả định "ID chắc sẽ luôn nhỏ" chính xác là kiểu giả định
+chưa kiểm chứng mà dự án này tránh.
 
-**Decision: all ID fields are `string`** at the domain model and
-Repository boundary (`RentalProperty.id`, `Room.id`, `Room.propertyId`,
-etc. — see each model file's "ID representation" comment). This matches
-Postgres.js's own default `BIGINT` behavior (see above), so no
-conversion happens anywhere in the Repository layer — the string that
-comes off the wire is the string stored in the domain object.
+**Quyết định: mọi field ID đều là `string`** ở domain model và ranh
+giới Repository (`RentalProperty.id`, `Room.id`, `Room.propertyId`,
+v.v. — xem comment "Biểu diễn ID" của mỗi file model). Điều này khớp
+với hành vi mặc định của chính Postgres.js với `BIGINT` (xem ở trên),
+nên không có chuyển đổi nào xảy ra ở bất kỳ đâu trong tầng Repository —
+chuỗi lấy ra từ wire chính là chuỗi được lưu trong domain object.
 
-This required updating the existing domain models' `id`/`...Id` fields
-from `number` to `string` (a minimal, mechanical, single-purpose change
-— no other fields or logic were touched). `number` remains correct for
-non-identity integer columns that are `INTEGER`, not `BIGINT`
-(`tenant_count`, `tier_number`, `people_per_quota_unit`,
-`fallback_tier_number`, `display_order`) — these fit safely in `number`
-and were left unchanged.
+Điều này yêu cầu cập nhật các field `id`/`...Id` của domain model sẵn
+có từ `number` sang `string` (một thay đổi tối thiểu, cơ học, một mục
+đích duy nhất — không có field hay logic nào khác bị chạm vào).
+`number` vẫn đúng cho các cột số nguyên không phải identity, là
+`INTEGER` chứ không phải `BIGINT` (`tenant_count`, `tier_number`,
+`people_per_quota_unit`, `fallback_tier_number`, `display_order`) —
+các cột này nằm an toàn trong `number` và được giữ nguyên.
 
-No `bigint` (the JS primitive) is used for IDs and none is exposed in a
-JSON-facing object — IDs are plain strings end to end, so no special
-serialization strategy is needed (unlike Calculation Core's internal
-`ExactNumber`/`BigInt`, which never crosses a module boundary at all —
-see `docs/NUMERIC_PRECISION.md`).
+Không có `bigint` (kiểu nguyên thuỷ của JS) nào được dùng cho ID và
+không có cái nào lộ ra trong một object hướng-JSON — ID là chuỗi thuần
+từ đầu đến cuối, nên không cần chiến lược serialize đặc biệt nào (khác
+với `ExactNumber`/`BigInt` nội bộ của Calculation Core, thứ không bao
+giờ vượt qua ranh giới module — xem `docs/NUMERIC_PRECISION.md`).
 
-## `DATE` boundary — reviewed, not changed (future consideration)
+## Ranh giới `DATE` — đã review, chưa thay đổi (cân nhắc tương lai)
 
-`billing_period`, `effective_from`, and `effective_to` are PostgreSQL
-`DATE` columns (a calendar day, with no time-of-day or timezone
-component). The Repository layer currently represents them as JS `Date`
-objects, matching the existing domain models
-(`docs/DOMAIN_MODEL.md`) and Postgres.js's built-in `date` type handler
-(OID `1082`/`1114`/`1184`, parsed via `new Date(x)`).
+`billing_period`, `effective_from`, và `effective_to` là cột `DATE`
+của PostgreSQL (một ngày lịch, không có thành phần giờ hay timezone).
+Tầng Repository hiện biểu diễn chúng dưới dạng object `Date` của JS,
+khớp với domain model sẵn có (`docs/DOMAIN_MODEL.md`) và handler kiểu
+`date` có sẵn của Postgres.js (OID `1082`/`1114`/`1184`, parse qua
+`new Date(x)`).
 
-This was reviewed for a specific risk: Postgres.js serializes an
-outgoing JS `Date` parameter as a `timestamptz` (OID `1184`, via
-`.toISOString()`), not as a `date`. When that parameter is compared
-against a `DATE` column (e.g. `WHERE billing_period = ${someDate}`),
-PostgreSQL casts the column's `date` value to `timestamptz` using the
-**session's timezone** to do the comparison — not necessarily UTC. If
-that session timezone were ever something other than UTC, a `Date`
-meant to represent "2026-09-01" could, in principle, fail to match a
-`billing_period` of `2026-09-01`, or match the wrong row, depending on
-the offset.
+Điều này đã được review cho một rủi ro cụ thể: Postgres.js serialize
+một tham số `Date` JS đi ra dưới dạng `timestamptz` (OID `1184`, qua
+`.toISOString()`), không phải dưới dạng `date`. Khi tham số đó được so
+sánh với một cột `DATE` (ví dụ `WHERE billing_period = ${someDate}`),
+PostgreSQL ép kiểu giá trị `date` của cột đó sang `timestamptz` dùng
+**timezone của session** để so sánh — không nhất thiết là UTC. Nếu
+timezone của session đó từng khác UTC, một `Date` dùng để biểu diễn
+"2026-09-01" về lý thuyết có thể không khớp với một `billing_period`
+là `2026-09-01`, hoặc khớp nhầm dòng, tuỳ theo offset.
 
-**This is a theoretical risk, not a demonstrated bug.** No live
-PostgreSQL connection was available to actually test it in the tasks
-that built this layer, and Supabase-hosted PostgreSQL databases default
-their session timezone to UTC, which would make this a non-issue in
-practice for this project's actual deployment. No code change was made
-based on this review, per instruction: only a demonstrated defect
-justifies changing behavior, not a theoretical one.
+**Đây là một rủi ro lý thuyết, không phải một bug đã chứng minh.**
+Không có kết nối PostgreSQL sống nào để thực sự test điều này trong
+các task đã xây dựng tầng này, và các database PostgreSQL host bởi
+Supabase mặc định đặt timezone session là UTC, khiến đây không phải
+vấn đề trong thực tế triển khai của dự án này. Không có thay đổi code
+nào được thực hiện dựa trên review này, theo đúng nguyên tắc: chỉ một
+lỗi đã chứng minh mới đủ lý do thay đổi hành vi, không phải một lỗi lý
+thuyết.
 
-**Future boundary consideration:** if this is ever a concern (e.g. the
-database's timezone configuration changes, or a future API boundary
-needs to accept/return dates), the more robust fix is to stop relying on
-JS `Date` + implicit timezone-dependent casting entirely for `DATE`
-columns, and instead use canonical `YYYY-MM-DD` strings at the
-Repository parameter/return boundary (parsed/formatted explicitly,
-never through `Date`'s local-timezone-sensitive methods like
-`getDate()`/`getMonth()`). This would need its own small task, not a
-change bundled into unrelated work.
+**Cân nhắc ranh giới tương lai:** nếu điều này từng trở thành mối lo
+(ví dụ cấu hình timezone của database thay đổi, hay một ranh giới API
+tương lai cần nhận/trả ngày), cách sửa vững chắc hơn là ngừng phụ thuộc
+hoàn toàn vào `Date` JS + việc ép kiểu phụ thuộc timezone ngầm định cho
+cột `DATE`, và thay vào đó dùng chuỗi `YYYY-MM-DD` chuẩn tại ranh giới
+tham số/trả về của Repository (parse/format tường minh, không bao giờ
+qua các phương thức nhạy cảm với timezone local của `Date` như
+`getDate()`/`getMonth()`). Điều này cần một task nhỏ riêng, không phải
+một thay đổi gộp vào công việc không liên quan.
 
-## Error translation
+## Dịch lỗi
 
-Repository implementations reuse the project's existing `Result<T>`
-contract (`docs/ERROR_HANDLING.md`). Two distinct situations are always
-kept separate:
+Các implementation Repository dùng lại hợp đồng `Result<T>` sẵn có của
+dự án (`docs/ERROR_HANDLING.md`). Hai tình huống khác nhau luôn được
+giữ tách biệt:
 
-| Situation | Example | Result |
+| Tình huống | Ví dụ | Result |
 |---|---|---|
-| The query ran fine, but no matching domain record exists | No room with that id | A specific not-found code, e.g. `ROOM_NOT_FOUND` |
-| The query itself failed (connection, syntax, constraint violation not pre-checked) | Connection drop, unique violation | A generic code, e.g. `DATABASE_READ_FAILED` / `TRANSACTION_FAILED` |
+| Query chạy ổn, nhưng không có bản ghi domain nào khớp | Không có room với id đó | Một mã not-found cụ thể, ví dụ `ROOM_NOT_FOUND` |
+| Bản thân query thất bại (kết nối, cú pháp, vi phạm ràng buộc chưa được kiểm tra trước) | Mất kết nối, vi phạm unique | Một mã chung, ví dụ `DATABASE_READ_FAILED` / `TRANSACTION_FAILED` |
 
-The one documented exception is `InvoiceRepository.findByRoomAndPeriod`:
-"no invoice for this room/period" is a normal, expected **success**
-outcome (`Result<Invoice | null>`) because the caller is typically
-asking "does one already exist?" before deciding whether to create one
-— see that interface's own header comment for the full reasoning.
+Ngoại lệ duy nhất đã ghi rõ là `InvoiceRepository.findByRoomAndPeriod`:
+"không có invoice cho room/kỳ này" là một kết quả **thành công** bình
+thường, đã lường trước (`Result<Invoice | null>`) vì caller thường
+đang hỏi "đã có cái nào chưa?" trước khi quyết định có tạo mới hay
+không — xem chính comment đầu interface đó để biết lý do đầy đủ.
 
-Raw PostgreSQL errors (SQL text that was running, connection details,
-stack traces) are **never** put into a `Result`'s `message` — they are
-logged server-side only, via `logDatabaseError()`, for developer
-debugging.
+Lỗi PostgreSQL thô (văn bản SQL đang chạy, chi tiết kết nối, stack
+trace) **không bao giờ** được đưa vào `message` của một `Result` — chỉ
+được log phía server qua `logDatabaseError()`, để developer debug.
 
-`PostgresInvoiceRepository.createInvoice` inspects one specific
-PostgreSQL error code — unique-violation `SQLSTATE 23505` (the
-`UNIQUE(room_id, billing_period)` constraint) — and translates it to
-`INVOICE_ALREADY_EXISTS`, because `CreateInvoiceService`
-(`backend/src/modules/invoice/create-invoice.service.ts`) genuinely
-needs this specific mapping to protect against a race condition its own
-pre-check cannot fully prevent (see
-`docs/CREATE_INVOICE_WORKFLOW.md` "Duplicate invoice / race
-condition"). This is the **only** SQLSTATE mapping in the codebase —
-still no generic PostgreSQL-error-mapping framework is built. Any other
-write failure (including a different constraint violation) falls
-through to the generic `DATABASE_WRITE_FAILED`.
+`PostgresInvoiceRepository.createInvoice` kiểm tra một mã lỗi
+PostgreSQL cụ thể — unique-violation `SQLSTATE 23505` (ràng buộc
+`UNIQUE(room_id, billing_period)`) — và dịch nó thành
+`INVOICE_ALREADY_EXISTS`, vì `CreateInvoiceService`
+(`backend/src/modules/invoice/create-invoice.service.ts`) thực sự cần
+ánh xạ cụ thể này để chống lại một race condition mà bước pre-check
+của chính nó không thể ngăn hoàn toàn (xem
+`docs/CREATE_INVOICE_WORKFLOW.md` mục "Hoá đơn trùng lặp / race
+condition"). Đây là ánh xạ SQLSTATE **duy nhất** trong codebase —
+vẫn không có framework ánh xạ lỗi PostgreSQL tổng quát nào được xây
+dựng. Mọi thất bại ghi khác (bao gồm một vi phạm ràng buộc khác) rơi
+vào `DATABASE_WRITE_FAILED` chung.
 
-## Least privilege
+## Quyền tối thiểu (least privilege)
 
-The backend connects using one `DATABASE_URL` that should be scoped to
-only the access this application genuinely needs (read/write on this
-project's own tables) — not a Supabase service-role/admin key used for
-convenience. Provisioning that specific role is an operational step for
-the repository owner in the Supabase dashboard, not something this
-codebase can enforce, but the connection string boundary
-(backend-only, never sent to the frontend) is enforced by design: no
-database credential is ever read by, or transmitted to, frontend code.
+Backend kết nối bằng một `DATABASE_URL` nên được giới hạn đúng phạm vi
+truy cập mà ứng dụng này thực sự cần (đọc/ghi trên các bảng của chính
+dự án này) — không phải một khoá service-role/admin của Supabase dùng
+cho tiện lợi. Cấp phát đúng role cụ thể đó là một bước vận hành của
+chủ repository trong Supabase dashboard, không phải thứ codebase này
+có thể tự ép buộc, nhưng ranh giới connection string (chỉ backend,
+không bao giờ gửi tới frontend) được đảm bảo theo thiết kế: không có
+credential database nào từng được đọc bởi, hay truyền tới, code
+frontend.
 
-## SQL is not a secret; credentials are
+## SQL không phải bí mật; credential mới là bí mật
 
-The SQL text in this repository (table names, column names, query
-shape) is not sensitive — it is visible source code, same as any other
-logic, and is expected to be read during an oral defense. What **must**
-stay secret is the connection *credential*: `DATABASE_URL` (which
-contains a password), any Supabase service-role key. These never appear
-in committed files — `backend/.env.example` contains a placeholder
-format only (see its own comment), `.env` is git-ignored, and no test or
-source file interpolates a real credential.
+Văn bản SQL trong repository này (tên bảng, tên cột, hình dạng query)
+không nhạy cảm — nó là mã nguồn hiển thị, như mọi logic khác, và được
+kỳ vọng sẽ được đọc khi bảo vệ trực tiếp. Thứ **phải** giữ bí mật là
+*credential* kết nối: `DATABASE_URL` (chứa mật khẩu), bất kỳ khoá
+service-role nào của Supabase. Những thứ này không bao giờ xuất hiện
+trong file đã commit — `backend/.env.example` chỉ chứa định dạng
+placeholder (xem comment của chính nó), `.env` bị git-ignore, và không
+có file test hay source nào nội suy một credential thật.
 
-## Deliberately deferred
+## Cố ý hoãn lại
 
-The persistence foundation, the invoice write workflow
-(`CreateInvoiceService`, see `docs/CREATE_INVOICE_WORKFLOW.md`), and
-the mandatory management API (property/room/meter-reading/tariff — see
-`docs/MANAGEMENT_API.md`) are now implemented. Still deliberately
-**not** implemented: DELETE for any resource (a scope decision, not a
-gap — see `docs/MANAGEMENT_API.md` "No DELETE endpoints"), a generic
-PostgreSQL-error-code-to-domain-error mapping table (each Repository
-translates only the one `SQLSTATE 23505` case it actually needs, via
-the shared `backend/src/database/unique-violation.ts` structural
-check), and any frontend/auth/admin work. These are separate, later,
-reviewable tasks.
+Nền tảng persistence, luồng ghi hoá đơn (`CreateInvoiceService`, xem
+`docs/CREATE_INVOICE_WORKFLOW.md`), và management API bắt buộc
+(property/room/meter-reading/tariff — xem `docs/MANAGEMENT_API.md`)
+nay đã được cài đặt đầy đủ. Vẫn cố ý **chưa** cài đặt: DELETE cho bất
+kỳ tài nguyên nào (một quyết định về phạm vi, không phải một lỗ hổng —
+xem `docs/MANAGEMENT_API.md` mục "Không có endpoint DELETE"), một bảng
+ánh xạ mã lỗi PostgreSQL sang lỗi domain tổng quát (mỗi Repository chỉ
+dịch đúng một case `SQLSTATE 23505` mà nó thực sự cần, qua kiểm tra cấu
+trúc dùng chung `backend/src/database/unique-violation.ts`), và xác
+thực/phân quyền/khu vực quản trị riêng. Giao diện trình duyệt (frontend)
+đã được cài đặt đầy đủ — xem `docs/FRONTEND.md`; đây không còn là công
+việc hoãn lại.
