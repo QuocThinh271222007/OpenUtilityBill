@@ -4,6 +4,42 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- Closed a precision mismatch between Calculation Core and the database:
+  `invoice_items.quantity`/`.amount` were `NUMERIC(12,2)`/`NUMERIC(14,2)`
+  (fixed to 2 decimal places), which could silently truncate exact
+  intermediate values Calculation Core deliberately preserves (e.g. a
+  quota-adjusted tier capacity of `62.5125` kWh). Added
+  `database/migrations/002_preserve_invoice_item_precision.sql`,
+  widening both columns to unconstrained `NUMERIC` (a safe, non-
+  destructive `ALTER COLUMN ... TYPE`); `unit_price` and the invoices
+  table's final rounded totals were deliberately left unchanged (see
+  `docs/DATABASE_DESIGN.md` "Invoice item precision" for why). Added
+  `database/validation/004_invoice_item_precision_validation.sql`
+  proving PostgreSQL preserves 4-6 decimal-place values after the
+  migration. Migration 001 was not modified.
+- Removed an unnecessary internal round-trip: `calculateTieredElectricity`
+  now calls the new `calculateQuotaFactorExact` (returns `ExactNumber`)
+  directly instead of parsing back the string result of
+  `calculateQuotaFactor`. Decimal strings remain for module/API/database
+  boundaries only, not for communication between tightly-coupled internal
+  calculation steps.
+- Made the "quota configuration must yield a finite decimal" rule
+  explicit and consistent: `calculateQuotaFactor`/`calculateQuotaFactorExact`
+  now validate `peoplePerQuotaUnit` itself (via the new
+  `isFiniteDecimalDenominator`) *before* dividing, independently of
+  `tenantCount`. Previously, the same `peoplePerQuotaUnit` (e.g. `3`)
+  could succeed or fail depending on which `tenantCount` it was applied
+  to (e.g. `3/3` succeeded, `1/3` failed) - now it is rejected
+  consistently for every `tenantCount`, which is more predictable and
+  explainable for a tariff configuration. The official `peoplePerQuotaUnit
+  = 4` case, and all values whose only prime factors are 2 and/or 5, are
+  unaffected. All 7 official test cases remain unchanged and passing.
+- Added `backend/src/calculation/__tests__/public-json-safety.test.ts`,
+  verifying no public Calculation Core result object leaks a `bigint`
+  (every public result `JSON.stringify`s successfully).
+
 ### Added
 
 - Calculation Core (`backend/src/calculation/`): pure TypeScript billing

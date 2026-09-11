@@ -190,7 +190,69 @@ với một nửa mẫu số bằng phép toán `BigInt` nguyên
 `Math.round` che giấu vấn đề thay vì giải quyết nó; hàm tự viết trên có
 thể kiểm chứng và giải thích từng bước bằng số học nguyên.
 
-## 13. Tóm tắt
+## 13.5. Độ chính xác TÍNH TOÁN ≠ độ chính xác LƯU TRỮ
+
+Đây là hai mối quan tâm KHÁC NHAU, và cả hai phải cùng bảo toàn một giá
+trị trung gian cho tới đúng ranh giới làm tròn cuối cùng:
+
+- **Tính toán** (Calculation Core, tài liệu này): dùng `ExactNumber`
+  nội bộ, không làm tròn trung gian.
+- **Lưu trữ** (PostgreSQL, `docs/DATABASE_DESIGN.md`): cột NUMERIC phải
+  có đủ scale để giữ NGUYÊN VẸN giá trị Calculation Core đã tính, chứ
+  không được âm thầm làm tròn nó khi ghi vào database.
+
+Ví dụ đã từng là một lỗ hổng thực sự trong schema: `invoice_items.quantity`
+ban đầu là `NUMERIC(12, 2)` — chỉ giữ 2 chữ số thập phân. Nếu ngưỡng bậc
+gốc là `50.01` kWh và quota là `1.25`, Calculation Core tính đúng ngưỡng
+đã điều chỉnh là `62.5125` (xem mục 5 ở trên) — nhưng `NUMERIC(12, 2)`
+sẽ CẮT nó thành `62.51` ngay khi lưu, phá vỡ đúng nguyên tắc "không làm
+tròn giá trị trung gian" mà cả tài liệu này lẫn database đều tuyên bố
+tuân theo. `database/migrations/002_preserve_invoice_item_precision.sql`
+sửa lỗi này bằng cách nới `invoice_items.quantity` và `.amount` thành
+`NUMERIC` không giới hạn scale — xem chi tiết đầy đủ trong
+`docs/DATABASE_DESIGN.md` mục "Invoice item precision" và migration đó.
+
+Quy tắc chung rút ra: bất cứ khi nào một cột database sẽ lưu một giá trị
+TRUNG GIAN (chưa qua bước làm tròn cuối cùng) do Calculation Core tính
+ra, cột đó phải là `NUMERIC` không giới hạn scale — KHÔNG phải
+`NUMERIC(p, s)` cố định. Chỉ số tiền VNĐ CUỐI CÙNG (đã qua half-up, như
+`invoices.calculated_total`) mới nên có scale cố định (và trên thực tế
+luôn là số nguyên).
+
+## 13.6. Chiến lược cho quota không hữu hạn (1/3-style)
+
+`calculateQuotaFactor`/`calculateQuotaFactorExact`
+(`electricity/calculate-quota-factor.ts`) có thể gặp
+`tenantCount / peoplePerQuotaUnit` không có biểu diễn thập phân hữu hạn
+(ví dụ `1/3`). Hai chiến lược đã được cân nhắc:
+
+- **Chiến lược A** (lan truyền `ExactNumber` xuyên suốt pipeline, định
+  nghĩa một biểu diễn JSON-safe cho số vô hạn tuần hoàn, ví dụ một chuỗi
+  phân số `"numerator/denominator"`): bị loại. Vấn đề không dừng lại ở
+  `quotaFactor` — MỌI giá trị hạ nguồn phụ thuộc nó (`quantityKwh` từng
+  bậc, có thể cả `subtotal`/`vatAmount`) cũng có thể trở thành vô hạn
+  tuần hoàn, nên Chiến lược A thực chất đòi hỏi thiết kế lại hợp đồng
+  "mọi giá trị công khai là chuỗi thập phân" (mục 9 ở trên) cho TOÀN BỘ
+  Calculation Core, không riêng một field — một thay đổi kiến trúc lớn
+  hơn nhiều so với phạm vi một corrective, không mang lại lợi ích nào
+  cho cấu hình thực tế của kỳ thi (`peoplePerQuotaUnit = 4`, luôn hữu
+  hạn).
+- **Chiến lược B** (đã chọn): định nghĩa tường minh "`peoplePerQuotaUnit`
+  hợp lệ = giá trị mà MỌI `tenantCount` đều cho thương số hữu hạn", tức
+  `peoplePerQuotaUnit` chỉ có ước nguyên tố 2 và/hoặc 5 (`1, 2, 4, 5, 8,
+  10, 16, 20, 25, ...`). Kiểm tra bằng `isFiniteDecimalDenominator`
+  (`shared/exact-number.ts`) TRƯỚC khi chia, độc lập với `tenantCount` cụ
+  thể — nên cùng một cấu hình tariff luôn thành công hoặc luôn thất bại,
+  không phụ thuộc phòng nào đang được tính.
+
+Ràng buộc này CHỈ tồn tại trong Calculation Core (một quyết định của
+tầng tính toán) — cột `electricity_tariffs.people_per_quota_unit` trong
+database vẫn giữ nguyên `CHECK (people_per_quota_unit > 0)`, KHÔNG bị
+thắt chặt thêm. Việc validate `peoplePerQuotaUnit` một cách chặt hơn ở
+form quản trị tariff (Service/Admin layer) là quyết định của một task
+sau, khi giao diện đó thực sự được xây dựng.
+
+## 14. Tóm tắt
 
 | Giá trị | Kiểu | Vì sao |
 |---|---|---|

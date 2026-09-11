@@ -234,31 +234,59 @@ calculations. `NUMERIC` stores an exact decimal value, which is what a
 billing application needs: a VAT rate of `0.08` must mean exactly
 `0.08`, not `0.08000000000000000004`.
 
-### Database `NUMERIC` vs. TypeScript runtime representation — a separate decision
+### Database `NUMERIC` vs. TypeScript runtime representation
 
 Storing values as `NUMERIC` in PostgreSQL is a **database-layer**
-decision, made in this task. It does not, by itself, decide how
-TypeScript code will do arithmetic on those values later — that is a
-**separate, runtime-layer** decision for Calculation Core, deferred to
-that task.
+decision; it does not, by itself, decide how TypeScript code does
+arithmetic on those values — that is Calculation Core's decision (see
+`docs/NUMERIC_PRECISION.md`).
 
-For this task's domain model types
-(`backend/src/modules/*/*.model.ts`), every field backed by a `NUMERIC`
-column is typed as TypeScript `string`, documented inline in each model
-file. This matches how the standard PostgreSQL driver for Node.js (`pg`)
-returns `NUMERIC` values by default — as strings, specifically to avoid
-silently truncating precision by parsing into a JS `number`
-(IEEE-754 double, the same representation problem as `FLOAT`/`REAL`).
-Choosing `string` at the model boundary means this project does not
-silently downgrade to imprecise floating point the moment data crosses
-from the database into TypeScript.
+For domain model types (`backend/src/modules/*/*.model.ts`), every field
+backed by a `NUMERIC` column is typed as TypeScript `string`, matching
+how the standard PostgreSQL driver for Node.js (`pg`) returns `NUMERIC`
+by default — as strings, to avoid silently truncating precision by
+parsing into a JS `number` (IEEE-754 double, the same representation
+problem as `FLOAT`/`REAL`).
 
-Whether Calculation Core later parses these strings into `number`
-(acceptable for values that fit safely within double precision, with
-careful rounding rules), uses a decimal arithmetic library, or works with
-the strings directly, is a decision for that future task — not decided,
-and not needed, here. Do not treat the `string` typing in the current
-model files as an implicit answer to that question.
+Calculation Core (`backend/src/calculation/`) parses those strings into
+an exact rational (`ExactNumber`, built on `BigInt`) at its input
+boundary, does every intermediate operation on that exact representation
+(never `number`), and only produces a decimal string again at its output
+boundary. This is the same `string` ↔ exact-value ↔ `string` pattern on
+both sides of Calculation Core — the database and the calculation layer
+agree on the boundary representation. See `docs/NUMERIC_PRECISION.md`
+for the full reasoning, including why no `decimal.js`-style library was
+added.
+
+### Invoice item precision
+
+`invoice_items.quantity` and `invoice_items.amount` were originally
+`NUMERIC(12, 2)`/`NUMERIC(14, 2)` (fixed to 2 decimal places) in
+`001_initial_domain_schema.sql`. This was a latent correctness bug:
+Calculation Core deliberately preserves intermediate precision beyond 2
+decimal places (e.g. a quota-adjusted tier capacity of `62.5125` kWh —
+see `docs/NUMERIC_PRECISION.md` §13.5), and a fixed-scale column would
+silently truncate that value the moment it was persisted, contradicting
+the "no intermediate rounding" rule at the one layer meant to store it
+faithfully.
+
+`002_preserve_invoice_item_precision.sql` widens both columns to
+unconstrained `NUMERIC` (no precision/scale limit). This is a safe,
+non-destructive `ALTER COLUMN ... TYPE NUMERIC` — every value that fit
+in the old fixed-scale column is still a valid value in the new
+unconstrained one, so no existing data can be lost or altered by the
+migration itself.
+
+`invoice_items.unit_price` was deliberately **not** widened: it is
+always a direct copy of `electricity_tariff_tiers.unit_price` or a
+`water_tariffs.price_per_*` column, both already `NUMERIC(14, 2)` at the
+source and never computed/multiplied before being snapshotted — so it
+can never carry more than 2 decimal places regardless of quota or
+threshold values, and widening it would protect nothing. `invoices.calculated_total`/`actual_charged_amount`
+were also left unchanged — they are **final**, already-rounded VND
+amounts (the output of `roundHalfUpToInteger`, see
+`docs/NUMERIC_PRECISION.md`), a different concern from preserving
+unrounded intermediate values.
 
 ## Tariff versions and effective dates
 

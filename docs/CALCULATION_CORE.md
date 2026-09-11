@@ -70,10 +70,10 @@ Config / input (decimal strings, plain numbers)
 
 | Module | Responsibility |
 |---|---|
-| `shared/exact-number.ts` | Exact rational arithmetic (`parseDecimal`, `add`, `subtract`, `multiply`, `divide`, `compare`, `min`, `toDecimalString`, `roundHalfUpToInteger`). See `docs/NUMERIC_PRECISION.md`. |
+| `shared/exact-number.ts` | Exact rational arithmetic (`parseDecimal`, `add`, `subtract`, `multiply`, `divide`, `compare`, `min`, `toDecimalString`, `roundHalfUpToInteger`, `isFiniteDecimalDenominator`). See `docs/NUMERIC_PRECISION.md`. |
 | `meter/calculate-meter-usage.ts` | `previous`/`current`/`max` readings → usage, including rollover (`current < previous`). |
 | `electricity/validate-electricity-config.ts` | Checks a tier list is well-formed (non-empty, positive unique tier numbers, exactly one trailing unlimited tier, valid thresholds/prices) and sorts it deterministically. |
-| `electricity/calculate-quota-factor.ts` | `tenantCount / peoplePerQuotaUnit`, unrounded. |
+| `electricity/calculate-quota-factor.ts` | `tenantCount / peoplePerQuotaUnit`, unrounded. Exports both `calculateQuotaFactorExact` (returns `ExactNumber`, for internal composition) and `calculateQuotaFactor` (a thin `string`-returning wrapper around it, for the public/test boundary). |
 | `electricity/allocate-electricity-tiers.ts` | Iteratively distributes usage across quota-adjusted tier capacities. |
 | `electricity/calculate-tiered-electricity.ts` | Orchestrates quota → allocation → subtotal → VAT → total for `QUOTA_TIERED`. |
 | `electricity/calculate-fallback-electricity.ts` | Prices the entire usage at one configured tier's unit price, for `FALLBACK_TIER_FLAT`. |
@@ -157,9 +157,39 @@ billing — `calculateWaterCharge`'s `PER_PERSON` method still accepts
 `tenantCount = 0` (a legitimate "empty room pays 0 for water" outcome,
 not a quota calculation).
 
+## Quota configuration limit (1/3-style values)
+
+`peoplePerQuotaUnit` must be a value whose only prime factors are 2
+and/or 5 (`1, 2, 4, 5, 8, 10, 16, 20, 25, ...`), checked by
+`isFiniteDecimalDenominator` *before* the division, independently of
+`tenantCount`. This guarantees `tenantCount / peoplePerQuotaUnit` is
+representable as a finite decimal for **every** tenant count a given
+tariff might ever be applied to — a config-level guarantee, not a
+per-computation coincidence. See `docs/NUMERIC_PRECISION.md` §13.6 for
+the full reasoning (including why the alternative — propagating exact
+rationals everywhere, with a fraction-based public contract — was
+considered and rejected as out of scope for this project). The database
+`CHECK (people_per_quota_unit > 0)` is deliberately left unchanged; this
+is a Calculation Core boundary, not a database restriction.
+
+## No internal string round-trips
+
+`calculateTieredElectricity` calls `calculateQuotaFactorExact` (which
+returns `ExactNumber`) directly, and uses that value immediately in
+`allocateElectricityTiers` — it does **not** call the string-returning
+`calculateQuotaFactor` and then re-`parseDecimal` the result just to
+keep calculating. Decimal strings are for module/API/database
+boundaries (see "Public numeric contract" below), not for passing values
+between two tightly-coupled steps inside the same pipeline. The
+string-returning `calculateQuotaFactor` still exists and is still
+public/tested — `calculateTieredElectricity` just doesn't route through
+it internally anymore.
+
 ## Public numeric contract
 
 Every public function in `electricity/`, `water/`, and `invoice/`
 accepts and returns **decimal strings** for measurement/financial
 values — never `ExactNumber` or `bigint`. See
-`docs/NUMERIC_PRECISION.md` §9 for why.
+`docs/NUMERIC_PRECISION.md` §9 for why. This is verified by a dedicated
+test (`__tests__/public-json-safety.test.ts`) that `JSON.stringify`s
+every public result object and walks it recursively for any `bigint`.
