@@ -5,10 +5,13 @@ exist. It complements `docs/CREATE_INVOICE_WORKFLOW.md` (the underlying
 Service logic) and `docs/ERROR_HANDLING.md` (the general success/error
 contract).
 
-**Only two business endpoints exist**: `POST /api/v1/invoices` and
-`GET /api/v1/invoices`. No property/room/meter-reading/tariff CRUD, no
-authentication, and no frontend consumes this API yet — do not assume
-otherwise from this document.
+This document covers the invoice workflow endpoints
+(`POST`/`GET /api/v1/invoices`). Property/room/meter-reading/tariff
+management endpoints are documented separately in
+`docs/MANAGEMENT_API.md` — the two documents share the same
+conventions (IDs, decimal-string contract, error contract) described
+below. No authentication and no frontend consumes this API yet — do
+not assume otherwise from either document.
 
 ## Base path
 
@@ -201,19 +204,28 @@ GET /api/v1/invoices?roomId=1&billingPeriod=2026-09-01
 
 ### HTTP status mapping
 
-A small, explicit table
-(`backend/src/modules/invoice/invoice.http.ts`,
-`mapResultErrorCodeToHttpStatus`) — not a generic error framework. Any
-`Result` error code not listed here maps to `500` (never guessed as a
-4xx for an unrecognized situation).
+A small, explicit table, now shared by every HTTP module in the backend
+(`backend/src/shared/http/result-error-status.ts`,
+`mapResultErrorCodeToHttpStatus` — the invoice module's own
+`invoice.http.ts` re-exports it unchanged so existing imports keep
+working) — not a generic error framework. Any `Result` error code not
+listed here maps to `500` (never guessed as a 4xx for an unrecognized
+situation).
 
 | Status | Codes |
 |---|---|
 | `400` | `VALIDATION_ERROR`, `INVALID_ACTUAL_CHARGED_AMOUNT` |
-| `404` | `ROOM_NOT_FOUND`, `METER_READING_NOT_FOUND`, `TARIFF_NOT_FOUND`, `INVOICE_NOT_FOUND` |
-| `409` | `INVOICE_ALREADY_EXISTS` |
-| `422` | `AMBIGUOUS_TARIFF_CONFIGURATION`, `TARIFF_CONFIGURATION_INVALID`, `INVALID_QUOTA`, `INVALID_TENANT_COUNT`, `INVALID_METER_READING`, `INVALID_METER_MAXIMUM`, `METER_MAXIMUM_REQUIRED`, `FALLBACK_TIER_NOT_FOUND`, `INVALID_WATER_METHOD`, `INVALID_WATER_RATE`, `INVALID_VAT_RATE`, `INVALID_DECIMAL` |
+| `404` | `ROOM_NOT_FOUND`, `METER_READING_NOT_FOUND`, `TARIFF_NOT_FOUND`, `INVOICE_NOT_FOUND`, `PROPERTY_NOT_FOUND` |
+| `409` | `INVOICE_ALREADY_EXISTS`, `ROOM_ALREADY_EXISTS`, `METER_READING_ALREADY_EXISTS`, `METER_READING_IN_USE`, `TARIFF_ALREADY_EXISTS`, `TARIFF_PERIOD_OVERLAP`, `TARIFF_IN_USE` |
+| `422` | `AMBIGUOUS_TARIFF_CONFIGURATION`, `TARIFF_CONFIGURATION_INVALID`, `INVALID_QUOTA`, `INVALID_TENANT_COUNT`, `INVALID_PEOPLE_PER_QUOTA_UNIT`, `INVALID_METER_READING`, `INVALID_METER_MAXIMUM`, `METER_MAXIMUM_REQUIRED`, `FALLBACK_TIER_NOT_FOUND`, `INVALID_WATER_METHOD`, `INVALID_WATER_RATE`, `INVALID_VAT_RATE`, `INVALID_DECIMAL`, and the `validateElectricityConfig` tier-structure codes (`EMPTY_TARIFF`, `INVALID_TIER_NUMBER`, `DUPLICATE_TIER_NUMBER`, `INVALID_TIER_PRICE`, `INVALID_TIER_THRESHOLD`, `NO_UNLIMITED_TIER`, `MULTIPLE_UNLIMITED_TIERS`, `UNLIMITED_TIER_NOT_LAST`) |
 | `500` | `DATABASE_READ_FAILED`, `DATABASE_WRITE_FAILED`, `TRANSACTION_FAILED`, `INTERNAL_INVARIANT_VIOLATION`, `INTERNAL_ERROR` (unexpected throw caught at the Controller boundary), and any unrecognized code |
+
+The `404`/`409`/`422` codes added in this row (`PROPERTY_NOT_FOUND`,
+`ROOM_ALREADY_EXISTS`, `METER_READING_ALREADY_EXISTS`,
+`METER_READING_IN_USE`, `TARIFF_ALREADY_EXISTS`,
+`TARIFF_PERIOD_OVERLAP`, `TARIFF_IN_USE`, `INVALID_PEOPLE_PER_QUOTA_UNIT`,
+and the tier-structure codes) are only reachable through the management
+endpoints — see `docs/MANAGEMENT_API.md`.
 
 `409 INVOICE_ALREADY_EXISTS` covers both the normal case (the Service's
 own pre-check) and the race-condition case (a real `SQLSTATE 23505`
@@ -265,7 +277,8 @@ at module-import time. This means:
 
 ## What is not implemented
 
-Property/Room/MeterReading/Tariff CRUD, authentication, roles, an admin
-UI, and any frontend screen consuming this API. See
-`docs/CREATE_INVOICE_WORKFLOW.md` "What is still deferred" for the full
-list.
+DELETE for any resource (by design — see `docs/MANAGEMENT_API.md` "No
+DELETE endpoints"), authentication, roles, an admin UI, and any
+frontend screen consuming this API. Property/Room/MeterReading/Tariff
+management (list/create/update) **is** implemented — see
+`docs/MANAGEMENT_API.md`.

@@ -110,20 +110,27 @@ Service / Orchestrator   (backend/src/modules/<module>/<module>.service.ts)
        PostgreSQL (Supabase)
 ```
 
-Note: the invoice module now implements the full chain —
-`invoice.routes.ts` → `invoice.controller.ts` →
-`create-invoice.service.ts`/`get-invoice.service.ts` → Repository/
-Calculation Core/`InvoiceUnitOfWork` → PostgreSQL — for exactly two
-endpoints, `POST`/`GET /api/v1/invoices` (see `docs/API.md`,
-`docs/CREATE_INVOICE_WORKFLOW.md`). The Controller depends on the
-Service through a small `getService: () => Service` factory
-(dependency injection), and the concrete Postgres-backed Service is
-assembled by a separate composition root
-(`backend/src/composition/invoice.composition.ts`), not by the
-Controller itself. Every other domain (rooms, properties, meter
-readings, tariffs) still has no Route/Controller — the chain above is
-the intended shape for when that work happens (see
-`docs/CALCULATION_CORE.md`, `docs/DATABASE_ACCESS.md`).
+Note: every domain module now implements the full chain — `<module>
+.routes.ts` → `<module>.controller.ts` → `<module>...service.ts` →
+Repository/Calculation Core (+ `InvoiceUnitOfWork`/
+`ElectricityTariffUnitOfWork` where an aggregate write must be atomic)
+→ PostgreSQL. Invoice (`POST`/`GET /api/v1/invoices`, see
+`docs/API.md`, `docs/CREATE_INVOICE_WORKFLOW.md`) and the management
+modules — property, room, meter-reading, tariff (electricity + water),
+see `docs/MANAGEMENT_API.md` — all follow this shape. Every Controller
+depends on its Service through a small `getService: () => Service`
+factory (dependency injection), and each concrete Postgres-backed
+Service is assembled by its own composition root under
+`backend/src/composition/` (one file per module), never by the
+Controller itself. `backend/src/shared/http/` and
+`backend/src/shared/validation/` hold small utilities (date parsing,
+error-code→HTTP-status mapping, ID/decimal-scale shape checks) shared
+across all of these modules, extracted from the invoice module once a
+second consumer needed the same logic — see `docs/MANAGEMENT_API.md`
+"Architecture notes specific to management" for the full list. DELETE
+is deliberately not implemented for any management resource (see that
+document's "No DELETE endpoints" section) — this is not a gap in the
+chain above, it is a scope decision.
 
 Concrete example implemented in this foundation — the health check:
 

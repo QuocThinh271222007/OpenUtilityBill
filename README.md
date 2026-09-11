@@ -75,32 +75,36 @@ every financial value, with no database or HTTP dependency. See
 
 A persistence foundation now exists: a Postgres.js database adapter and
 transaction boundary (`backend/src/database/`), and Repository
-implementations for `Room`, `MeterReading`, `ElectricityTariff` (with its
-tiers), `WaterTariff` (all read-only), and `Invoice` (read + write —
-`createInvoice`/`createInvoiceItems`) (`backend/src/repositories/`) —
-all parameterized SQL, no ORM, `NUMERIC` and `BIGINT` preserved as exact
-strings end to end. See
+implementations for `RentalProperty`, `Room`, `MeterReading`,
+`ElectricityTariff` (with its tiers), `WaterTariff`, and `Invoice` —
+every one of these now supports both read AND write
+(`backend/src/repositories/`) — all parameterized SQL, no ORM,
+`NUMERIC` and `BIGINT` preserved as exact strings end to end. See
 [`docs/DATABASE_ACCESS.md`](docs/DATABASE_ACCESS.md).
 
-The first complete write workflow is implemented:
-`CreateInvoiceService` (`backend/src/modules/invoice/`) orchestrates
-Room/MeterReading/Tariff reads, Calculation Core, and a transactional
-`InvoiceUnitOfWork` to persist an invoice and its full breakdown
-atomically, with race-condition-safe duplicate protection.
-`GetInvoiceService` reads a persisted invoice back (no recalculation).
-See [`docs/CREATE_INVOICE_WORKFLOW.md`](docs/CREATE_INVOICE_WORKFLOW.md).
+The invoice write workflow is implemented: `CreateInvoiceService`
+(`backend/src/modules/invoice/`) orchestrates Room/MeterReading/Tariff
+reads, Calculation Core, and a transactional `InvoiceUnitOfWork` to
+persist an invoice and its full breakdown atomically, with
+race-condition-safe duplicate protection. `GetInvoiceService` reads a
+persisted invoice back (no recalculation). See
+[`docs/CREATE_INVOICE_WORKFLOW.md`](docs/CREATE_INVOICE_WORKFLOW.md).
 
-The first real business REST endpoints now exist:
-`POST /api/v1/invoices` and `GET /api/v1/invoices`, wired through
-Route → Controller → Service with no business logic or SQL in the
-Controller, and a lazy composition root
-(`backend/src/composition/invoice.composition.ts`) so
-`GET /api/v1/health` keeps working with no `DATABASE_URL` set. See
-[`docs/API.md`](docs/API.md).
+The full mandatory backend REST API now exists: invoice creation/
+readback (`POST`/`GET /api/v1/invoices`) plus management endpoints for
+properties, rooms, meter readings, and electricity/water tariff
+configuration (`docs/MANAGEMENT_API.md`) — enough for a future frontend
+to manage all required data and create/inspect invoices. Every endpoint
+is wired Route → Controller → Service with no business logic or SQL in
+the Controller, and each module has its own lazy composition root
+(`backend/src/composition/`) so `GET /api/v1/health` keeps working with
+no `DATABASE_URL` set. DELETE is deliberately not implemented for any
+resource yet (see `docs/MANAGEMENT_API.md` "No DELETE endpoints"). See
+[`docs/API.md`](docs/API.md) and
+[`docs/MANAGEMENT_API.md`](docs/MANAGEMENT_API.md).
 
-Full CRUD for other domains (property/room/meter-reading/tariff),
-authentication, and a frontend that consumes this API still do not
-exist — these are separate, later, reviewable tasks.
+Authentication, roles, an admin UI, and a frontend that consumes this
+API still do not exist — these are separate, later, reviewable tasks.
 
 ## Repository structure
 
@@ -116,7 +120,7 @@ OpenUtilityBill/
   database/    PostgreSQL schema (migrations/), seed data (seeds/), and
                runtime validation SQL (validation/)
   docs/        Architecture, domain model, database access, calculation,
-               and learning docs
+               API/management API, and learning docs
 ```
 
 ## Quick start
@@ -154,6 +158,11 @@ and typecheck commands for both `backend/` and `frontend/`.
   `POST`/`GET /api/v1/invoices`: request/response shape, the
   `YYYY-MM-DD` date wire format, decimal-string financial contract,
   HTTP status mapping, and the lazy database composition.
+- [`docs/MANAGEMENT_API.md`](docs/MANAGEMENT_API.md) — REST contract
+  for property/room/meter-reading/tariff management: numeric/date
+  contracts per resource, duplicate/overlap protection, historical
+  reference protection (why a referenced meter reading or tariff can't
+  be edited), and why DELETE is not implemented.
 - [`database/README.md`](database/README.md) — schema/seed files and how
   to run them.
 
@@ -165,9 +174,11 @@ Calculation Core implements the official competition billing rules
 (meter usage, tiered/fallback electricity, water, invoice totals) and is
 covered by automated tests against the official published test cases
 (`cd backend && npm test`). A Repository layer over Postgres.js exists
-(read-only for Room/MeterReading/Tariff, read+write for Invoice), a
-complete `CreateInvoiceService`/`GetInvoiceService` pair ties them
-together transactionally, and `POST`/`GET /api/v1/invoices` expose that
-through a real REST endpoint (see `docs/API.md`); full CRUD for other
-domains, authentication, and billing UI screens are not implemented
-yet.
+with read+write support for every domain (RentalProperty, Room,
+MeterReading, ElectricityTariff, WaterTariff, Invoice); a complete
+`CreateInvoiceService`/`GetInvoiceService` pair ties invoice creation/
+readback together transactionally; and the full mandatory REST API
+(invoice workflow plus property/room/meter-reading/tariff management)
+exposes that through real endpoints (see `docs/API.md`,
+`docs/MANAGEMENT_API.md`). DELETE, authentication, and billing UI
+screens are not implemented yet.

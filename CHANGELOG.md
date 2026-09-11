@@ -4,6 +4,84 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Mandatory management REST API: properties, rooms, meter readings, and
+  electricity/water tariff configuration —
+  `GET`/`POST /api/v1/properties`, `PATCH /api/v1/properties/:propertyId`;
+  `GET`/`POST /api/v1/rooms` (optional `?propertyId=`),
+  `PATCH /api/v1/rooms/:roomId`; `GET`/`POST /api/v1/meter-readings`
+  (`?roomId=`, optional `&billingPeriod=`),
+  `PUT /api/v1/meter-readings/:readingId`; `GET`/`POST
+  /api/v1/tariffs/electricity`, `PUT /api/v1/tariffs/electricity/:tariffId`;
+  `GET`/`POST /api/v1/tariffs/water`, `PUT /api/v1/tariffs/water/:tariffId`.
+  Every Repository (`Property`, `Room`, `MeterReading`,
+  `ElectricityTariff`, `WaterTariff`) now supports write operations, not
+  just Invoice. See `docs/MANAGEMENT_API.md` for the full contract.
+  DELETE is deliberately not implemented for any resource — historical
+  `RESTRICT` foreign keys make deletion semantics a product decision
+  out of scope for the mandatory contest requirements
+  (`DELETE_NOT_IMPLEMENTED_BY_DESIGN=true`).
+- `PropertyRepository` implemented (`listAll`/`findById`/`create`/
+  `update`) — previously deferred at the domain-database-foundation
+  stage for lack of a read use case; the management API now needs it.
+- Electricity tariff configuration is an aggregate (`electricity_tariffs`
+  parent + `electricity_tariff_tiers` children, any number of tiers,
+  never assumed to be 6): `create`/`update` write both atomically
+  through a new `ElectricityTariffUnitOfWork` (modeled directly on
+  `InvoiceUnitOfWork`). `update` replaces the entire tier set (delete
+  all, insert submitted set) inside the same transaction as the parent
+  update — no state where the parent is written but tiers are only
+  half-written.
+- Reused, not reimplemented: tier structure validation
+  (`validateElectricityConfig`), the `peoplePerQuotaUnit`
+  finite-quota-factor rule (`calculateQuotaFactor`, probed with a safe
+  `tenantCount = 1`), and meter-reading rollover/validity checks
+  (`calculateMeterUsage`, usage result discarded) — all Calculation
+  Core functions already used by `CreateInvoiceService`, so admin input
+  is held to the exact same rules invoicing will apply later, not a
+  second, possibly-divergent copy.
+- Tariff period overlap validation (`TARIFF_PERIOD_OVERLAP`, 409) —
+  application-level (no new migration/exclusion constraint), independent
+  of `CreateInvoiceService`'s existing `AMBIGUOUS_TARIFF_CONFIGURATION`
+  fail-closed check, which remains the second line of defense.
+- Historical reference protection: a meter reading already used as an
+  invoice's `electricity_reading_id`/`water_reading_id` cannot be
+  updated (`METER_READING_IN_USE`, 409); a tariff already referenced by
+  an invoice's `electricity_tariff_id`/`water_tariff_id` cannot be
+  updated (`TARIFF_IN_USE`, 409) — editing either would silently change
+  what a historical invoice's source data means.
+- Shared infrastructure extracted from the invoice module (behavior
+  unchanged, invoice's own files re-export where needed so existing
+  imports/tests kept working): `backend/src/shared/http/`
+  (`date-wire-format.ts` — `parseDateWireFormat` for any calendar date
+  vs. `parseFirstOfMonthWireFormat` for billing-period-shaped dates;
+  `result-error-status.ts` — the shared error-code → HTTP-status table;
+  `controller-helpers.ts` — `isPlainRequestBody`/`sendValidationError`/
+  `sendInternalError`), `backend/src/shared/validation/` (`id.ts`,
+  `date.ts`, `decimal-scale.ts` — a generic "exact decimal within N
+  integer/M fractional digits" check used for every `NUMERIC(p, s)`
+  field in the new endpoints), and
+  `backend/src/database/unique-violation.ts` (the SQLSTATE 23505
+  structural check, now used by five Repositories instead of one).
+- New composition roots (`backend/src/composition/{property,room,
+  meter-reading,tariff}.composition.ts`), same lazy pattern as
+  `invoice.composition.ts` — `GET /api/v1/health` and input validation
+  on every new endpoint keep working with no `DATABASE_URL` set.
+- Unit tests (no PostgreSQL) for every new Repository/Service/Controller,
+  and `DATABASE_URL`-gated integration tests for Property (create →
+  update → read), Room (create → update → list, real `UNIQUE(property_id,
+  name)` violation), MeterReading (create → update → list ordering, real
+  `UNIQUE` violation), the electricity tariff aggregate transaction
+  (real commit and real rollback via a genuine `UNIQUE(tariff_id,
+  tier_number)` violation), and WaterTariff (create → update, real
+  `UNIQUE(name, effective_from)` violation) — all `SKIP` (not fail) when
+  `DATABASE_URL` is unset, matching every other integration test in this
+  project's history.
+
+No frontend consumes this API yet — see `docs/MANAGEMENT_API.md` for
+what is still deferred.
+
 ### Fixed
 
 - `actualChargedAmount` persistence-precision defect: `CreateInvoiceService`

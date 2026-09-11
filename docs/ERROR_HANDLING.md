@@ -65,22 +65,24 @@ fail(code, message)         // → { success: false, error: { code, message } }
 
 Error codes are `UPPER_SNAKE_CASE`, domain-specific, and describe *what*
 failed, not *how* (no HTTP status codes or stack traces embedded in the
-code). The invoice REST API (`docs/API.md`) now wires several of these
-to real logic — `POST`/`GET /api/v1/invoices` map every one of them to
-an HTTP status via one small table
-(`backend/src/modules/invoice/invoice.http.ts`,
+code). The REST API (`docs/API.md`, `docs/MANAGEMENT_API.md`) now wires
+all of these to real logic — every endpoint maps its `Result` errors to
+an HTTP status via one shared table
+(`backend/src/shared/http/result-error-status.ts`,
 `mapResultErrorCodeToHttpStatus` — see `docs/API.md` "HTTP status
 mapping" for the full table, including Calculation Core's own
-`INVALID_*` codes not repeated here):
+`INVALID_*`/tier-structure codes not repeated here):
 
 - `VALIDATION_ERROR` — Service-level input shape validation (e.g.
-  `roomId`, `billingPeriod`, billing methods, `actualChargedAmount`
-  scale).
-- `ROOM_NOT_FOUND`
-- `METER_READING_NOT_FOUND`
+  `roomId`, `billingPeriod`, billing methods, decimal-scale checks).
+- `ROOM_NOT_FOUND` / `ROOM_ALREADY_EXISTS`
+- `PROPERTY_NOT_FOUND`
+- `METER_READING_NOT_FOUND` / `METER_READING_ALREADY_EXISTS` /
+  `METER_READING_IN_USE`
 - `INVALID_METER_READING`
-- `TARIFF_NOT_FOUND`
-- `AMBIGUOUS_TARIFF_CONFIGURATION`
+- `TARIFF_NOT_FOUND` / `TARIFF_ALREADY_EXISTS` / `TARIFF_PERIOD_OVERLAP`
+  / `TARIFF_IN_USE`
+- `AMBIGUOUS_TARIFF_CONFIGURATION` / `TARIFF_CONFIGURATION_INVALID`
 - `INVOICE_ALREADY_EXISTS`
 - `INVOICE_NOT_FOUND` — `GetInvoiceService`, no persisted invoice for
   the given (roomId, billingPeriod).

@@ -30,7 +30,7 @@ cp .env.example .env   # edit values if needed; PORT defaults to 3000
 | `npm run typecheck` | Run `tsc --noEmit` — type-check without emitting files. |
 | `npm run build` | Compile TypeScript to `backend/dist/`. |
 | `npm start` | Run the compiled server (`node dist/server.js`). Requires `npm run build` first. |
-| `npm test` | Run all backend tests (Node's built-in `node:test` runner, executed via `tsx` — no Jest/Vitest/Mocha). Covers `backend/src/**/*.test.ts`: Calculation Core (including the official competition test cases), database config/adapter unit tests, Repository row-mapping/error-semantics unit tests, `CreateInvoiceService`/`GetInvoiceService` orchestration (fake Repositories, no PostgreSQL), and the invoice HTTP layer (`invoice.http.ts` pure functions + `invoice.controller.ts` with a fake Service). Tests that need a real PostgreSQL connection (`*.integration.test.ts`) auto-**skip** (not fail) when `DATABASE_URL` is unset — this includes `invoice.api.integration.test.ts`, which drives the real Express app through a real HTTP round trip (`app.listen(0)` + built-in `fetch`, no `supertest`). |
+| `npm test` | Run all backend tests (Node's built-in `node:test` runner, executed via `tsx` — no Jest/Vitest/Mocha). Covers `backend/src/**/*.test.ts`: Calculation Core (including the official competition test cases), database config/adapter unit tests, Repository row-mapping/error-semantics unit tests, every management/invoice Service's orchestration (fake Repositories, no PostgreSQL), and every module's HTTP layer (`*.http.ts` pure functions + `*.controller.ts` with a fake Service). Tests that need a real PostgreSQL connection (`*.integration.test.ts`) auto-**skip** (not fail) when `DATABASE_URL` is unset — this includes `invoice.api.integration.test.ts`, which drives the real Express app through a real HTTP round trip (`app.listen(0)` + built-in `fetch`, no `supertest`). **Known debt:** `backend/tsconfig.json` excludes `src/**/__tests__/**`, so this command does not itself type-check test files — see `docs/MANAGEMENT_API.md` "Known debt: test-file typechecking". |
 
 Verify it works:
 
@@ -49,6 +49,18 @@ curl -X POST http://localhost:3000/api/v1/invoices \
   -d '{"roomId":"1","billingPeriod":"2026-09-01","electricityBillingMethod":"QUOTA_TIERED","waterBillingMethod":"PER_CUBIC_METER","actualChargedAmount":null}'
 
 curl "http://localhost:3000/api/v1/invoices?roomId=1&billingPeriod=2026-09-01"
+```
+
+The management API — properties, rooms, meter readings, and tariff
+configuration — is documented in
+[`docs/MANAGEMENT_API.md`](MANAGEMENT_API.md):
+
+```bash
+curl -X POST http://localhost:3000/api/v1/properties \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Khu trọ A","address":null}'
+
+curl http://localhost:3000/api/v1/rooms
 ```
 
 ## Frontend
@@ -73,15 +85,16 @@ be running (`npm run dev` in `backend/`, in a separate terminal).
   Copy it to `backend/.env` and edit locally — `.env` is git-ignored and
   must never be committed.
 - `DATABASE_URL` is required to run anything that touches the database:
-  the Repository layer, the `POST`/`GET /api/v1/invoices` endpoints
-  (`npm run dev`/`start`), and the `*.integration.test.ts` tests. The
-  health endpoint (`GET /api/v1/health`) still does **not** touch the
-  database and works with no `DATABASE_URL` set — see
-  `docs/DATABASE_ACCESS.md`. Request validation on the invoice endpoints
-  (malformed body, bad `billingPeriod` shape) also does **not** need
+  the Repository layer, every REST endpoint under `/api/v1` except
+  `/health` (`npm run dev`/`start`), and the `*.integration.test.ts`
+  tests. The health endpoint (`GET /api/v1/health`) still does **not**
+  touch the database and works with no `DATABASE_URL` set — see
+  `docs/DATABASE_ACCESS.md`. Request validation on every endpoint
+  (malformed body, bad date shape, ...) also does **not** need
   `DATABASE_URL` — only a request that actually reaches
-  Repository/Calculation Core does (see `docs/API.md`). Never put a real
-  Supabase connection string in a committed file.
+  Repository/Calculation Core does (see `docs/API.md`,
+  `docs/MANAGEMENT_API.md`). Never put a real Supabase connection
+  string in a committed file.
 
 ## Repository layout
 
@@ -93,6 +106,6 @@ OpenUtilityBill/
   frontend/    Vite + TypeScript + Bootstrap client
   database/    PostgreSQL schema (migrations/), seed data (seeds/),
                and runtime validation SQL (validation/) — Supabase-hosted
-  docs/        Architecture, database access, calculation, and
-               learning documentation
+  docs/        Architecture, database access, calculation, API/
+               management API, and learning documentation
 ```

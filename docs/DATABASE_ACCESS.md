@@ -55,9 +55,14 @@ Controller  →  Service / Orchestrator  →  Repository interface
 
 Each domain has a small, explicit **Repository interface**
 (`backend/src/repositories/*.repository.ts`) describing *what* can be
-read (and, for `InvoiceRepository` only, written) in domain terms — e.g.
+read and written in domain terms — e.g.
 `RoomRepository.findById(id): Promise<Result<Room>>`. The interface has
-no SQL and no Postgres.js import.
+no SQL and no Postgres.js import. Every Repository now has write
+methods (`Property`, `Room`, `MeterReading`, `ElectricityTariff`,
+`WaterTariff`, in addition to `Invoice`) — added for the management API
+(see `docs/MANAGEMENT_API.md`); each still only implements the
+operations a real use case needs (no `delete` anywhere, per that
+document's "No DELETE endpoints").
 
 The **Postgres implementation** (`backend/src/repositories/postgres/postgres-*.repository.ts`)
 is the only place that SQL for that domain exists. It:
@@ -374,14 +379,14 @@ source file interpolates a real credential.
 
 ## Deliberately deferred
 
-The persistence foundation, plus the first complete write workflow
-(`CreateInvoiceService`, see `docs/CREATE_INVOICE_WORKFLOW.md`), are
-now implemented. Still deliberately **not** implemented: any Express
-route/Controller calling this Service (no REST billing endpoint
-exists), full CRUD for `RentalProperty`/`Room`/`MeterReading`/
-`ElectricityTariff`/`WaterTariff` (create/update/delete — only reads
-and the one `CreateInvoice` write path exist), `PropertyRepository` (no
-current read use case needs it), a generic
-PostgreSQL-error-code-to-domain-error mapping table (beyond the one
-`SQLSTATE 23505` case described above), and any frontend/auth/admin
-work. These are separate, later, reviewable tasks.
+The persistence foundation, the invoice write workflow
+(`CreateInvoiceService`, see `docs/CREATE_INVOICE_WORKFLOW.md`), and
+the mandatory management API (property/room/meter-reading/tariff — see
+`docs/MANAGEMENT_API.md`) are now implemented. Still deliberately
+**not** implemented: DELETE for any resource (a scope decision, not a
+gap — see `docs/MANAGEMENT_API.md` "No DELETE endpoints"), a generic
+PostgreSQL-error-code-to-domain-error mapping table (each Repository
+translates only the one `SQLSTATE 23505` case it actually needs, via
+the shared `backend/src/database/unique-violation.ts` structural
+check), and any frontend/auth/admin work. These are separate, later,
+reviewable tasks.
