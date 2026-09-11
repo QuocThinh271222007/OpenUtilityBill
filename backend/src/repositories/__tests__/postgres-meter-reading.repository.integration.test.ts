@@ -78,7 +78,10 @@ test(
           meterMaximumValue: null,
         });
         assert.equal(updateResult.success, true);
-        if (updateResult.success) assert.equal(updateResult.data.currentReading, "105");
+        // current_reading là NUMERIC(12, 2) -> PostgreSQL trả đủ 2 chữ số
+        // thập phân theo scale đã khai báo ("105.00"), không phải "105"
+        // (xem giải thích scale ở repository-reads.integration.test.ts).
+        if (updateResult.success) assert.equal(updateResult.data.currentReading, "105.00");
       }
 
       const duplicateResult = await repository.create({

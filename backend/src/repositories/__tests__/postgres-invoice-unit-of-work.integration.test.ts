@@ -51,10 +51,21 @@ async function createFixtures(sql: Sql, suffix: string, billingPeriod: Date): Pr
     INSERT INTO rooms (property_id, name, tenant_count) VALUES (${property.id}, ${roomName}, 4) RETURNING id
   `;
 
+  // effective_from/effective_to CỐ Ý bị chặn trong năm 2024 (KHÔNG NULL ở
+  // effective_to) — nằm HOÀN TOÀN NGOÀI khoảng hiệu lực của tariff seed
+  // thật (điện: 2025-05-10..2026-12-31; nước: 2026-09-06..NULL). Nếu để
+  // effective_to = NULL và effective_from trùng/giao với seed thật, một
+  // test file khác chạy ĐỒNG THỜI (node:test chạy song song nhiều file)
+  // có thể đọc thấy CẢ tariff seed LẪN tariff fixture này cùng có hiệu
+  // lực tại cùng một billingPeriod -> AMBIGUOUS_TARIFF_CONFIGURATION giả —
+  // đây là nguyên nhân THẬT đã phát hiện được khi chạy runtime closure
+  // (fixture "vĩnh viễn" của file này từng khiến
+  // repository-reads.integration.test.ts và
+  // invoice.api.integration.test.ts thất bại không ổn định).
   const [electricityTariff] = await sql`
     INSERT INTO electricity_tariffs (
       name, effective_from, effective_to, electricity_vat_rate, people_per_quota_unit, fallback_tier_number
-    ) VALUES (${electricityTariffName}, '2025-05-10', NULL, 0.08, 4, 3)
+    ) VALUES (${electricityTariffName}, '2024-01-01', '2024-12-31', 0.08, 4, 3)
     RETURNING id
   `;
   await sql`
@@ -71,7 +82,7 @@ async function createFixtures(sql: Sql, suffix: string, billingPeriod: Date): Pr
   const [waterTariff] = await sql`
     INSERT INTO water_tariffs (
       name, effective_from, effective_to, price_per_cubic_meter, price_per_person, vat_rate, environmental_fee_rate
-    ) VALUES (${waterTariffName}, '2026-01-01', NULL, 8500, 80000, 0.05, 0.10)
+    ) VALUES (${waterTariffName}, '2024-01-01', '2024-12-31', 8500, 80000, 0.05, 0.10)
     RETURNING id
   `;
 
@@ -157,7 +168,9 @@ test(
   { skip: hasDatabaseUrl ? false : "Cần DATABASE_URL trỏ tới Supabase PostgreSQL thật để chạy test này." },
   async () => {
     const sql = getDatabaseClient();
-    const billingPeriod = new Date("2026-09-01");
+    // 2024-06-01 CỐ Ý nằm ngoài khoảng hiệu lực của tariff seed thật —
+    // xem giải thích ở createFixtures().
+    const billingPeriod = new Date("2024-06-01");
     const fixtures = await createFixtures(sql, `COMMIT_${Date.now()}`, billingPeriod);
     let invoiceId: string | null = null;
 
@@ -192,7 +205,7 @@ test(
   { skip: hasDatabaseUrl ? false : "Cần DATABASE_URL trỏ tới Supabase PostgreSQL thật để chạy test này." },
   async () => {
     const sql = getDatabaseClient();
-    const billingPeriod = new Date("2026-09-01");
+    const billingPeriod = new Date("2024-06-01");
     const fixtures = await createFixtures(sql, `ROLLBACK_${Date.now()}`, billingPeriod);
 
     try {
