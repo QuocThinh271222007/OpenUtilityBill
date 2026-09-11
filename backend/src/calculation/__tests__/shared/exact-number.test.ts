@@ -8,6 +8,7 @@ import {
   add,
   compare,
   divide,
+  isFiniteDecimalDenominator,
   min,
   multiply,
   parseDecimal,
@@ -157,4 +158,25 @@ test("roundHalfUpToInteger: trường hợp chính thức 151097.4 -> 151097", (
   if (value.success) {
     assert.equal(roundHalfUpToInteger(value.data), 151097n);
   }
+});
+
+test("multiply: 50.01 * 1.25 = 62.5125 — giữ đúng 4 chữ số thập phân, không làm tròn", () => {
+  const threshold = parseDecimal("50.01");
+  const quota = parseDecimal("1.25");
+  assert.equal(threshold.success, true);
+  assert.equal(quota.success, true);
+  if (threshold.success && quota.success) {
+    assert.equal(toDecimalString(multiply(threshold.data, quota.data)), "62.5125");
+  }
+});
+
+test("isFiniteDecimalDenominator: chỉ đúng khi ước nguyên tố là 2 và/hoặc 5", () => {
+  for (const value of [1n, 2n, 4n, 5n, 8n, 10n, 16n, 20n, 25n, 40n, 50n]) {
+    assert.equal(isFiniteDecimalDenominator(value), true, `${value} phải hữu hạn`);
+  }
+  for (const value of [3n, 6n, 7n, 9n, 11n, 12n, 15n]) {
+    assert.equal(isFiniteDecimalDenominator(value), false, `${value} không được hữu hạn`);
+  }
+  assert.equal(isFiniteDecimalDenominator(0n), false);
+  assert.equal(isFiniteDecimalDenominator(-4n), false);
 });

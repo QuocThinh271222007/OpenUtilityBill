@@ -152,6 +152,34 @@ test("calculateTieredElectricity: vatRate ngoài [0, 1] -> FAIL", () => {
   }
 });
 
+test("calculateTieredElectricity: ngưỡng bậc không phải số nguyên (50.01) vẫn giữ chính xác tuyệt đối sau khi nhân quota", () => {
+  // 5 người, peoplePerQuotaUnit 4 -> quota = 1.25. Ngưỡng gốc 50.01,
+  // điều chỉnh: 50.01 * 1.25 = 62.5125 — PHẢI giữ đúng 4 chữ số thập
+  // phân, không bị làm tròn về 62.51 hay 62.5 ở bất kỳ bước nào. Đây là
+  // ví dụ chính xác được nêu trong migration
+  // database/migrations/002_preserve_invoice_item_precision.sql.
+  const result = calculateTieredElectricity({
+    usageKwh: "62.5125",
+    tenantCount: 5,
+    peoplePerQuotaUnit: 4,
+    vatRate: "0",
+    tiers: [
+      { tierNumber: 1, thresholdKwh: "50.01", unitPrice: "1984" },
+      { tierNumber: 2, thresholdKwh: null, unitPrice: "2000" },
+    ],
+  });
+  assert.equal(result.success, true);
+  if (!result.success) return;
+
+  assert.equal(result.data.quotaFactor, "1.25");
+  assert.equal(result.data.appliedTiers.length, 1);
+  assert.equal(result.data.appliedTiers[0].quantityKwh, "62.5125");
+  // 62.5125 * 1984 = 124024.8 — tính đúng bằng tay, xem test này và
+  // docs/NUMERIC_PRECISION.md.
+  assert.equal(result.data.appliedTiers[0].amount, "124024.8");
+  assert.equal(result.data.subtotal, "124024.8");
+});
+
 test("calculateTieredElectricity: tenantCount = 0 -> FAIL (uỷ quyền cho calculateQuotaFactor)", () => {
   const result = calculateTieredElectricity({
     usageKwh: "10",
