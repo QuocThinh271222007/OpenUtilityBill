@@ -2,7 +2,7 @@
 
 import "bootstrap/dist/css/bootstrap.min.css";
 import "../styles/main.css";
-import { checkBackendStatus } from "./controllers/status.controller";
+import { initBackendStatusTracking } from "./controllers/status.controller";
 import { initNavigation, registerRoutes } from "./controllers/navigation.controller";
 import { renderAppShell } from "./views/layout.view";
 import { renderDashboardPage } from "./controllers/dashboard.controller";
@@ -15,13 +15,9 @@ import { renderTariffManagementPage } from "./controllers/tariff.controller";
 /**
  * Trách nhiệm:
  * Entry point phía trình duyệt — dựng khung ứng dụng (app shell), đăng
- * ký toàn bộ route thật sự tồn tại, khởi động router, và kiểm tra
- * trạng thái backend. Đây là nơi DUY NHẤT "wiring" các module lại với
- * nhau.
- *
- * Không chịu trách nhiệm:
- * - chứa logic gọi API hay render (những việc đó nằm ở controllers/,
- *   api/, views/).
+ * ký toàn bộ route thật sự tồn tại, khởi động router, và khởi tạo theo
+ * dõi trạng thái backend. Đây là nơi DUY NHẤT "wiring" các module lại
+ * với nhau.
  */
 renderAppShell();
 
@@ -35,4 +31,4 @@ registerRoutes([
 ]);
 
 initNavigation();
-void checkBackendStatus();
+initBackendStatusTracking();
