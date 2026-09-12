@@ -8,11 +8,13 @@ export interface FakePropertyRepositoryOptions {
   properties?: RentalProperty[];
   createResult?: Result<RentalProperty>;
   updateResult?: Result<RentalProperty>;
+  deleteResult?: Result<{ id: string }>;
 }
 
 export interface FakePropertyRepository extends PropertyRepository {
   readonly createCalls: NewRentalProperty[];
   readonly updateCalls: Array<{ id: string; input: UpdateRentalProperty }>;
+  readonly deleteCalls: string[];
 }
 
 /** Fake viết tay (không mocking library) — xem docs/DEVELOPMENT.md công cụ test. */
@@ -20,11 +22,13 @@ export function createFakePropertyRepository(options: FakePropertyRepositoryOpti
   const properties = options.properties ?? [];
   const createCalls: NewRentalProperty[] = [];
   const updateCalls: Array<{ id: string; input: UpdateRentalProperty }> = [];
+  const deleteCalls: string[] = [];
   let nextId = 100;
 
   return {
     createCalls,
     updateCalls,
+    deleteCalls,
 
     async listAll(): Promise<Result<RentalProperty[]>> {
       return ok(properties);
@@ -52,6 +56,15 @@ export function createFakePropertyRepository(options: FakePropertyRepositoryOpti
       if (input.name !== undefined) found.name = input.name;
       if (input.address !== undefined) found.address = input.address;
       return ok(found);
+    },
+
+    async deleteById(id: string): Promise<Result<{ id: string }>> {
+      deleteCalls.push(id);
+      if (options.deleteResult) return options.deleteResult;
+      const index = properties.findIndex((p) => p.id === id);
+      if (index === -1) return fail("PROPERTY_NOT_FOUND", `Không tìm thấy rental property với id = ${id}.`);
+      properties.splice(index, 1);
+      return ok({ id });
     },
   };
 }

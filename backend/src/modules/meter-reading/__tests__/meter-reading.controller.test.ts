@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import type { Request, Response } from "express";
 import {
   createCreateMeterReadingController,
+  createDeleteMeterReadingController,
   createListMeterReadingsController,
   createUpdateMeterReadingController,
 } from "../meter-reading.controller";
@@ -51,7 +52,12 @@ const VALID_BODY = {
   meterMaximumValue: null,
 };
 
-function fakeService(overrides: { list?: Result<MeterReading[]>; create?: Result<MeterReading>; update?: Result<MeterReading> }) {
+function fakeService(overrides: {
+  list?: Result<MeterReading[]>;
+  create?: Result<MeterReading>;
+  update?: Result<MeterReading>;
+  delete?: Result<{ id: string }>;
+}) {
   return {
     async list(_roomId: string, _billingPeriod?: Date): Promise<Result<MeterReading[]>> {
       return overrides.list ?? ok([SAMPLE]);
@@ -61,6 +67,9 @@ function fakeService(overrides: { list?: Result<MeterReading[]>; create?: Result
     },
     async update(_id: string, _input: UpdateMeterReadingInput): Promise<Result<MeterReading>> {
       return overrides.update ?? ok(SAMPLE);
+    },
+    async delete(_id: string): Promise<Result<{ id: string }>> {
+      return overrides.delete ?? ok({ id: SAMPLE.id });
     },
   };
 }
@@ -131,6 +140,33 @@ test("PUT meter-readings/:readingId: Service trả METER_READING_IN_USE -> 409",
   );
   const { res, state } = createFakeResponse();
   await controller(createFakeRequest({ body: VALID_BODY, params: { readingId: "1" } }), res);
+  assert.equal(state.statusCode, 409);
+});
+
+test("DELETE meter-readings/:readingId: hợp lệ -> 200 với { id }", async () => {
+  const controller = createDeleteMeterReadingController(() => fakeService({}));
+  const { res, state } = createFakeResponse();
+  await controller(createFakeRequest({ params: { readingId: "1" } }), res);
+  assert.equal(state.statusCode, 200);
+  const body = state.body as { data: { id: string } };
+  assert.equal(body.data.id, "1");
+});
+
+test("DELETE meter-readings/:readingId: Service trả METER_READING_NOT_FOUND -> 404", async () => {
+  const controller = createDeleteMeterReadingController(() =>
+    fakeService({ delete: fail("METER_READING_NOT_FOUND", "không tìm thấy") })
+  );
+  const { res, state } = createFakeResponse();
+  await controller(createFakeRequest({ params: { readingId: "999" } }), res);
+  assert.equal(state.statusCode, 404);
+});
+
+test("DELETE meter-readings/:readingId: Service trả METER_READING_IN_USE -> 409", async () => {
+  const controller = createDeleteMeterReadingController(() =>
+    fakeService({ delete: fail("METER_READING_IN_USE", "đã tham chiếu") })
+  );
+  const { res, state } = createFakeResponse();
+  await controller(createFakeRequest({ params: { readingId: "1" } }), res);
   assert.equal(state.statusCode, 409);
 });
 

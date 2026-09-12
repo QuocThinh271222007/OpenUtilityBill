@@ -3,7 +3,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import type { Request, Response } from "express";
-import { createCreateRoomController, createListRoomsController, createUpdateRoomController } from "../room.controller";
+import {
+  createCreateRoomController,
+  createDeleteRoomController,
+  createListRoomsController,
+  createUpdateRoomController,
+} from "../room.controller";
 import { Result, ok, fail } from "../../../shared/result";
 import { Room } from "../room.model";
 import { CreateRoomInput, UpdateRoomInput } from "../room-management.types";
@@ -29,7 +34,7 @@ function createFakeRequest(overrides: { body?: unknown; params?: Record<string, 
 
 const SAMPLE: Room = { id: "1", propertyId: "10", name: "101", tenantCount: 4, createdAt: new Date("2026-01-01T00:00:00.000Z") };
 
-function fakeService(overrides: { list?: Result<Room[]>; create?: Result<Room>; update?: Result<Room> }) {
+function fakeService(overrides: { list?: Result<Room[]>; create?: Result<Room>; update?: Result<Room>; delete?: Result<{ id: string }> }) {
   return {
     async list(_propertyId?: string): Promise<Result<Room[]>> {
       return overrides.list ?? ok([SAMPLE]);
@@ -39,6 +44,9 @@ function fakeService(overrides: { list?: Result<Room[]>; create?: Result<Room>; 
     },
     async update(_id: string, _input: UpdateRoomInput): Promise<Result<Room>> {
       return overrides.update ?? ok(SAMPLE);
+    },
+    async delete(_id: string): Promise<Result<{ id: string }>> {
+      return overrides.delete ?? ok({ id: SAMPLE.id });
     },
   };
 }
@@ -98,6 +106,29 @@ test("PATCH rooms/:roomId: Service trả ROOM_NOT_FOUND -> 404", async () => {
   const { res, state } = createFakeResponse();
   await controller(createFakeRequest({ body: { tenantCount: 5 }, params: { roomId: "999" } }), res);
   assert.equal(state.statusCode, 404);
+});
+
+test("DELETE rooms/:roomId: hợp lệ -> 200 với { id }", async () => {
+  const controller = createDeleteRoomController(() => fakeService({}));
+  const { res, state } = createFakeResponse();
+  await controller(createFakeRequest({ params: { roomId: "1" } }), res);
+  assert.equal(state.statusCode, 200);
+  const body = state.body as { data: { id: string } };
+  assert.equal(body.data.id, "1");
+});
+
+test("DELETE rooms/:roomId: Service trả ROOM_NOT_FOUND -> 404", async () => {
+  const controller = createDeleteRoomController(() => fakeService({ delete: fail("ROOM_NOT_FOUND", "không tìm thấy") }));
+  const { res, state } = createFakeResponse();
+  await controller(createFakeRequest({ params: { roomId: "999" } }), res);
+  assert.equal(state.statusCode, 404);
+});
+
+test("DELETE rooms/:roomId: Service trả ROOM_HAS_DEPENDENCIES -> 409", async () => {
+  const controller = createDeleteRoomController(() => fakeService({ delete: fail("ROOM_HAS_DEPENDENCIES", "còn phụ thuộc") }));
+  const { res, state } = createFakeResponse();
+  await controller(createFakeRequest({ params: { roomId: "1" } }), res);
+  assert.equal(state.statusCode, 409);
 });
 
 test("getService() throw -> 500 INTERNAL_ERROR", async () => {

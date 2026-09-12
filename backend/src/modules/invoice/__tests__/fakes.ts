@@ -73,6 +73,9 @@ export function createFakeRoomRepository(room: Room | null): FakeRoomRepository 
     update(_id: string, _input: UpdateRoom): Promise<Result<Room>> {
       return unsupported("RoomRepository.update");
     },
+    deleteById(_id: string): Promise<Result<{ id: string }>> {
+      return unsupported("RoomRepository.deleteById");
+    },
   };
 }
 
@@ -109,6 +112,9 @@ export function createFakeMeterReadingRepository(
     isReferencedByInvoice(_id: string): Promise<Result<boolean>> {
       return unsupported("MeterReadingRepository.isReferencedByInvoice");
     },
+    deleteById(_id: string): Promise<Result<{ id: string }>> {
+      return unsupported("MeterReadingRepository.deleteById");
+    },
   };
 }
 
@@ -138,6 +144,9 @@ export function createFakeElectricityTariffRepository(data: ElectricityTariffWit
     updateTariffParent(_id: string, _input: UpdateElectricityTariffParent): Promise<Result<ElectricityTariff>> {
       return unsupported("ElectricityTariffRepository.updateTariffParent");
     },
+    deleteById(_id: string): Promise<Result<{ id: string }>> {
+      return unsupported("ElectricityTariffRepository.deleteById");
+    },
   };
 }
 
@@ -164,6 +173,9 @@ export function createFakeWaterTariffRepository(data: WaterTariff | null): Water
     update(_id: string, _input: UpdateWaterTariff): Promise<Result<WaterTariff>> {
       return unsupported("WaterTariffRepository.update");
     },
+    deleteById(_id: string): Promise<Result<{ id: string }>> {
+      return unsupported("WaterTariffRepository.deleteById");
+    },
   };
 }
 
@@ -174,21 +186,25 @@ export interface FakeInvoiceRepositoryOptions {
   createInvoiceResult?: Result<Invoice>;
   createInvoiceItemsResult?: Result<InvoiceItem[]>;
   findItemsByInvoiceIdResult?: Result<InvoiceItem[]>;
+  deleteResult?: Result<{ id: string }>;
 }
 
 export interface FakeInvoiceRepository extends InvoiceRepository {
   readonly createInvoiceCalls: NewInvoice[];
   readonly createInvoiceItemsCalls: Array<{ invoiceId: string; items: NewInvoiceItem[] }>;
   readonly findItemsByInvoiceIdCalls: string[];
+  readonly deleteCalls: string[];
 }
 
 export function createFakeInvoiceRepository(options: FakeInvoiceRepositoryOptions = {}): FakeInvoiceRepository {
   const createInvoiceCalls: NewInvoice[] = [];
   const createInvoiceItemsCalls: Array<{ invoiceId: string; items: NewInvoiceItem[] }> = [];
   const findItemsByInvoiceIdCalls: string[] = [];
+  const deleteCalls: string[] = [];
   let nextInvoiceId = 1;
   let nextItemId = 1;
 
+  let existingInvoice = options.existingInvoice ?? null;
   const itemsByInvoiceId = new Map<string, InvoiceItem[]>();
   if (options.existingInvoice && options.existingItems) {
     itemsByInvoiceId.set(options.existingInvoice.id, options.existingItems);
@@ -198,9 +214,10 @@ export function createFakeInvoiceRepository(options: FakeInvoiceRepositoryOption
     createInvoiceCalls,
     createInvoiceItemsCalls,
     findItemsByInvoiceIdCalls,
+    deleteCalls,
 
     async findByRoomAndPeriod(): Promise<Result<Invoice | null>> {
-      return ok(options.existingInvoice ?? null);
+      return ok(existingInvoice);
     },
 
     async createInvoice(input: NewInvoice): Promise<Result<Invoice>> {
@@ -253,6 +270,17 @@ export function createFakeInvoiceRepository(options: FakeInvoiceRepositoryOption
         return options.findItemsByInvoiceIdResult;
       }
       return ok(itemsByInvoiceId.get(invoiceId) ?? []);
+    },
+
+    async deleteById(id: string): Promise<Result<{ id: string }>> {
+      deleteCalls.push(id);
+      if (options.deleteResult) return options.deleteResult;
+      if (existingInvoice === null || existingInvoice.id !== id) {
+        return fail("INVOICE_NOT_FOUND", `Không tìm thấy invoice với id = ${id}.`);
+      }
+      existingInvoice = null;
+      itemsByInvoiceId.delete(id);
+      return ok({ id });
     },
   };
 }

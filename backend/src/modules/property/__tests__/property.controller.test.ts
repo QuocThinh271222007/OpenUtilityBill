@@ -3,7 +3,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import type { Request, Response } from "express";
-import { createCreatePropertyController, createListPropertiesController, createUpdatePropertyController } from "../property.controller";
+import {
+  createCreatePropertyController,
+  createDeletePropertyController,
+  createListPropertiesController,
+  createUpdatePropertyController,
+} from "../property.controller";
 import { Result, ok, fail } from "../../../shared/result";
 import { RentalProperty } from "../property.model";
 import { CreatePropertyInput, UpdatePropertyInput } from "../property-management.types";
@@ -33,6 +38,7 @@ function fakeService(overrides: {
   list?: Result<RentalProperty[]>;
   create?: Result<RentalProperty>;
   update?: Result<RentalProperty>;
+  delete?: Result<{ id: string }>;
 }) {
   return {
     async list(): Promise<Result<RentalProperty[]>> {
@@ -43,6 +49,9 @@ function fakeService(overrides: {
     },
     async update(_id: string, _input: UpdatePropertyInput): Promise<Result<RentalProperty>> {
       return overrides.update ?? ok(SAMPLE);
+    },
+    async delete(_id: string): Promise<Result<{ id: string }>> {
+      return overrides.delete ?? ok({ id: SAMPLE.id });
     },
   };
 }
@@ -110,6 +119,43 @@ test("PATCH properties/:propertyId: address không phải string/null -> 400", a
   const { res, state } = createFakeResponse();
   await controller(createFakeRequest({ body: { address: 123 }, params: { propertyId: "1" } }), res);
   assert.equal(state.statusCode, 400);
+});
+
+test("DELETE properties/:propertyId: hợp lệ -> 200 với { id }", async () => {
+  const controller = createDeletePropertyController(() => fakeService({}));
+  const { res, state } = createFakeResponse();
+  await controller(createFakeRequest({ params: { propertyId: "1" } }), res);
+  assert.equal(state.statusCode, 200);
+  const body = state.body as { success: boolean; data: { id: string } };
+  assert.equal(body.success, true);
+  assert.equal(body.data.id, "1");
+});
+
+test("DELETE properties/:propertyId: propertyId sai hình dạng -> 400 VALIDATION_ERROR", async () => {
+  const controller = createDeletePropertyController(() =>
+    fakeService({ delete: fail("VALIDATION_ERROR", "propertyId không hợp lệ") })
+  );
+  const { res, state } = createFakeResponse();
+  await controller(createFakeRequest({ params: { propertyId: "abc" } }), res);
+  assert.equal(state.statusCode, 400);
+});
+
+test("DELETE properties/:propertyId: không tồn tại -> 404 PROPERTY_NOT_FOUND", async () => {
+  const controller = createDeletePropertyController(() =>
+    fakeService({ delete: fail("PROPERTY_NOT_FOUND", "không tìm thấy") })
+  );
+  const { res, state } = createFakeResponse();
+  await controller(createFakeRequest({ params: { propertyId: "999" } }), res);
+  assert.equal(state.statusCode, 404);
+});
+
+test("DELETE properties/:propertyId: còn room tham chiếu -> 409 PROPERTY_HAS_DEPENDENCIES", async () => {
+  const controller = createDeletePropertyController(() =>
+    fakeService({ delete: fail("PROPERTY_HAS_DEPENDENCIES", "còn room tham chiếu") })
+  );
+  const { res, state } = createFakeResponse();
+  await controller(createFakeRequest({ params: { propertyId: "1" } }), res);
+  assert.equal(state.statusCode, 409);
 });
 
 test("getService() throw -> 500 INTERNAL_ERROR", async () => {

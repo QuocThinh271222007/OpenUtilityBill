@@ -83,3 +83,40 @@ test("PropertyManagementService.create: lỗi database propagate", async () => {
   assert.equal(result.success, false);
   if (!result.success) assert.equal(result.error.code, "DATABASE_WRITE_FAILED");
 });
+
+test("PropertyManagementService.delete: xoá property không có room -> thành công", async () => {
+  const propertyRepository = createFakePropertyRepository({ properties: [{ ...EXISTING }] });
+  const service = new PropertyManagementService({ propertyRepository });
+  const result = await service.delete("1");
+  assert.equal(result.success, true);
+  if (result.success) assert.equal(result.data.id, "1");
+  assert.deepEqual(propertyRepository.deleteCalls, ["1"]);
+});
+
+test("PropertyManagementService.delete: id không hợp lệ -> VALIDATION_ERROR, không gọi Repository", async () => {
+  const propertyRepository = createFakePropertyRepository({ properties: [{ ...EXISTING }] });
+  const service = new PropertyManagementService({ propertyRepository });
+  const result = await service.delete("not-an-id");
+  assert.equal(result.success, false);
+  if (!result.success) assert.equal(result.error.code, "VALIDATION_ERROR");
+  assert.equal(propertyRepository.deleteCalls.length, 0);
+});
+
+test("PropertyManagementService.delete: id không tồn tại -> PROPERTY_NOT_FOUND", async () => {
+  const propertyRepository = createFakePropertyRepository({ properties: [] });
+  const service = new PropertyManagementService({ propertyRepository });
+  const result = await service.delete("999");
+  assert.equal(result.success, false);
+  if (!result.success) assert.equal(result.error.code, "PROPERTY_NOT_FOUND");
+});
+
+test("PropertyManagementService.delete: property còn room tham chiếu -> PROPERTY_HAS_DEPENDENCIES", async () => {
+  const propertyRepository = createFakePropertyRepository({
+    properties: [{ ...EXISTING }],
+    deleteResult: { success: false, error: { code: "PROPERTY_HAS_DEPENDENCIES", message: "còn room tham chiếu" } },
+  });
+  const service = new PropertyManagementService({ propertyRepository });
+  const result = await service.delete("1");
+  assert.equal(result.success, false);
+  if (!result.success) assert.equal(result.error.code, "PROPERTY_HAS_DEPENDENCIES");
+});

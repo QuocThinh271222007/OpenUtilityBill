@@ -21,12 +21,14 @@ export interface FakeElectricityTariffRepositoryOptions {
   replaceTiersResult?: Result<ElectricityTariffTier[]>;
   updateTariffParentResult?: Result<ElectricityTariff>;
   isReferencedByInvoiceResult?: Result<boolean>;
+  deleteResult?: Result<{ id: string }>;
 }
 
 export interface FakeElectricityTariffRepository extends ElectricityTariffRepository {
   readonly createTariffCalls: NewElectricityTariff[];
   readonly replaceTiersCalls: Array<{ tariffId: string; tiers: NewElectricityTariffTier[] }>;
   readonly updateTariffParentCalls: Array<{ id: string; input: UpdateElectricityTariffParent }>;
+  readonly deleteCalls: string[];
 }
 
 export function createFakeElectricityTariffRepository(
@@ -36,6 +38,7 @@ export function createFakeElectricityTariffRepository(
   const createTariffCalls: NewElectricityTariff[] = [];
   const replaceTiersCalls: Array<{ tariffId: string; tiers: NewElectricityTariffTier[] }> = [];
   const updateTariffParentCalls: Array<{ id: string; input: UpdateElectricityTariffParent }> = [];
+  const deleteCalls: string[] = [];
   let nextTariffId = 100;
   let nextTierId = 1000;
 
@@ -43,6 +46,7 @@ export function createFakeElectricityTariffRepository(
     createTariffCalls,
     replaceTiersCalls,
     updateTariffParentCalls,
+    deleteCalls,
 
     async findApplicableTariffForPeriod(billingPeriod: Date): Promise<Result<ElectricityTariffWithTiers>> {
       const matches = tariffs.filter(
@@ -99,6 +103,15 @@ export function createFakeElectricityTariffRepository(
       entry.tariff = { ...entry.tariff, ...input };
       return ok(entry.tariff);
     },
+
+    async deleteById(id: string): Promise<Result<{ id: string }>> {
+      deleteCalls.push(id);
+      if (options.deleteResult) return options.deleteResult;
+      const index = tariffs.findIndex((t) => t.tariff.id === id);
+      if (index === -1) return fail("TARIFF_NOT_FOUND", `Không tìm thấy electricity tariff với id = ${id}.`);
+      tariffs.splice(index, 1);
+      return ok({ id });
+    },
   };
 }
 
@@ -123,22 +136,26 @@ export interface FakeWaterTariffRepositoryOptions {
   createResult?: Result<WaterTariff>;
   updateResult?: Result<WaterTariff>;
   isReferencedByInvoiceResult?: Result<boolean>;
+  deleteResult?: Result<{ id: string }>;
 }
 
 export interface FakeWaterTariffRepository extends WaterTariffRepository {
   readonly createCalls: NewWaterTariff[];
   readonly updateCalls: Array<{ id: string; input: UpdateWaterTariff }>;
+  readonly deleteCalls: string[];
 }
 
 export function createFakeWaterTariffRepository(options: FakeWaterTariffRepositoryOptions = {}): FakeWaterTariffRepository {
   const tariffs = options.tariffs ?? [];
   const createCalls: NewWaterTariff[] = [];
   const updateCalls: Array<{ id: string; input: UpdateWaterTariff }> = [];
+  const deleteCalls: string[] = [];
   let nextId = 100;
 
   return {
     createCalls,
     updateCalls,
+    deleteCalls,
 
     async findApplicableTariffForPeriod(billingPeriod: Date): Promise<Result<WaterTariff>> {
       const matches = tariffs.filter(
@@ -176,6 +193,15 @@ export function createFakeWaterTariffRepository(options: FakeWaterTariffReposito
       if (!found) return fail("TARIFF_NOT_FOUND", `Không tìm thấy water tariff với id = ${id}.`);
       Object.assign(found, input);
       return ok(found);
+    },
+
+    async deleteById(id: string): Promise<Result<{ id: string }>> {
+      deleteCalls.push(id);
+      if (options.deleteResult) return options.deleteResult;
+      const index = tariffs.findIndex((t) => t.id === id);
+      if (index === -1) return fail("TARIFF_NOT_FOUND", `Không tìm thấy water tariff với id = ${id}.`);
+      tariffs.splice(index, 1);
+      return ok({ id });
     },
   };
 }

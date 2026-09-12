@@ -175,6 +175,41 @@ test("update: tariffId không hợp lệ -> VALIDATION_ERROR trước khi kiểm
   assert.equal(electricityTariffRepository.createTariffCalls.length, 0);
 });
 
+test("delete: tariff KHÔNG bị tham chiếu -> thành công", async () => {
+  const existing = {
+    tariff: { id: "1", name: "Old", effectiveFrom: new Date("2026-01-01"), effectiveTo: null, electricityVatRate: "0.05", peoplePerQuotaUnit: 4, fallbackTierNumber: 2, createdAt: new Date("2026-01-01") },
+    tiers: [],
+  };
+  const { service, electricityTariffRepository } = buildService({ tariffs: [existing], isReferencedByInvoiceResult: { success: true, data: false } });
+  const result = await service.delete("1");
+  assert.equal(result.success, true);
+  if (result.success) assert.equal(result.data.id, "1");
+  assert.deepEqual(electricityTariffRepository.deleteCalls, ["1"]);
+});
+
+test("delete: tariff ĐÃ bị tham chiếu bởi invoice -> TARIFF_IN_USE, không xoá", async () => {
+  const { service, electricityTariffRepository } = buildService({ isReferencedByInvoiceResult: { success: true, data: true } });
+  const result = await service.delete("1");
+  assert.equal(result.success, false);
+  if (!result.success) assert.equal(result.error.code, "TARIFF_IN_USE");
+  assert.equal(electricityTariffRepository.deleteCalls.length, 0);
+});
+
+test("delete: tariffId không hợp lệ -> VALIDATION_ERROR trước khi kiểm tra tham chiếu", async () => {
+  const { service, electricityTariffRepository } = buildService();
+  const result = await service.delete("not-an-id");
+  assert.equal(result.success, false);
+  if (!result.success) assert.equal(result.error.code, "VALIDATION_ERROR");
+  assert.equal(electricityTariffRepository.deleteCalls.length, 0);
+});
+
+test("delete: id không tồn tại -> TARIFF_NOT_FOUND", async () => {
+  const { service } = buildService({ isReferencedByInvoiceResult: { success: true, data: false } });
+  const result = await service.delete("999");
+  assert.equal(result.success, false);
+  if (!result.success) assert.equal(result.error.code, "TARIFF_NOT_FOUND");
+});
+
 test("database failure khi listEffectivePeriods (kiểm tra overlap) -> propagate", async () => {
   const electricityTariffRepository = createFakeElectricityTariffRepository();
   // Ghi đè listEffectivePeriods để giả lập lỗi database.

@@ -6,6 +6,8 @@ import type { Request, Response } from "express";
 import {
   createCreateElectricityTariffController,
   createCreateWaterTariffController,
+  createDeleteElectricityTariffController,
+  createDeleteWaterTariffController,
   createListElectricityTariffsController,
   createListWaterTariffsController,
   createUpdateElectricityTariffController,
@@ -64,6 +66,7 @@ function fakeElectricityService(overrides: {
   list?: Result<ElectricityTariffWithTiers[]>;
   create?: Result<ElectricityTariffWithTiers>;
   update?: Result<ElectricityTariffWithTiers>;
+  delete?: Result<{ id: string }>;
 }) {
   return {
     async list(): Promise<Result<ElectricityTariffWithTiers[]>> {
@@ -74,6 +77,9 @@ function fakeElectricityService(overrides: {
     },
     async update(_id: string, _input: UpdateElectricityTariffInput): Promise<Result<ElectricityTariffWithTiers>> {
       return overrides.update ?? ok(SAMPLE_ELECTRICITY);
+    },
+    async delete(_id: string): Promise<Result<{ id: string }>> {
+      return overrides.delete ?? ok({ id: SAMPLE_ELECTRICITY.tariff.id });
     },
   };
 }
@@ -100,7 +106,12 @@ const VALID_WATER_BODY = {
   environmentalFeeRate: "0.10",
 };
 
-function fakeWaterService(overrides: { list?: Result<WaterTariff[]>; create?: Result<WaterTariff>; update?: Result<WaterTariff> }) {
+function fakeWaterService(overrides: {
+  list?: Result<WaterTariff[]>;
+  create?: Result<WaterTariff>;
+  update?: Result<WaterTariff>;
+  delete?: Result<{ id: string }>;
+}) {
   return {
     async list(): Promise<Result<WaterTariff[]>> {
       return overrides.list ?? ok([SAMPLE_WATER]);
@@ -110,6 +121,9 @@ function fakeWaterService(overrides: { list?: Result<WaterTariff[]>; create?: Re
     },
     async update(_id: string, _input: UpdateWaterTariffInput): Promise<Result<WaterTariff>> {
       return overrides.update ?? ok(SAMPLE_WATER);
+    },
+    async delete(_id: string): Promise<Result<{ id: string }>> {
+      return overrides.delete ?? ok({ id: SAMPLE_WATER.id });
     },
   };
 }
@@ -180,6 +194,33 @@ test("PUT tariffs/electricity/:tariffId: Service trả DUPLICATE_TIER_NUMBER -> 
   assert.equal(state.statusCode, 422);
 });
 
+test("DELETE tariffs/electricity/:tariffId: hợp lệ -> 200 với { id }", async () => {
+  const controller = createDeleteElectricityTariffController(() => fakeElectricityService({}));
+  const { res, state } = createFakeResponse();
+  await controller(createFakeRequest({ params: { tariffId: "1" } }), res);
+  assert.equal(state.statusCode, 200);
+  const body = state.body as { data: { id: string } };
+  assert.equal(body.data.id, "1");
+});
+
+test("DELETE tariffs/electricity/:tariffId: Service trả TARIFF_IN_USE -> 409", async () => {
+  const controller = createDeleteElectricityTariffController(() =>
+    fakeElectricityService({ delete: fail("TARIFF_IN_USE", "đã tham chiếu") })
+  );
+  const { res, state } = createFakeResponse();
+  await controller(createFakeRequest({ params: { tariffId: "1" } }), res);
+  assert.equal(state.statusCode, 409);
+});
+
+test("DELETE tariffs/electricity/:tariffId: Service trả TARIFF_NOT_FOUND -> 404", async () => {
+  const controller = createDeleteElectricityTariffController(() =>
+    fakeElectricityService({ delete: fail("TARIFF_NOT_FOUND", "không tìm thấy") })
+  );
+  const { res, state } = createFakeResponse();
+  await controller(createFakeRequest({ params: { tariffId: "999" } }), res);
+  assert.equal(state.statusCode, 404);
+});
+
 // ---- Water ----
 
 test("GET tariffs/water: 200", async () => {
@@ -215,6 +256,22 @@ test("PUT tariffs/water/:tariffId: Service trả TARIFF_IN_USE -> 409", async ()
   const controller = createUpdateWaterTariffController(() => fakeWaterService({ update: fail("TARIFF_IN_USE", "đã tham chiếu") }));
   const { res, state } = createFakeResponse();
   await controller(createFakeRequest({ body: VALID_WATER_BODY, params: { tariffId: "1" } }), res);
+  assert.equal(state.statusCode, 409);
+});
+
+test("DELETE tariffs/water/:tariffId: hợp lệ -> 200 với { id }", async () => {
+  const controller = createDeleteWaterTariffController(() => fakeWaterService({}));
+  const { res, state } = createFakeResponse();
+  await controller(createFakeRequest({ params: { tariffId: "1" } }), res);
+  assert.equal(state.statusCode, 200);
+  const body = state.body as { data: { id: string } };
+  assert.equal(body.data.id, "1");
+});
+
+test("DELETE tariffs/water/:tariffId: Service trả TARIFF_IN_USE -> 409", async () => {
+  const controller = createDeleteWaterTariffController(() => fakeWaterService({ delete: fail("TARIFF_IN_USE", "đã tham chiếu") }));
+  const { res, state } = createFakeResponse();
+  await controller(createFakeRequest({ params: { tariffId: "1" } }), res);
   assert.equal(state.statusCode, 409);
 });
 
