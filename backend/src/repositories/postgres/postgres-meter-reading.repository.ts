@@ -3,6 +3,7 @@
 import { Result, ok, fail } from "../../shared/result";
 import { logDatabaseError } from "../../database/postgres-client";
 import { isUniqueViolation } from "../../database/unique-violation";
+import { isForeignKeyViolation } from "../../database/foreign-key-violation";
 import type { DatabaseExecutor } from "../../database/database.types";
 import { MeterReading, UtilityType } from "../../modules/meter-reading/meter-reading.model";
 import { MeterReadingRepository, NewMeterReading, UpdateMeterReading } from "../meter-reading.repository";
@@ -184,6 +185,32 @@ export class PostgresMeterReadingRepository implements MeterReadingRepository {
     } catch (error) {
       logDatabaseError("PostgresMeterReadingRepository.isReferencedByInvoice", error);
       return fail("DATABASE_READ_FAILED", "Không thể kiểm tra meter reading có đang được invoice tham chiếu hay không.");
+    }
+  }
+
+  /**
+   * Failure: `METER_READING_IN_USE` khi vi phạm
+   * `invoices.electricity_reading_id`/`water_reading_id ON DELETE
+   * RESTRICT` (SQLSTATE 23503) — reading này vẫn được một invoice tham
+   * chiếu. Service đã pre-check bằng `isReferencedByInvoice` để có
+   * message rõ ràng hơn TRƯỚC khi gọi tới đây, nhưng FK constraint ở
+   * đây mới là nguồn thẩm quyền cuối cùng cho race condition.
+   */
+  async deleteById(id: string): Promise<Result<{ id: string }>> {
+    try {
+      const rows = await this.sql<Array<{ id: string }>>`
+        DELETE FROM meter_readings WHERE id = ${id} RETURNING id
+      `;
+      if (rows.length === 0) {
+        return fail("METER_READING_NOT_FOUND", `Không tìm thấy meter reading với id = ${id}.`);
+      }
+      return ok({ id: rows[0].id });
+    } catch (error) {
+      if (isForeignKeyViolation(error)) {
+        return fail("METER_READING_IN_USE", `Meter reading với id = ${id} đã được một invoice tham chiếu, không thể xoá.`);
+      }
+      logDatabaseError("PostgresMeterReadingRepository.deleteById", error);
+      return fail("DATABASE_WRITE_FAILED", "Không thể xoá dữ liệu meter reading khỏi database.");
     }
   }
 }

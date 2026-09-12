@@ -222,6 +222,28 @@ export class PostgresInvoiceRepository implements InvoiceRepository {
       return fail("DATABASE_READ_FAILED", "Không thể đọc dữ liệu invoice_items từ database.");
     }
   }
+
+  /**
+   * Xoá đúng MỘT invoice — `invoice_items` của nó tự cascade qua
+   * `invoice_items.invoice_id ON DELETE CASCADE` đã có sẵn ở schema, một
+   * câu `DELETE` invoice cha là đủ. KHÔNG chạm room/meter_readings/
+   * tariffs. Không có bảng nào khác RESTRICT việc xoá invoice nên không
+   * cần xử lý FK violation ở đây.
+   */
+  async deleteById(id: string): Promise<Result<{ id: string }>> {
+    try {
+      const rows = await this.sql<Array<{ id: string }>>`
+        DELETE FROM invoices WHERE id = ${id} RETURNING id
+      `;
+      if (rows.length === 0) {
+        return fail("INVOICE_NOT_FOUND", `Không tìm thấy invoice với id = ${id}.`);
+      }
+      return ok({ id: rows[0].id });
+    } catch (error) {
+      logDatabaseError("PostgresInvoiceRepository.deleteById", error);
+      return fail("DATABASE_WRITE_FAILED", "Không thể xoá dữ liệu invoice khỏi database.");
+    }
+  }
 }
 
 /** Xuất riêng để unit-test ánh xạ row mà không cần database thật. */

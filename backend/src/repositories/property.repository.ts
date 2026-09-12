@@ -31,14 +31,14 @@ export interface UpdateRentalProperty {
  * (`docs/MANAGEMENT_API.md`).
  *
  * Điều kiện lỗi:
- * - `findById`/`update`: `PROPERTY_NOT_FOUND` khi không có property nào
- *   khớp id.
+ * - `findById`/`update`/`deleteById`: `PROPERTY_NOT_FOUND` khi không có
+ *   property nào khớp id.
+ * - `deleteById`: `PROPERTY_HAS_DEPENDENCIES` khi vẫn còn Room tham
+ *   chiếu property này (`rooms.property_id ON DELETE RESTRICT`, xem
+ *   migration 001) — PostgreSQL là nguồn thẩm quyền cuối cùng, không
+ *   phải một pre-check SELECT ở tầng ứng dụng.
  * - `DATABASE_READ_FAILED`/`DATABASE_WRITE_FAILED` cho lỗi query/ghi
  *   khác.
- *
- * Không chịu trách nhiệm:
- * - implement `delete` — xem docs/MANAGEMENT_API.md mục "No DELETE
- *   endpoints (by design)".
  */
 export interface PropertyRepository {
   /** `ORDER BY id ASC` — thứ tự xác định (deterministic), không dựa vào thứ tự hàng tự nhiên. */
@@ -46,4 +46,6 @@ export interface PropertyRepository {
   findById(id: string): Promise<Result<RentalProperty>>;
   create(input: NewRentalProperty): Promise<Result<RentalProperty>>;
   update(id: string, input: UpdateRentalProperty): Promise<Result<RentalProperty>>;
+  /** Xoá đúng MỘT property theo id — KHÔNG cascade xoá room. Trả về `{ id }` của hàng đã xoá. */
+  deleteById(id: string): Promise<Result<{ id: string }>>;
 }

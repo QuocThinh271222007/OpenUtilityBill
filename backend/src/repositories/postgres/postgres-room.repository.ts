@@ -3,6 +3,7 @@
 import { Result, ok, fail } from "../../shared/result";
 import { logDatabaseError } from "../../database/postgres-client";
 import { isUniqueViolation } from "../../database/unique-violation";
+import { isForeignKeyViolation } from "../../database/foreign-key-violation";
 import type { DatabaseExecutor } from "../../database/database.types";
 import { Room } from "../../modules/room/room.model";
 import { NewRoom, RoomRepository, UpdateRoom } from "../room.repository";
@@ -143,6 +144,30 @@ export class PostgresRoomRepository implements RoomRepository {
       }
       logDatabaseError("PostgresRoomRepository.update", error);
       return fail("DATABASE_WRITE_FAILED", "Không thể cập nhật dữ liệu room vào database.");
+    }
+  }
+
+  /**
+   * Failure: `ROOM_HAS_DEPENDENCIES` khi vi phạm
+   * `meter_readings.room_id`/`invoices.room_id ON DELETE RESTRICT`
+   * (SQLSTATE 23503) — vẫn còn ít nhất một meter reading hoặc invoice
+   * thuộc room này.
+   */
+  async deleteById(id: string): Promise<Result<{ id: string }>> {
+    try {
+      const rows = await this.sql<Array<{ id: string }>>`
+        DELETE FROM rooms WHERE id = ${id} RETURNING id
+      `;
+      if (rows.length === 0) {
+        return fail("ROOM_NOT_FOUND", `Không tìm thấy room với id = ${id}.`);
+      }
+      return ok({ id: rows[0].id });
+    } catch (error) {
+      if (isForeignKeyViolation(error)) {
+        return fail("ROOM_HAS_DEPENDENCIES", `Room với id = ${id} vẫn còn meter reading hoặc invoice tham chiếu, không thể xoá.`);
+      }
+      logDatabaseError("PostgresRoomRepository.deleteById", error);
+      return fail("DATABASE_WRITE_FAILED", "Không thể xoá dữ liệu room khỏi database.");
     }
   }
 }

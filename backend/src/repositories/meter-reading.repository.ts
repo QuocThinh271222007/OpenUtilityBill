@@ -34,10 +34,13 @@ export type UpdateMeterReading = NewMeterReading;
  * Không chịu trách nhiệm: chứa SQL — xem `postgres/postgres-meter-reading.repository.ts`.
  *
  * Điều kiện lỗi:
- * - `findById`/`findByRoomPeriodAndUtility`/`update`:
+ * - `findById`/`findByRoomPeriodAndUtility`/`update`/`deleteById`:
  *   `METER_READING_NOT_FOUND` khi không có reading nào khớp.
  * - `create`/`update`: `METER_READING_ALREADY_EXISTS` khi vi phạm
  *   `UNIQUE(room_id, billing_period, utility_type)`.
+ * - `deleteById`: `METER_READING_IN_USE` khi vi phạm
+ *   `invoices.electricity_reading_id`/`water_reading_id ON DELETE
+ *   RESTRICT` (xem migration 001).
  * - `DATABASE_READ_FAILED`/`DATABASE_WRITE_FAILED` cho lỗi query/ghi
  *   khác.
  */
@@ -60,9 +63,12 @@ export interface MeterReadingRepository {
   /**
    * `true` khi reading này được một invoice tham chiếu (làm
    * `electricity_reading_id` HOẶC `water_reading_id`) — dùng bởi
-   * `MeterReadingManagementService` để chặn `update` một reading lịch
-   * sử đã dùng để tính hoá đơn (xem docs/MANAGEMENT_API.md mục
-   * "Historical protection").
+   * `MeterReadingManagementService` để chặn `update`/`delete` một
+   * reading lịch sử đã dùng để tính hoá đơn (xem docs/MANAGEMENT_API.md
+   * mục "Bảo vệ tham chiếu lịch sử").
    */
   isReferencedByInvoice(id: string): Promise<Result<boolean>>;
+
+  /** Xoá đúng MỘT meter reading theo id. Trả về `{ id }` của hàng đã xoá. */
+  deleteById(id: string): Promise<Result<{ id: string }>>;
 }

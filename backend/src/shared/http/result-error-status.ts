@@ -40,6 +40,8 @@ const STATUS_BY_ERROR_CODE: Readonly<Record<string, number>> = {
   TARIFF_ALREADY_EXISTS: 409,
   TARIFF_PERIOD_OVERLAP: 409,
   TARIFF_IN_USE: 409,
+  PROPERTY_HAS_DEPENDENCIES: 409,
+  ROOM_HAS_DEPENDENCIES: 409,
 
   // ---- 422: business/configuration validation (Calculation Core + Service) ----
   AMBIGUOUS_TARIFF_CONFIGURATION: 422,
