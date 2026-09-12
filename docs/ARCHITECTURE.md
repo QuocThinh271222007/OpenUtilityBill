@@ -128,9 +128,11 @@ xạ mã lỗi→HTTP status, kiểm tra hình dạng ID/scale thập phân) dù
 chung cho tất cả các module này, được tách ra khỏi module invoice khi
 có consumer thứ hai cần cùng logic — xem `docs/MANAGEMENT_API.md` mục
 "Ghi chú kiến trúc riêng cho quản lý" để biết danh sách đầy đủ. DELETE
-CỐ Ý chưa được cài đặt cho bất kỳ tài nguyên quản lý nào (xem mục
-"Không có endpoint DELETE" trong tài liệu đó) — đây không phải một lỗ
-hổng trong chuỗi trên, mà là một quyết định về phạm vi.
+nay đã được cài đặt cho mọi tài nguyên quản lý theo ĐÚNG chuỗi kiến
+trúc ở trên — Route → Controller → Service → Repository interface →
+Postgres repository → Postgres.js → PostgreSQL, KHÔNG có đường tắt nào
+bỏ qua Service/Repository (xem `docs/MANAGEMENT_API.md` mục "Xóa an
+toàn (SAFE DELETE)").
 
 Ví dụ cụ thể đã cài đặt — health check:
 

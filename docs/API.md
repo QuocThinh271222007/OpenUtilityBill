@@ -198,6 +198,34 @@ GET /api/v1/invoices?roomId=1&billingPeriod=2026-09-01
 **không** được lưu trữ, và là `null` khi `actualChargedAmount` là
 `null`.
 
+## `DELETE /api/v1/invoices/:invoiceId`
+
+Xoá **đúng một** invoice đã tồn tại — một hành động phá huỷ lịch sử tài
+chính, được yêu cầu tường minh (xem docs/MANAGEMENT_API.md mục "CRUD
+matrix quản lý"). `invoice_items` của invoice đó tự biến mất qua
+`invoice_items.invoice_id ON DELETE CASCADE` đã có sẵn ở migration 001
+— Service/Repository **không** tự xoá từng dòng item, và **không bao
+giờ** chạm tới room/meter_readings/electricity_tariffs/water_tariffs
+liên quan (số liệu công tơ và biểu giá được giữ nguyên).
+
+### Response thành công — `200 OK`
+
+```json
+{ "success": true, "data": { "id": "42" } }
+```
+
+### Response lỗi
+
+| Status | Mã lỗi | Khi nào |
+|---|---|---|
+| `400` | `VALIDATION_ERROR` | `invoiceId` không phải chuỗi số nguyên dương. |
+| `404` | `INVOICE_NOT_FOUND` | Không có invoice nào khớp `invoiceId`. |
+| `500` | `DATABASE_WRITE_FAILED` | Lỗi ghi không mong đợi khác. |
+
+Không có mã `409` cho endpoint này — invoice là "đỉnh" của mọi quan hệ
+FK trong schema (không bảng nào khác `RESTRICT` việc xoá một invoice),
+nên một câu `DELETE` invoice cha luôn đủ, không cần xoá nhiều bước.
+
 ## Response lỗi
 
 ```json
@@ -252,15 +280,16 @@ server (`console.error`), không bao giờ serialize vào response.
   thấy hay tự dựng SQL (`SQL_IN_CONTROLLER=0`, `SQL_IN_SERVICE=0` — đã
   kiểm chứng bằng grep trên toàn bộ Controller/Service).
 - Cả `invoice.controller.ts` lẫn `create-invoice.service.ts`/
-  `get-invoice.service.ts` đều không import Postgres.js hay
-  `DatabaseExecutor` — chỉ
+  `get-invoice.service.ts`/`delete-invoice.service.ts` đều không import
+  Postgres.js hay `DatabaseExecutor` — chỉ
   `backend/src/composition/invoice.composition.ts` (composition root)
   và các file `postgres/postgres-*.repository.ts` mới làm điều đó.
 
 ## Nối composition / dependency
 
 `backend/src/composition/invoice.composition.ts` là nơi DUY NHẤT dựng
-`CreateInvoiceService`/`GetInvoiceService` thật (chạy trên Postgres).
+`CreateInvoiceService`/`GetInvoiceService`/`DeleteInvoiceService` thật
+(chạy trên Postgres).
 Nó **lazy**: `getDatabaseClient()` chỉ được gọi bên trong mỗi hàm
 factory, và mỗi hàm factory chỉ được gọi *sau khi* Controller đã
 validate xong request — không bao giờ tại thời điểm import module.
@@ -279,11 +308,9 @@ validate xong request — không bao giờ tại thời điểm import module.
 
 ## Những gì chưa được cài đặt
 
-DELETE cho bất kỳ tài nguyên nào (theo thiết kế — xem
-`docs/MANAGEMENT_API.md` mục "Không có endpoint DELETE (theo thiết
-kế)"), xác thực, phân quyền theo vai trò, và một khu vực quản trị/
-người dùng riêng có kiểm soát quyền. Quản lý Property/Room/
-MeterReading/Tariff (list/create/update) **đã** được cài đặt — xem
-`docs/MANAGEMENT_API.md` — và một giao diện trình duyệt đầy đủ nay
-tiêu thụ API này từ đầu đến cuối, bao gồm cả cấu hình tariff — xem
-`docs/FRONTEND.md`.
+Xác thực, phân quyền theo vai trò, và một khu vực quản trị/người dùng
+riêng có kiểm soát quyền. Quản lý Property/Room/MeterReading/Tariff
+(list/create/update/**delete**) **đã** được cài đặt đầy đủ — xem
+`docs/MANAGEMENT_API.md` mục "Xóa an toàn (SAFE DELETE)" — và một giao
+diện trình duyệt đầy đủ nay tiêu thụ API này từ đầu đến cuối, bao gồm
+cả cấu hình tariff và các nút xóa có xác nhận — xem `docs/FRONTEND.md`.

@@ -184,22 +184,38 @@ chỉ số công tơ điện, chỉ số công tơ nước, tạo hoá đơn, v�
 
 ## Dữ liệu test để lại sau khi chạy
 
-Ứng dụng **cố ý không có** endpoint/nút xoá (DELETE) cho bất kỳ tài
-nguyên nào (property/room/meter reading/tariff/invoice) — xem
-`docs/MANAGEMENT_API.md` mục "Không có endpoint DELETE (theo thiết
-kế)". Vì vậy:
+Ứng dụng nay **có** endpoint/nút xoá (DELETE) cho mọi tài nguyên quản
+lý (property/room/meter reading/tariff/invoice) — xem
+`docs/MANAGEMENT_API.md` mục "Xóa an toàn (SAFE DELETE)". Vì vậy:
 
-- **Không cần** dọn dẹp property/room/invoice vừa tạo qua giao diện —
-  việc đó không thể thực hiện được vì không có tính năng xoá, và đây
-  KHÔNG phải một bước bắt buộc của checklist này.
 - Đặt tên rõ ràng cho các bản ghi test (ví dụ tiền tố `SMOKE_TEST_...`)
   để dễ nhận ra đây là dữ liệu smoke test, không phải dữ liệu thật.
-- Việc để lại các bản ghi này trong database development/test là CHẤP
-  NHẬN ĐƯỢC.
-- Nếu cần dọn dẹp, có thể xoá trực tiếp trong database development/
-  test (ví dụ qua Supabase SQL editor) sau khi smoke test xong — đây
-  là một bước TUỲ CHỌN, không bắt buộc, và không cần thêm DELETE API
-  chỉ để phục vụ việc dọn dẹp này.
+- **Có thể** dọn dẹp property/room/reading/tariff/invoice vừa tạo qua
+  chính giao diện (nút "Xóa", có hộp thoại xác nhận) — nhớ xoá theo
+  ĐÚNG thứ tự phụ thuộc (invoice trước, rồi meter reading/tariff, rồi
+  room, rồi property) vì các ràng buộc `RESTRICT` sẽ chặn nếu xoá sai
+  thứ tự (409, không phải lỗi — đây chính là hành vi đúng cần xác
+  nhận, xem bước smoke bên dưới).
+- Việc để lại các bản ghi này trong database development/test (không
+  dọn dẹp) vẫn là CHẤP NHẬN ĐƯỢC nếu không muốn dọn ngay.
+- Nếu cần dọn dẹp mà không qua giao diện, vẫn có thể xoá trực tiếp
+  trong database development/test (ví dụ qua Supabase SQL editor) —
+  đây là một bước TUỲ CHỌN.
+
+### Smoke bổ sung cho DELETE (nếu có công cụ trình duyệt)
+
+- [ ] Bấm "Xóa" trên một property/room/reading/tariff — xác nhận hộp
+      thoại xác nhận xuất hiện, và huỷ (Cancel) KHÔNG gửi request nào.
+- [ ] Xác nhận xoá một room đang có chỉ số công tơ/hoá đơn liên quan —
+      xác nhận thấy message lỗi thân thiện (không lộ tên bảng/constraint)
+      và room KHÔNG biến mất khỏi danh sách.
+- [ ] Xoá một property/room/reading/tariff KHÔNG có phụ thuộc — xác
+      nhận thông báo thành công và danh sách tự làm mới (không cần tải
+      lại trang).
+- [ ] Trên trang Hóa đơn, tạo hoặc tải một hoá đơn đã lưu, bấm "Xóa hóa
+      đơn" — xác nhận văn bản xác nhận MẠNH hơn (nêu rõ invoice_items
+      bị xoá theo, chỉ số công tơ/biểu giá không bị xóa), và sau khi
+      xác nhận, khu vực kết quả trở về trạng thái "chưa có hoá đơn".
 
 ## Sau khi chạy checklist này
 
