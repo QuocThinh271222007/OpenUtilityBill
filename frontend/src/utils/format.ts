@@ -102,62 +102,95 @@ function isThousandsGroupedShape(groups: string[]): boolean {
 }
 
 /**
- * Định dạng một chuỗi tiền TRONG LÚC nhập liệu — nhận CẢ một chuỗi
- * canonical thô từ backend (ví dụ "40000.50", "8500.00", dấu "." LUÔN
- * là thập phân) LẪN một chuỗi đã ở dạng hiển thị/vừa paste (ví dụ
+ * Ba phần "ý định" của một giá trị tiền: chữ số phần nguyên, chữ số
+ * phần lẻ (tối đa 2, khớp `NUMERIC(14, 2)`), và có/không có dấu thập
+ * phân. Đây là mô hình DỮ LIỆU trung gian — dùng để RENDER lại
+ * (`formatMoneyParts`) hoặc để một ô nhập liệu có trạng thái
+ * (`utils/money-input.ts`) lưu/cập nhật state chính xác theo từng phím
+ * gõ, tách biệt khỏi việc "đoán" từ một chuỗi đã trộn lẫn ký hiệu.
+ */
+export interface MoneyInputParts {
+  integerDigits: string;
+  fractionalDigits: string;
+  hasDecimal: boolean;
+}
+
+/**
+ * Diễn giải MỘT CHUỖI HOÀN CHỈNH thành `MoneyInputParts` — nhận CẢ một
+ * chuỗi canonical thô từ backend (ví dụ "40000.50", "8500.00", dấu "."
+ * LUÔN là thập phân) LẪN một chuỗi đã ở dạng hiển thị/vừa paste (ví dụ
  * "40.000", "40.000,50", dấu "." có thể là ngăn hàng nghìn) — xem
  * `isThousandsGroupedShape` để biết cách hai trường hợp được phân
- * biệt. Luôn hiển thị nhóm hàng nghìn bằng "." và phần lẻ (nếu có)
- * bằng ",", tối đa 2 chữ số lẻ (khớp `NUMERIC(14, 2)` của mọi field
- * tiền trong dự án). KHÔNG BAO GIỜ dùng `Number`/`parseFloat`.
+ * biệt.
  *
- * CHÚ Ý cho nơi gọi: hàm này áp dụng "quy tắc paste" (dấu cuối cùng
- * gặp được là phân định thập phân, trừ khi TOÀN chuỗi khớp hình dạng
- * nhóm-hàng-nghìn) — vì vậy KHÔNG được gọi trực tiếp trên giá trị DOM
- * đang gõ dở (nơi một dấu "." do CHÍNH hàm này chèn ở lượt gõ trước có
- * thể trở thành "lệch vị trí" sau khi gõ thêm chữ số). Với ô nhập liệu
- * đang gõ theo từng phím, nơi gọi (`utils/money-input.ts`) PHẢI tự bỏ
- * hết dấu "." trong giá trị DOM hiện tại trước khi gọi hàm này — chỉ
- * dùng nguyên bản (không tiền xử lý) cho việc nạp sẵn từ canonical
- * hoặc xử lý một lần dán (paste) nguyên chuỗi.
+ * CHÚ Ý cho nơi gọi: hàm này áp dụng "quy tắc chuỗi hoàn chỉnh" (dấu
+ * cuối cùng gặp được là phân định thập phân, trừ khi TOÀN chuỗi khớp
+ * hình dạng nhóm-hàng-nghìn) — chỉ đúng khi chuỗi đầu vào là MỘT giá
+ * trị TRỌN VẸN (canonical nạp sẵn, hoặc nội dung dán một lần). KHÔNG
+ * dùng hàm này để diễn giải lại giá trị DOM đang gõ dở theo từng phím
+ * — một dấu "." do CHÍNH `formatMoneyParts` chèn ở lượt gõ trước có
+ * thể trở nên lệch vị trí sau khi gõ thêm chữ số (ví dụ "4.000" rồi gõ
+ * thêm "0" thành "4.0000" — không còn đúng 3 chữ số sau dấu "."). Việc
+ * gõ theo từng phím phải cập nhật trực tiếp `MoneyInputParts` đã lưu
+ * (xem `utils/money-input.ts`), không re-parse chuỗi đã trộn ký hiệu.
  */
-export function formatMoneyInputDisplay(rawCanonicalOrDisplay: string): string {
+export function parseMoneyInputParts(rawCanonicalOrDisplay: string): MoneyInputParts {
   const cleaned = rawCanonicalOrDisplay.replace(/[^0-9.,]/g, "");
-  if (cleaned.length === 0) return "";
-
-  let integerDigits: string;
-  let fractionalDigits: string;
-  let hasSeparator: boolean;
+  if (cleaned.length === 0) return { integerDigits: "", fractionalDigits: "", hasDecimal: false };
 
   if (cleaned.includes(",")) {
     const firstCommaIndex = cleaned.indexOf(",");
-    integerDigits = cleaned.slice(0, firstCommaIndex).replace(/\D/g, "");
-    fractionalDigits = cleaned.slice(firstCommaIndex + 1).replace(/\D/g, "");
-    hasSeparator = true;
-  } else if (cleaned.includes(".")) {
+    return {
+      integerDigits: cleaned.slice(0, firstCommaIndex).replace(/\D/g, ""),
+      fractionalDigits: cleaned.slice(firstCommaIndex + 1).replace(/\D/g, "").slice(0, 2),
+      hasDecimal: true,
+    };
+  }
+  if (cleaned.includes(".")) {
     const groups = cleaned.split(".");
     if (isThousandsGroupedShape(groups)) {
-      integerDigits = groups.join("");
-      fractionalDigits = "";
-      hasSeparator = false;
-    } else {
-      const lastDotIndex = cleaned.lastIndexOf(".");
-      integerDigits = cleaned.slice(0, lastDotIndex).replace(/\./g, "");
-      fractionalDigits = cleaned.slice(lastDotIndex + 1).replace(/\./g, "");
-      hasSeparator = true;
+      return { integerDigits: groups.join(""), fractionalDigits: "", hasDecimal: false };
     }
-  } else {
-    integerDigits = cleaned;
-    fractionalDigits = "";
-    hasSeparator = false;
+    const lastDotIndex = cleaned.lastIndexOf(".");
+    return {
+      integerDigits: cleaned.slice(0, lastDotIndex).replace(/\./g, ""),
+      fractionalDigits: cleaned.slice(lastDotIndex + 1).replace(/\./g, "").slice(0, 2),
+      hasDecimal: true,
+    };
   }
+  return { integerDigits: cleaned, fractionalDigits: "", hasDecimal: false };
+}
 
-  integerDigits = integerDigits.replace(/^0+(?=\d)/, "");
+/**
+ * Render `MoneyInputParts` thành chuỗi hiển thị — nhóm hàng nghìn bằng
+ * "." và phần lẻ (nếu `hasDecimal`) bằng ",". KHÔNG BAO GIỜ dùng
+ * `Number`/`parseFloat`. Đây là hướng NGƯỢC LẠI của việc diễn giải —
+ * an toàn gọi lại nhiều lần liên tiếp vì chỉ thao tác trên dữ liệu đã
+ * tách phần (integer/fractional/hasDecimal), không phải chuỗi đã trộn
+ * ký hiệu.
+ */
+export function formatMoneyParts(parts: MoneyInputParts): string {
+  let integerDigits = parts.integerDigits.replace(/^0+(?=\d)/, "");
+  const fractionalDigits = parts.fractionalDigits.slice(0, 2);
+  if (integerDigits.length === 0 && !parts.hasDecimal && fractionalDigits.length === 0) {
+    return "";
+  }
   if (integerDigits.length === 0) integerDigits = "0";
-  fractionalDigits = fractionalDigits.slice(0, 2);
 
   const groupedInteger = groupThousands(integerDigits);
-  return hasSeparator ? `${groupedInteger},${fractionalDigits}` : groupedInteger;
+  return parts.hasDecimal ? `${groupedInteger},${fractionalDigits}` : groupedInteger;
+}
+
+/**
+ * Định dạng MỘT CHUỖI HOÀN CHỈNH thành chuỗi hiển thị tiền — tương
+ * đương `formatMoneyParts(parseMoneyInputParts(value))`. Dùng để nạp
+ * sẵn một ô tiền từ giá trị canonical (khi mở form sửa) hoặc để xử lý
+ * một lần dán (paste) nguyên chuỗi — xem lưu ý ở `parseMoneyInputParts`
+ * về việc KHÔNG dùng hàm này để re-parse giá trị DOM đang gõ dở theo
+ * từng phím.
+ */
+export function formatMoneyInputDisplay(rawCanonicalOrDisplay: string): string {
+  return formatMoneyParts(parseMoneyInputParts(rawCanonicalOrDisplay));
 }
 
 /**
@@ -240,6 +273,44 @@ export function percentInputToRateCanonical(percentDisplay: string): string | nu
  */
 export function rateCanonicalToPercentDisplay(rateCanonical: string): string {
   return shiftDecimalPointString(rateCanonical, 2, true);
+}
+
+/**
+ * Mask nhập liệu cho ngày đầy đủ — bỏ MỌI ký tự không phải chữ số
+ * (thao tác thuần trên chuỗi, không có gì mơ hồ để "đoán" như dấu
+ * thập phân của tiền), giữ tối đa 8 chữ số (DDMMYYYY), rồi tự chèn "/"
+ * sau vị trí 2 và 4. An toàn gọi lại trên MỌI giá trị trung gian (kể
+ * cả giá trị đã có "/" từ lượt gõ trước) vì luôn tính lại từ đầu dựa
+ * trên SỐ LƯỢNG chữ số, không dựa vào vị trí "/" cũ. KHÔNG validate
+ * lịch — xem `displayDateToIsoDate` cho việc đó.
+ *
+ *   "1"        -> "1"
+ *   "10"       -> "10"
+ *   "100"      -> "10/0"
+ *   "1005"     -> "10/05"
+ *   "10052025" -> "10/05/2025"
+ */
+export function formatDateInputMask(rawDigitsOrDisplay: string): string {
+  const digits = rawDigitsOrDisplay.replace(/\D/g, "").slice(0, 8);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+}
+
+/**
+ * Mask nhập liệu cho kỳ billing (tháng) — cùng nguyên tắc với
+ * `formatDateInputMask`, giữ tối đa 6 chữ số (MMYYYY), tự chèn "/" sau
+ * vị trí 2. KHÔNG validate tháng 01-12 — xem `monthDisplayToBillingPeriod`
+ * cho việc đó.
+ *
+ *   "10"     -> "10"
+ *   "102"    -> "10/2"
+ *   "102026" -> "10/2026"
+ */
+export function formatMonthInputMask(rawDigitsOrDisplay: string): string {
+  const digits = rawDigitsOrDisplay.replace(/\D/g, "").slice(0, 6);
+  if (digits.length <= 2) return digits;
+  return `${digits.slice(0, 2)}/${digits.slice(2)}`;
 }
 
 /** "YYYY-MM-DD" -> "DD/MM/YYYY", thuần cắt chuỗi (không dựng `Date`, tránh mọi vấn đề múi giờ). Giá trị vào LUÔN đến từ backend, không cần validate. */

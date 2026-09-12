@@ -23,6 +23,7 @@ import {
 } from "../views/tariff.view";
 import { displayDateToIsoDate, moneyDisplayToCanonical, percentInputToRateCanonical } from "../utils/format";
 import { wireMoneyInput } from "../utils/money-input";
+import { wireDateInputMask } from "../utils/masked-text-input";
 import type { ElectricityTariffBody, ElectricityTariffTierInput, ElectricityTariffWithTiers, WaterTariff, WaterTariffBody } from "../types/tariff.types";
 
 /**
@@ -111,6 +112,10 @@ function wireElectricityTariffForm(): void {
   const form = document.querySelector<HTMLFormElement>("#electricity-tariff-form");
   const cancelBtn = document.querySelector<HTMLButtonElement>("#electricity-tariff-cancel-btn");
   const addTierBtn = document.querySelector<HTMLButtonElement>("#electricity-tier-add-btn");
+  const fromInput = document.querySelector<HTMLInputElement>("#electricity-tariff-effective-from");
+  const toInput = document.querySelector<HTMLInputElement>("#electricity-tariff-effective-to");
+  if (fromInput) wireDateInputMask(fromInput);
+  if (toInput) wireDateInputMask(toInput);
 
   form?.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -376,8 +381,12 @@ function wireWaterTariffForm(): void {
   const cancelBtn = document.querySelector<HTMLButtonElement>("#water-tariff-cancel-btn");
   const cubicInput = document.querySelector<HTMLInputElement>("#water-tariff-price-cubic-meter");
   const personInput = document.querySelector<HTMLInputElement>("#water-tariff-price-person");
+  const fromInput = document.querySelector<HTMLInputElement>("#water-tariff-effective-from");
+  const toInput = document.querySelector<HTMLInputElement>("#water-tariff-effective-to");
   if (cubicInput) wireMoneyInput(cubicInput);
   if (personInput) wireMoneyInput(personInput);
+  if (fromInput) wireDateInputMask(fromInput);
+  if (toInput) wireDateInputMask(toInput);
 
   form?.addEventListener("submit", (event) => {
     event.preventDefault();

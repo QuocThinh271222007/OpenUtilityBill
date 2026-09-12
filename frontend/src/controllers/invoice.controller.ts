@@ -14,6 +14,7 @@ import {
 } from "../views/invoice.view";
 import { moneyDisplayToCanonical, monthDisplayToBillingPeriod } from "../utils/format";
 import { wireMoneyInput } from "../utils/money-input";
+import { wireMonthInputMask } from "../utils/masked-text-input";
 import type { CreateInvoiceBody } from "../types/invoice.types";
 import type { Room } from "../types/room.types";
 
@@ -66,7 +67,9 @@ function wireInvoiceForm(): void {
   const form = document.querySelector<HTMLFormElement>("#invoice-form");
   const viewExistingBtn = document.querySelector<HTMLButtonElement>("#invoice-view-existing-btn");
   const actualInput = document.querySelector<HTMLInputElement>("#invoice-actual-charged");
+  const monthInput = document.querySelector<HTMLInputElement>("#invoice-month");
   if (actualInput) wireMoneyInput(actualInput);
+  if (monthInput) wireMonthInputMask(monthInput);
 
   propertySelect?.addEventListener("change", () => void handlePropertyChange());
   roomSelect?.addEventListener("change", () => {

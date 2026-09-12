@@ -15,6 +15,7 @@ import {
   setReadingUnitSuffix,
 } from "../views/meter-reading.view";
 import { monthDisplayToBillingPeriod } from "../utils/format";
+import { wireMonthInputMask } from "../utils/masked-text-input";
 import type { MeterReading, MeterReadingBody, UtilityType } from "../types/meter-reading.types";
 import type { Room } from "../types/room.types";
 
@@ -67,6 +68,7 @@ function wireSelectors(): void {
   const roomSelect = document.querySelector<HTMLSelectElement>("#reading-room-select");
   const monthFilter = document.querySelector<HTMLInputElement>("#reading-month-filter");
   const addBtn = document.querySelector<HTMLButtonElement>("#reading-add-btn");
+  if (monthFilter) wireMonthInputMask(monthFilter);
 
   propertySelect?.addEventListener("change", () => void handlePropertyChange());
   roomSelect?.addEventListener("change", () => void handleRoomChange());
@@ -175,6 +177,8 @@ function wireReadingForm(): void {
   const form = document.querySelector<HTMLFormElement>("#reading-form");
   const cancelBtn = document.querySelector<HTMLButtonElement>("#reading-cancel-btn");
   const utilitySelect = document.querySelector<HTMLSelectElement>("#reading-utility-type");
+  const monthInput = document.querySelector<HTMLInputElement>("#reading-billing-month");
+  if (monthInput) wireMonthInputMask(monthInput);
 
   utilitySelect?.addEventListener("change", () => {
     setReadingUnitSuffix(utilitySelect.value as UtilityType);

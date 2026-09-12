@@ -336,8 +336,8 @@ export function setWaterTariffFormMode(mode: "create" | "edit", tariff?: WaterTa
     nameInput.value = "";
     fromInput.value = "";
     toInput.value = "";
-    cubicInput.value = "";
-    personInput.value = "";
+    setMoneyInputFromCanonical(cubicInput, "");
+    setMoneyInputFromCanonical(personInput, "");
     vatInput.value = "";
     feeInput.value = "";
     cancelBtn.classList.add("d-none");
