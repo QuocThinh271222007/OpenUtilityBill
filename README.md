@@ -188,6 +188,31 @@ OpenUtilityBill/
 Xem [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) để biết package
 bên thứ ba và giấy phép tương ứng.
 
+## Bảng căn cứ pháp lý tham chiếu
+
+Các quy tắc nghiệp vụ về điện trong OpenUtilityBill được tách khỏi mã
+nguồn và lưu dưới dạng cấu hình để có thể cập nhật khi quy định thay
+đổi. Bảng dưới đây tổng hợp các văn bản được nêu trong bộ tài liệu đầu
+vào của dự án và cách chúng được phản ánh trong hệ thống.
+
+| Văn bản | Hiệu lực / thời điểm áp dụng | Nội dung tham chiếu | Liên hệ trong OpenUtilityBill |
+|---|---|---|---|
+| **Quyết định số 1279/QĐ-BCT ngày 09/5/2025 của Bộ Công Thương** | Áp dụng từ **10/5/2025** | Giá bán lẻ điện sinh hoạt theo biểu giá bậc thang sáu bậc. | Biểu giá điện được mô hình hoá bằng `electricity_tariffs` và `electricity_tariff_tiers`; cấu hình mặc định gồm 6 bậc và có thể thay đổi mà không sửa Calculation Core. |
+| **Thông tư số 60/2025/TT-BCT của Bộ Công Thương** | Hiệu lực từ **02/12/2025** | Quy định thực hiện giá bán điện đối với nhà cho thuê: định mức theo số người sử dụng điện; 4 người tương ứng 1 định mức, số người ít hơn được quy đổi theo tỷ lệ 1/4 định mức mỗi người; trường hợp không kê khai đầy đủ số người áp dụng giá bậc 3. | Calculation Core hỗ trợ phương pháp `QUOTA_TIERED`, hệ số định mức theo số người và phương án fallback theo bậc cấu hình; màn hình hoá đơn cho phép đối chiếu số tiền thực thu với số tiền tính theo cấu hình hợp lệ. |
+| **Nghị định số 133/2026/NĐ-CP** | Hiệu lực từ **25/5/2026** | Căn cứ xử lý hành vi thu tiền điện cao hơn giá quy định và nghĩa vụ hoàn trả theo tài liệu tham chiếu. | Dự án dùng nội dung này làm bối cảnh cho chức năng đối chiếu thực thu; OpenUtilityBill **không** tự tính mức xử phạt hành chính. |
+| **Nghị quyết số 204/2025/QH15** | Mức giảm thuế được tài liệu tham chiếu nêu áp dụng đến hết **31/12/2026** | Căn cứ cho mức giảm thuế giá trị gia tăng áp dụng trong giai đoạn tham chiếu. | Cấu hình mặc định sử dụng VAT điện **8%**; tỷ lệ VAT là dữ liệu cấu hình theo thời gian, không được hard-code vào Calculation Core. |
+
+Đối với **nước sinh hoạt**, bộ tài liệu đầu vào nêu rõ giá nước do từng
+địa phương ban hành nên có thể khác nhau giữa các tỉnh/thành. Vì vậy
+OpenUtilityBill không coi một đơn giá nước duy nhất là mức pháp lý áp
+dụng cho mọi nơi; giá theo m³, giá theo người, VAT và phí môi trường đều
+được thiết kế dưới dạng tham số cấu hình.
+
+> Bảng trên dùng để giải thích nguồn tham chiếu của các quy tắc và cấu
+> hình trong phần mềm, không thay thế văn bản pháp luật gốc. Khi biểu giá,
+> thuế hoặc quy định thay đổi, cần cập nhật cấu hình theo văn bản có hiệu
+> lực tại thời điểm áp dụng.
+
 ## Hướng dẫn cài đặt & Chạy trên máy
 
 ### Yêu cầu
