@@ -5,11 +5,11 @@ import assert from "node:assert/strict";
 import { calculateBillingDifference } from "../../invoice/calculate-billing-difference";
 
 /**
- * Official test case 7: legal calculated total (case 1) = 269244.
+ * Reference test case 7: legal calculated total (case 1) = 269244.
  * Actual charged = 4000 * 120 = 480000.
  * difference = 480000 - 269244 = 210756 (dương: khách trả nhiều hơn).
  */
-test("OFFICIAL CASE 7: actual charge so với tổng hợp pháp", () => {
+test("REFERENCE CASE 7: actual charge so với tổng hợp pháp", () => {
   const result = calculateBillingDifference({
     actualChargedAmount: "480000",
     legalRoundedTotalVnd: "269244",

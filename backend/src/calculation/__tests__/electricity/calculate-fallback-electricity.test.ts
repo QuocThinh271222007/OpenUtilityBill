@@ -5,26 +5,26 @@ import assert from "node:assert/strict";
 import { calculateFallbackElectricity } from "../../electricity/calculate-fallback-electricity";
 import { calculateTieredElectricity } from "../../electricity/calculate-tiered-electricity";
 import {
-  COMPETITION_ELECTRICITY_TIERS,
-  COMPETITION_ELECTRICITY_VAT_RATE,
-  COMPETITION_FALLBACK_TIER_NUMBER,
-  COMPETITION_PEOPLE_PER_QUOTA_UNIT,
-} from "../fixtures/competition-defaults";
+  DEFAULT_ELECTRICITY_TIERS,
+  DEFAULT_ELECTRICITY_VAT_RATE,
+  DEFAULT_FALLBACK_TIER_NUMBER,
+  DEFAULT_PEOPLE_PER_QUOTA_UNIT,
+} from "../fixtures/default-tariffs";
 
 /**
- * Official test case 5: FALLBACK_TIER_FLAT, 120 kWh, fallbackTierNumber
+ * Reference test case 5: FALLBACK_TIER_FLAT, 120 kWh, fallbackTierNumber
  * = 3 (đơn giá bậc 3 = 2380).
  *
  * subtotal = 120 * 2380 = 285600, VAT 8% = 22848, total = 308448.
  *
  * So với case 1 (tiered, cùng 120 kWh, 4 người): 308448 - 269244 = 39204.
  */
-test("OFFICIAL CASE 5: FALLBACK_TIER_FLAT, 120 kWh, fallback tier 3", () => {
+test("REFERENCE CASE 5: FALLBACK_TIER_FLAT, 120 kWh, fallback tier 3", () => {
   const fallbackResult = calculateFallbackElectricity({
     usageKwh: "120",
-    vatRate: COMPETITION_ELECTRICITY_VAT_RATE,
-    tiers: COMPETITION_ELECTRICITY_TIERS,
-    fallbackTierNumber: COMPETITION_FALLBACK_TIER_NUMBER,
+    vatRate: DEFAULT_ELECTRICITY_VAT_RATE,
+    tiers: DEFAULT_ELECTRICITY_TIERS,
+    fallbackTierNumber: DEFAULT_FALLBACK_TIER_NUMBER,
   });
   assert.equal(fallbackResult.success, true);
   if (!fallbackResult.success) return;
@@ -39,9 +39,9 @@ test("OFFICIAL CASE 5: FALLBACK_TIER_FLAT, 120 kWh, fallback tier 3", () => {
   const tieredResult = calculateTieredElectricity({
     usageKwh: "120",
     tenantCount: 4,
-    peoplePerQuotaUnit: COMPETITION_PEOPLE_PER_QUOTA_UNIT,
-    vatRate: COMPETITION_ELECTRICITY_VAT_RATE,
-    tiers: COMPETITION_ELECTRICITY_TIERS,
+    peoplePerQuotaUnit: DEFAULT_PEOPLE_PER_QUOTA_UNIT,
+    vatRate: DEFAULT_ELECTRICITY_VAT_RATE,
+    tiers: DEFAULT_ELECTRICITY_TIERS,
   });
   assert.equal(tieredResult.success, true);
   if (!tieredResult.success) return;

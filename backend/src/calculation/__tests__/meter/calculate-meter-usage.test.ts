@@ -20,7 +20,7 @@ test("calculateMeterUsage: chỉ số tăng bình thường", () => {
   }
 });
 
-test("calculateMeterUsage: rollover — official example (99850 -> 120, max 99999) = 270", () => {
+test("calculateMeterUsage: rollover — ví dụ tham chiếu (99850 -> 120, max 99999) = 270", () => {
   const result = calculateMeterUsage({ previousReading: "99850", currentReading: "120", meterMaximumValue: "99999" });
   assert.equal(result.success, true);
   if (result.success) {

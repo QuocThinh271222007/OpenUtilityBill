@@ -4,27 +4,27 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { calculateWaterCharge } from "../../water/calculate-water-charge";
 import {
-  COMPETITION_WATER_ENVIRONMENTAL_FEE_RATE,
-  COMPETITION_WATER_PRICE_PER_CUBIC_METER,
-  COMPETITION_WATER_PRICE_PER_PERSON,
-  COMPETITION_WATER_VAT_RATE,
-} from "../fixtures/competition-defaults";
+  DEFAULT_WATER_ENVIRONMENTAL_FEE_RATE,
+  DEFAULT_WATER_PRICE_PER_CUBIC_METER,
+  DEFAULT_WATER_PRICE_PER_PERSON,
+  DEFAULT_WATER_VAT_RATE,
+} from "../fixtures/default-tariffs";
 
 /**
- * Official test case 6: PER_CUBIC_METER, 12 m3, giá 8500/m3.
+ * Reference test case 6: PER_CUBIC_METER, 12 m3, giá 8500/m3.
  *
  * base = 102000, VAT 5% = 5100, phí môi trường 10% = 10200 (TỪ base,
  * không phải từ base + VAT), total = 117300.
  */
-test("OFFICIAL CASE 6: PER_CUBIC_METER, 12 m3 — phí môi trường tính từ base", () => {
+test("REFERENCE CASE 6: PER_CUBIC_METER, 12 m3 — phí môi trường tính từ base", () => {
   const result = calculateWaterCharge({
     method: "PER_CUBIC_METER",
     waterUsageM3: "12",
     tenantCount: 0,
-    pricePerCubicMeter: COMPETITION_WATER_PRICE_PER_CUBIC_METER,
-    pricePerPerson: COMPETITION_WATER_PRICE_PER_PERSON,
-    vatRate: COMPETITION_WATER_VAT_RATE,
-    environmentalFeeRate: COMPETITION_WATER_ENVIRONMENTAL_FEE_RATE,
+    pricePerCubicMeter: DEFAULT_WATER_PRICE_PER_CUBIC_METER,
+    pricePerPerson: DEFAULT_WATER_PRICE_PER_PERSON,
+    vatRate: DEFAULT_WATER_VAT_RATE,
+    environmentalFeeRate: DEFAULT_WATER_ENVIRONMENTAL_FEE_RATE,
   });
   assert.equal(result.success, true);
   if (!result.success) return;
@@ -47,10 +47,10 @@ test("calculateWaterCharge: PER_PERSON", () => {
     method: "PER_PERSON",
     waterUsageM3: null,
     tenantCount: 4,
-    pricePerCubicMeter: COMPETITION_WATER_PRICE_PER_CUBIC_METER,
-    pricePerPerson: COMPETITION_WATER_PRICE_PER_PERSON,
-    vatRate: COMPETITION_WATER_VAT_RATE,
-    environmentalFeeRate: COMPETITION_WATER_ENVIRONMENTAL_FEE_RATE,
+    pricePerCubicMeter: DEFAULT_WATER_PRICE_PER_CUBIC_METER,
+    pricePerPerson: DEFAULT_WATER_PRICE_PER_PERSON,
+    vatRate: DEFAULT_WATER_VAT_RATE,
+    environmentalFeeRate: DEFAULT_WATER_ENVIRONMENTAL_FEE_RATE,
   });
   assert.equal(result.success, true);
   if (!result.success) return;

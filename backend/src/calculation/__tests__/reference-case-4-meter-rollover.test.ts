@@ -5,14 +5,14 @@ import assert from "node:assert/strict";
 import { calculateMeterUsage } from "../meter/calculate-meter-usage";
 import { calculateTieredElectricity } from "../electricity/calculate-tiered-electricity";
 import {
-  COMPETITION_ELECTRICITY_TIERS,
-  COMPETITION_ELECTRICITY_VAT_RATE,
-  COMPETITION_PEOPLE_PER_QUOTA_UNIT,
-} from "./fixtures/competition-defaults";
+  DEFAULT_ELECTRICITY_TIERS,
+  DEFAULT_ELECTRICITY_VAT_RATE,
+  DEFAULT_PEOPLE_PER_QUOTA_UNIT,
+} from "./fixtures/default-tariffs";
 
 /**
  * Trách nhiệm:
- * Kiểm chứng Official test case 4 — trường hợp DUY NHẤT cần GHÉP hai
+ * Kiểm chứng Reference test case 4 — trường hợp DUY NHẤT cần GHÉP hai
  * module (calculateMeterUsage + calculateTieredElectricity) lại với
  * nhau, vì đây là ranh giới thực tế giữa "đọc chỉ số công tơ" và "tính
  * tiền điện". Hai module vẫn được unit-test ĐỘC LẬP ở nơi khác
@@ -25,7 +25,7 @@ import {
  * (rollover). Với 4 người (quota 1): subtotal 649560, VAT 51964.8,
  * exactTotal 701524.8, roundedTotalVnd 701525.
  */
-test("OFFICIAL CASE 4: meter rollover (270 kWh) ghép với tính tiền điện bậc thang", () => {
+test("REFERENCE CASE 4: meter rollover (270 kWh) ghép với tính tiền điện bậc thang", () => {
   const usageResult = calculateMeterUsage({
     previousReading: "99850",
     currentReading: "120",
@@ -38,9 +38,9 @@ test("OFFICIAL CASE 4: meter rollover (270 kWh) ghép với tính tiền điện
   const electricityResult = calculateTieredElectricity({
     usageKwh: usageResult.data,
     tenantCount: 4,
-    peoplePerQuotaUnit: COMPETITION_PEOPLE_PER_QUOTA_UNIT,
-    vatRate: COMPETITION_ELECTRICITY_VAT_RATE,
-    tiers: COMPETITION_ELECTRICITY_TIERS,
+    peoplePerQuotaUnit: DEFAULT_PEOPLE_PER_QUOTA_UNIT,
+    vatRate: DEFAULT_ELECTRICITY_VAT_RATE,
+    tiers: DEFAULT_ELECTRICITY_TIERS,
   });
   assert.equal(electricityResult.success, true);
   if (!electricityResult.success) return;

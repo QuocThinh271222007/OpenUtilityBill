@@ -3,23 +3,23 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { calculateTieredElectricity } from "../../electricity/calculate-tiered-electricity";
-import { COMPETITION_ELECTRICITY_TIERS, COMPETITION_ELECTRICITY_VAT_RATE, COMPETITION_PEOPLE_PER_QUOTA_UNIT } from "../fixtures/competition-defaults";
+import { DEFAULT_ELECTRICITY_TIERS, DEFAULT_ELECTRICITY_VAT_RATE, DEFAULT_PEOPLE_PER_QUOTA_UNIT } from "../fixtures/default-tariffs";
 
 /**
- * Official test case 1: 4 người, 120 kWh, quota = 1.
+ * Reference test case 1: 4 người, 120 kWh, quota = 1.
  *
  * Bậc 1: 50 * 1984 = 99200
  * Bậc 2: 50 * 2050 = 102500
  * Bậc 3: 20 * 2380 = 47600
  * subtotal = 249300, VAT 8% = 19944, total = 269244.
  */
-test("OFFICIAL CASE 1: 4 người, 120 kWh, quota 1", () => {
+test("REFERENCE CASE 1: 4 người, 120 kWh, quota 1", () => {
   const result = calculateTieredElectricity({
     usageKwh: "120",
     tenantCount: 4,
-    peoplePerQuotaUnit: COMPETITION_PEOPLE_PER_QUOTA_UNIT,
-    vatRate: COMPETITION_ELECTRICITY_VAT_RATE,
-    tiers: COMPETITION_ELECTRICITY_TIERS,
+    peoplePerQuotaUnit: DEFAULT_PEOPLE_PER_QUOTA_UNIT,
+    vatRate: DEFAULT_ELECTRICITY_VAT_RATE,
+    tiers: DEFAULT_ELECTRICITY_TIERS,
   });
   assert.equal(result.success, true);
   if (!result.success) return;
@@ -36,7 +36,7 @@ test("OFFICIAL CASE 1: 4 người, 120 kWh, quota 1", () => {
 });
 
 /**
- * Official test case 2: 5 người, 200 kWh, quota = 1.25.
+ * Reference test case 2: 5 người, 200 kWh, quota = 1.25.
  *
  * Ngưỡng đã điều chỉnh: 62.5 / 62.5 / 125 / 125 / 125 / unlimited.
  * Bậc 1: 62.5 * 1984 = 124000
@@ -46,13 +46,13 @@ test("OFFICIAL CASE 1: 4 người, 120 kWh, quota 1", () => {
  *
  * Test này chứng minh ngưỡng 62.5 KHÔNG bị làm tròn.
  */
-test("OFFICIAL CASE 2: 5 người, 200 kWh, quota 1.25 — không làm tròn ngưỡng", () => {
+test("REFERENCE CASE 2: 5 người, 200 kWh, quota 1.25 — không làm tròn ngưỡng", () => {
   const result = calculateTieredElectricity({
     usageKwh: "200",
     tenantCount: 5,
-    peoplePerQuotaUnit: COMPETITION_PEOPLE_PER_QUOTA_UNIT,
-    vatRate: COMPETITION_ELECTRICITY_VAT_RATE,
-    tiers: COMPETITION_ELECTRICITY_TIERS,
+    peoplePerQuotaUnit: DEFAULT_PEOPLE_PER_QUOTA_UNIT,
+    vatRate: DEFAULT_ELECTRICITY_VAT_RATE,
+    tiers: DEFAULT_ELECTRICITY_TIERS,
   });
   assert.equal(result.success, true);
   if (!result.success) return;
@@ -68,7 +68,7 @@ test("OFFICIAL CASE 2: 5 người, 200 kWh, quota 1.25 — không làm tròn ng�
 });
 
 /**
- * Official test case 3: 1 người, 60 kWh, quota = 0.25.
+ * Reference test case 3: 1 người, 60 kWh, quota = 0.25.
  *
  * Ngưỡng: 12.5 / 12.5 / 25 / 25 / 25 / unlimited.
  * Bậc 1: 12.5 * 1984 = 24800
@@ -81,13 +81,13 @@ test("OFFICIAL CASE 2: 5 người, 200 kWh, quota 1.25 — không làm tròn ng�
  * Test này chứng minh độ chính xác thập phân trung gian (11192.4 không
  * bị làm tròn trước khi cộng vào subtotal).
  */
-test("OFFICIAL CASE 3: 1 người, 60 kWh, quota 0.25 — độ chính xác thập phân trung gian", () => {
+test("REFERENCE CASE 3: 1 người, 60 kWh, quota 0.25 — độ chính xác thập phân trung gian", () => {
   const result = calculateTieredElectricity({
     usageKwh: "60",
     tenantCount: 1,
-    peoplePerQuotaUnit: COMPETITION_PEOPLE_PER_QUOTA_UNIT,
-    vatRate: COMPETITION_ELECTRICITY_VAT_RATE,
-    tiers: COMPETITION_ELECTRICITY_TIERS,
+    peoplePerQuotaUnit: DEFAULT_PEOPLE_PER_QUOTA_UNIT,
+    vatRate: DEFAULT_ELECTRICITY_VAT_RATE,
+    tiers: DEFAULT_ELECTRICITY_TIERS,
   });
   assert.equal(result.success, true);
   if (!result.success) return;
@@ -108,9 +108,9 @@ test("calculateTieredElectricity: usage = 0 -> subtotal 0, không có bậc áp 
   const result = calculateTieredElectricity({
     usageKwh: "0",
     tenantCount: 4,
-    peoplePerQuotaUnit: COMPETITION_PEOPLE_PER_QUOTA_UNIT,
-    vatRate: COMPETITION_ELECTRICITY_VAT_RATE,
-    tiers: COMPETITION_ELECTRICITY_TIERS,
+    peoplePerQuotaUnit: DEFAULT_PEOPLE_PER_QUOTA_UNIT,
+    vatRate: DEFAULT_ELECTRICITY_VAT_RATE,
+    tiers: DEFAULT_ELECTRICITY_TIERS,
   });
   assert.equal(result.success, true);
   if (!result.success) return;
@@ -144,7 +144,7 @@ test("calculateTieredElectricity: vatRate ngoài [0, 1] -> FAIL", () => {
     tenantCount: 4,
     peoplePerQuotaUnit: 4,
     vatRate: "1.5",
-    tiers: COMPETITION_ELECTRICITY_TIERS,
+    tiers: DEFAULT_ELECTRICITY_TIERS,
   });
   assert.equal(result.success, false);
   if (!result.success) {
@@ -186,7 +186,7 @@ test("calculateTieredElectricity: tenantCount = 0 -> FAIL (uỷ quyền cho calc
     tenantCount: 0,
     peoplePerQuotaUnit: 4,
     vatRate: "0.08",
-    tiers: COMPETITION_ELECTRICITY_TIERS,
+    tiers: DEFAULT_ELECTRICITY_TIERS,
   });
   assert.equal(result.success, false);
   if (!result.success) {

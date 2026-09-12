@@ -10,15 +10,15 @@ import { calculateWaterCharge } from "../water/calculate-water-charge";
 import { calculateInvoiceTotal } from "../invoice/calculate-invoice-total";
 import { calculateBillingDifference } from "../invoice/calculate-billing-difference";
 import {
-  COMPETITION_ELECTRICITY_TIERS,
-  COMPETITION_ELECTRICITY_VAT_RATE,
-  COMPETITION_FALLBACK_TIER_NUMBER,
-  COMPETITION_PEOPLE_PER_QUOTA_UNIT,
-  COMPETITION_WATER_ENVIRONMENTAL_FEE_RATE,
-  COMPETITION_WATER_PRICE_PER_CUBIC_METER,
-  COMPETITION_WATER_PRICE_PER_PERSON,
-  COMPETITION_WATER_VAT_RATE,
-} from "./fixtures/competition-defaults";
+  DEFAULT_ELECTRICITY_TIERS,
+  DEFAULT_ELECTRICITY_VAT_RATE,
+  DEFAULT_FALLBACK_TIER_NUMBER,
+  DEFAULT_PEOPLE_PER_QUOTA_UNIT,
+  DEFAULT_WATER_ENVIRONMENTAL_FEE_RATE,
+  DEFAULT_WATER_PRICE_PER_CUBIC_METER,
+  DEFAULT_WATER_PRICE_PER_PERSON,
+  DEFAULT_WATER_VAT_RATE,
+} from "./fixtures/default-tariffs";
 
 /**
  * Trách nhiệm:
@@ -32,7 +32,7 @@ import {
  * này throw, nghĩa là không có bigint nào lọt ra ngoài.
  *
  * Không chịu trách nhiệm:
- * - kiểm tra lại các giá trị số học (đã có 7 official case + các test
+ * - kiểm tra lại các giá trị số học (đã có 7 case tham chiếu + các test
  *   khác). File này CHỈ kiểm tra RANH GIỚI kiểu dữ liệu (type boundary).
  */
 
@@ -64,7 +64,7 @@ test("calculateMeterUsage: kết quả JSON-safe", () => {
 });
 
 test("calculateQuotaFactor: kết quả JSON-safe", () => {
-  const result = calculateQuotaFactor({ tenantCount: 5, peoplePerQuotaUnit: COMPETITION_PEOPLE_PER_QUOTA_UNIT });
+  const result = calculateQuotaFactor({ tenantCount: 5, peoplePerQuotaUnit: DEFAULT_PEOPLE_PER_QUOTA_UNIT });
   assert.equal(result.success, true);
   if (result.success) {
     assertNoBigIntLeaks(result, "calculateQuotaFactor");
@@ -75,9 +75,9 @@ test("calculateTieredElectricity: kết quả JSON-safe (bao gồm appliedTiers)
   const result = calculateTieredElectricity({
     usageKwh: "200",
     tenantCount: 5,
-    peoplePerQuotaUnit: COMPETITION_PEOPLE_PER_QUOTA_UNIT,
-    vatRate: COMPETITION_ELECTRICITY_VAT_RATE,
-    tiers: COMPETITION_ELECTRICITY_TIERS,
+    peoplePerQuotaUnit: DEFAULT_PEOPLE_PER_QUOTA_UNIT,
+    vatRate: DEFAULT_ELECTRICITY_VAT_RATE,
+    tiers: DEFAULT_ELECTRICITY_TIERS,
   });
   assert.equal(result.success, true);
   if (result.success) {
@@ -94,9 +94,9 @@ test("calculateTieredElectricity: kết quả JSON-safe (bao gồm appliedTiers)
 test("calculateFallbackElectricity: kết quả JSON-safe", () => {
   const result = calculateFallbackElectricity({
     usageKwh: "120",
-    vatRate: COMPETITION_ELECTRICITY_VAT_RATE,
-    tiers: COMPETITION_ELECTRICITY_TIERS,
-    fallbackTierNumber: COMPETITION_FALLBACK_TIER_NUMBER,
+    vatRate: DEFAULT_ELECTRICITY_VAT_RATE,
+    tiers: DEFAULT_ELECTRICITY_TIERS,
+    fallbackTierNumber: DEFAULT_FALLBACK_TIER_NUMBER,
   });
   assert.equal(result.success, true);
   if (result.success) {
@@ -109,10 +109,10 @@ test("calculateWaterCharge: kết quả JSON-safe", () => {
     method: "PER_CUBIC_METER",
     waterUsageM3: "12",
     tenantCount: 0,
-    pricePerCubicMeter: COMPETITION_WATER_PRICE_PER_CUBIC_METER,
-    pricePerPerson: COMPETITION_WATER_PRICE_PER_PERSON,
-    vatRate: COMPETITION_WATER_VAT_RATE,
-    environmentalFeeRate: COMPETITION_WATER_ENVIRONMENTAL_FEE_RATE,
+    pricePerCubicMeter: DEFAULT_WATER_PRICE_PER_CUBIC_METER,
+    pricePerPerson: DEFAULT_WATER_PRICE_PER_PERSON,
+    vatRate: DEFAULT_WATER_VAT_RATE,
+    environmentalFeeRate: DEFAULT_WATER_ENVIRONMENTAL_FEE_RATE,
   });
   assert.equal(result.success, true);
   if (result.success) {

@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { allocateElectricityTiers } from "../../electricity/allocate-electricity-tiers";
 import { validateElectricityConfig } from "../../electricity/validate-electricity-config";
 import { ONE, parseDecimal, toDecimalString } from "../../shared/exact-number";
-import { COMPETITION_ELECTRICITY_TIERS } from "../fixtures/competition-defaults";
+import { DEFAULT_ELECTRICITY_TIERS } from "../fixtures/default-tariffs";
 
 function parseOrThrow(value: string) {
   const result = parseDecimal(value);
@@ -15,7 +15,7 @@ function parseOrThrow(value: string) {
 }
 
 test("allocateElectricityTiers: usage = 0 -> không có bậc nào được áp dụng", () => {
-  const tiers = validateElectricityConfig(COMPETITION_ELECTRICITY_TIERS);
+  const tiers = validateElectricityConfig(DEFAULT_ELECTRICITY_TIERS);
   assert.equal(tiers.success, true);
   if (!tiers.success) return;
   const applied = allocateElectricityTiers(parseOrThrow("0"), ONE, tiers.data);
@@ -23,7 +23,7 @@ test("allocateElectricityTiers: usage = 0 -> không có bậc nào được áp 
 });
 
 test("allocateElectricityTiers: usage đúng bằng ranh giới bậc 1 (50 kWh, quota 1)", () => {
-  const tiers = validateElectricityConfig(COMPETITION_ELECTRICITY_TIERS);
+  const tiers = validateElectricityConfig(DEFAULT_ELECTRICITY_TIERS);
   assert.equal(tiers.success, true);
   if (!tiers.success) return;
   const applied = allocateElectricityTiers(parseOrThrow("50"), ONE, tiers.data);
@@ -33,7 +33,7 @@ test("allocateElectricityTiers: usage đúng bằng ranh giới bậc 1 (50 kWh,
 });
 
 test("allocateElectricityTiers: usage vượt đúng một ranh giới bậc (100 kWh, quota 1) -> 2 bậc", () => {
-  const tiers = validateElectricityConfig(COMPETITION_ELECTRICITY_TIERS);
+  const tiers = validateElectricityConfig(DEFAULT_ELECTRICITY_TIERS);
   assert.equal(tiers.success, true);
   if (!tiers.success) return;
   const applied = allocateElectricityTiers(parseOrThrow("100"), ONE, tiers.data);
@@ -43,7 +43,7 @@ test("allocateElectricityTiers: usage vượt đúng một ranh giới bậc (10
 });
 
 test("allocateElectricityTiers: usage lớn, chạm tới bậc không giới hạn", () => {
-  const tiers = validateElectricityConfig(COMPETITION_ELECTRICITY_TIERS);
+  const tiers = validateElectricityConfig(DEFAULT_ELECTRICITY_TIERS);
   assert.equal(tiers.success, true);
   if (!tiers.success) return;
   // Tổng 5 bậc có giới hạn (quota=1): 50+50+100+100+100 = 400
@@ -54,7 +54,7 @@ test("allocateElectricityTiers: usage lớn, chạm tới bậc không giới h�
 });
 
 test("allocateElectricityTiers: không làm tròn ngưỡng đã điều chỉnh theo quota (62.5)", () => {
-  const tiers = validateElectricityConfig(COMPETITION_ELECTRICITY_TIERS);
+  const tiers = validateElectricityConfig(DEFAULT_ELECTRICITY_TIERS);
   assert.equal(tiers.success, true);
   if (!tiers.success) return;
   const quotaFactor = parseOrThrow("1.25");
