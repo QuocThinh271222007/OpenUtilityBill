@@ -3,6 +3,7 @@
 import { Result, ok, fail } from "../../shared/result";
 import { logDatabaseError } from "../../database/postgres-client";
 import { isUniqueViolation } from "../../database/unique-violation";
+import { isForeignKeyViolation } from "../../database/foreign-key-violation";
 import type { DatabaseExecutor } from "../../database/database.types";
 import { ElectricityTariff, ElectricityTariffTier } from "../../modules/tariff/tariff.model";
 import {
@@ -235,6 +236,34 @@ export class PostgresElectricityTariffRepository implements ElectricityTariffRep
     } catch (error) {
       logDatabaseError("PostgresElectricityTariffRepository.replaceTiers", error);
       return fail("DATABASE_WRITE_FAILED", "Không thể ghi dữ liệu electricity tariff tiers vào database.");
+    }
+  }
+
+  /**
+   * Xoá đúng MỘT electricity tariff (cha) — tier con tự cascade qua
+   * `electricity_tariff_tiers.tariff_id ON DELETE CASCADE` đã có sẵn ở
+   * schema, không cần Unit of Work hay xoá tier thủ công.
+   * Failure: `TARIFF_IN_USE` khi vi phạm
+   * `invoices.electricity_tariff_id ON DELETE RESTRICT` (SQLSTATE
+   * 23503) — Service đã pre-check bằng `isReferencedByInvoice` để có
+   * message rõ ràng hơn, nhưng FK constraint ở đây mới là nguồn thẩm
+   * quyền cuối cùng cho race condition.
+   */
+  async deleteById(id: string): Promise<Result<{ id: string }>> {
+    try {
+      const rows = await this.sql<Array<{ id: string }>>`
+        DELETE FROM electricity_tariffs WHERE id = ${id} RETURNING id
+      `;
+      if (rows.length === 0) {
+        return fail("TARIFF_NOT_FOUND", `Không tìm thấy electricity tariff với id = ${id}.`);
+      }
+      return ok({ id: rows[0].id });
+    } catch (error) {
+      if (isForeignKeyViolation(error)) {
+        return fail("TARIFF_IN_USE", `Electricity tariff với id = ${id} đã được một invoice tham chiếu, không thể xoá.`);
+      }
+      logDatabaseError("PostgresElectricityTariffRepository.deleteById", error);
+      return fail("DATABASE_WRITE_FAILED", "Không thể xoá dữ liệu electricity tariff khỏi database.");
     }
   }
 }

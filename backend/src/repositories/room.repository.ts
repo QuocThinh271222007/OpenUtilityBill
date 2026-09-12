@@ -32,12 +32,16 @@ export interface UpdateRoom {
  * Không chịu trách nhiệm:
  * - chứa SQL — implementation cụ thể (Postgres.js) nằm ở
  *   `postgres/postgres-room.repository.ts`.
- * - implement `delete` — xem docs/MANAGEMENT_API.md.
  *
  * Failure conditions (xem implementation cụ thể):
- * - `findById`/`update`: `ROOM_NOT_FOUND` khi không có room nào khớp id.
+ * - `findById`/`update`/`deleteById`: `ROOM_NOT_FOUND` khi không có
+ *   room nào khớp id.
  * - `create`/`update`: `ROOM_ALREADY_EXISTS` khi vi phạm
  *   `UNIQUE(property_id, name)`.
+ * - `deleteById`: `ROOM_HAS_DEPENDENCIES` khi vẫn còn MeterReading
+ *   hoặc Invoice tham chiếu room này (`meter_readings.room_id`/
+ *   `invoices.room_id ON DELETE RESTRICT`, xem migration 001) —
+ *   PostgreSQL là nguồn thẩm quyền cuối cùng.
  * - `DATABASE_READ_FAILED`/`DATABASE_WRITE_FAILED` cho lỗi query/ghi
  *   khác.
  *
@@ -53,4 +57,6 @@ export interface RoomRepository {
   listAll(propertyId?: string): Promise<Result<Room[]>>;
   create(input: NewRoom): Promise<Result<Room>>;
   update(id: string, input: UpdateRoom): Promise<Result<Room>>;
+  /** Xoá đúng MỘT room theo id — KHÔNG cascade xoá meter reading/invoice. Trả về `{ id }` của hàng đã xoá. */
+  deleteById(id: string): Promise<Result<{ id: string }>>;
 }

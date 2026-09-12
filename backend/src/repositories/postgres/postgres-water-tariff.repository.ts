@@ -3,6 +3,7 @@
 import { Result, ok, fail } from "../../shared/result";
 import { logDatabaseError } from "../../database/postgres-client";
 import { isUniqueViolation } from "../../database/unique-violation";
+import { isForeignKeyViolation } from "../../database/foreign-key-violation";
 import type { DatabaseExecutor } from "../../database/database.types";
 import { WaterTariff } from "../../modules/tariff/tariff.model";
 import { NewWaterTariff, UpdateWaterTariff, WaterTariffRepository } from "../water-tariff.repository";
@@ -157,6 +158,31 @@ export class PostgresWaterTariffRepository implements WaterTariffRepository {
       }
       logDatabaseError("PostgresWaterTariffRepository.update", error);
       return fail("DATABASE_WRITE_FAILED", "Không thể cập nhật dữ liệu water tariff vào database.");
+    }
+  }
+
+  /**
+   * Failure: `TARIFF_IN_USE` khi vi phạm `invoices.water_tariff_id ON
+   * DELETE RESTRICT` (SQLSTATE 23503) — Service đã pre-check bằng
+   * `isReferencedByInvoice` để có message rõ ràng hơn, nhưng FK
+   * constraint ở đây mới là nguồn thẩm quyền cuối cùng cho race
+   * condition.
+   */
+  async deleteById(id: string): Promise<Result<{ id: string }>> {
+    try {
+      const rows = await this.sql<Array<{ id: string }>>`
+        DELETE FROM water_tariffs WHERE id = ${id} RETURNING id
+      `;
+      if (rows.length === 0) {
+        return fail("TARIFF_NOT_FOUND", `Không tìm thấy water tariff với id = ${id}.`);
+      }
+      return ok({ id: rows[0].id });
+    } catch (error) {
+      if (isForeignKeyViolation(error)) {
+        return fail("TARIFF_IN_USE", `Water tariff với id = ${id} đã được một invoice tham chiếu, không thể xoá.`);
+      }
+      logDatabaseError("PostgresWaterTariffRepository.deleteById", error);
+      return fail("DATABASE_WRITE_FAILED", "Không thể xoá dữ liệu water tariff khỏi database.");
     }
   }
 }

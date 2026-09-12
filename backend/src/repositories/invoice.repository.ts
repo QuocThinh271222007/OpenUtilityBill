@@ -81,6 +81,13 @@ export interface NewInvoiceItem {
  *   luôn chạy cùng transaction với `createInvoice`, nhưng đọc lại một
  *   mảng rỗng vẫn là một kết quả THÀNH CÔNG hợp lệ về mặt kiểu dữ liệu,
  *   không phải lỗi).
+ * - `deleteById`: `INVOICE_NOT_FOUND` khi id không tồn tại.
+ *   `DATABASE_WRITE_FAILED` cho lỗi khác. KHÔNG cần xử lý FK violation ở
+ *   đây — invoice là "đỉnh" của các quan hệ tham chiếu (không có bảng
+ *   nào khác RESTRICT việc xoá một invoice); chỉ `invoice_items` phụ
+ *   thuộc invoice, và quan hệ đó là `ON DELETE CASCADE` (xem migration
+ *   001), nên một câu `DELETE` invoice cha là đủ, không cần xoá thủ công
+ *   invoice_items trước.
  *
  * Bất biến quan trọng:
  * `createInvoice`/`createInvoiceItems` KHÔNG tự mở transaction riêng —
@@ -107,4 +114,12 @@ export interface InvoiceRepository {
    * breakdown từ Calculation Core.
    */
   findItemsByInvoiceId(invoiceId: string): Promise<Result<InvoiceItem[]>>;
+
+  /**
+   * Xoá đúng MỘT invoice theo id — `invoice_items` của nó tự cascade
+   * qua `invoice_items.invoice_id ON DELETE CASCADE` đã có sẵn ở schema,
+   * KHÔNG chạm đến room/meter_readings/tariffs. Trả về `{ id }` của hàng
+   * đã xoá.
+   */
+  deleteById(id: string): Promise<Result<{ id: string }>>;
 }

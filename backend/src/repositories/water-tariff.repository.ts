@@ -34,10 +34,11 @@ export type UpdateWaterTariff = NewWaterTariff;
  *   billingPeriod).
  * - `create`: `TARIFF_ALREADY_EXISTS` khi vi phạm `UNIQUE(name,
  *   effective_from)`.
- * - `update`: `TARIFF_NOT_FOUND` khi id không tồn tại.
+ * - `update`/`deleteById`: `TARIFF_NOT_FOUND` khi id không tồn tại.
+ * - `deleteById`: `TARIFF_IN_USE` khi vi phạm
+ *   `invoices.water_tariff_id ON DELETE RESTRICT` (xem migration 001) —
+ *   PostgreSQL là nguồn thẩm quyền cuối cùng.
  * - `DATABASE_READ_FAILED`/`DATABASE_WRITE_FAILED` cho lỗi khác.
- *
- * Không chịu trách nhiệm: implement `delete`.
  */
 export interface WaterTariffRepository {
   findApplicableTariffForPeriod(billingPeriod: Date): Promise<Result<WaterTariff>>;
@@ -52,4 +53,7 @@ export interface WaterTariffRepository {
   create(input: NewWaterTariff): Promise<Result<WaterTariff>>;
 
   update(id: string, input: UpdateWaterTariff): Promise<Result<WaterTariff>>;
+
+  /** Xoá đúng MỘT water tariff theo id. Trả về `{ id }` của hàng đã xoá. */
+  deleteById(id: string): Promise<Result<{ id: string }>>;
 }

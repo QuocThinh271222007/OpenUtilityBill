@@ -61,18 +61,25 @@ export type { TariffEffectivePeriod };
  *   hoặc chèn trực tiếp qua SQL) rơi vào tình huống mơ hồ.
  * - `createTariff`: `TARIFF_ALREADY_EXISTS` khi vi phạm
  *   `UNIQUE(name, effective_from)`.
- * - `updateTariffParent`: `TARIFF_NOT_FOUND` khi id không tồn tại.
+ * - `updateTariffParent`/`deleteById`: `TARIFF_NOT_FOUND` khi id không
+ *   tồn tại.
+ * - `deleteById`: `TARIFF_IN_USE` khi vi phạm
+ *   `invoices.electricity_tariff_id ON DELETE RESTRICT` (xem migration
+ *   001) — PostgreSQL là nguồn thẩm quyền cuối cùng.
  * - `DATABASE_READ_FAILED`/`DATABASE_WRITE_FAILED` cho lỗi khác.
  *
  * Bất biến quan trọng:
  * `createTariff`/`replaceTiers`/`updateTariffParent` KHÔNG tự mở
  * transaction — chạy bằng `DatabaseExecutor` được truyền vào constructor
  * của implementation, để parent + tiers nằm chung MỘT transaction do
- * caller (`ElectricityTariffUnitOfWork`) kiểm soát.
+ * caller (`ElectricityTariffUnitOfWork`) kiểm soát. `deleteById` KHÔNG
+ * cần Unit of Work: xoá đúng MỘT hàng cha bằng một câu `DELETE` duy
+ * nhất, tier con tự động biến mất qua
+ * `electricity_tariff_tiers.tariff_id ON DELETE CASCADE` đã có sẵn ở
+ * schema.
  *
  * Không chịu trách nhiệm:
  * - hard-code số lượng bậc hay bất kỳ hằng số biểu giá cụ thể nào.
- * - implement `delete`.
  */
 export interface ElectricityTariffRepository {
   findApplicableTariffForPeriod(billingPeriod: Date): Promise<Result<ElectricityTariffWithTiers>>;
@@ -92,4 +99,7 @@ export interface ElectricityTariffRepository {
   replaceTiers(tariffId: string, tiers: NewElectricityTariffTier[]): Promise<Result<ElectricityTariffTier[]>>;
 
   updateTariffParent(id: string, input: UpdateElectricityTariffParent): Promise<Result<ElectricityTariff>>;
+
+  /** Xoá đúng MỘT electricity tariff (cha) theo id — tier con tự cascade theo schema. Trả về `{ id }` của hàng đã xoá. */
+  deleteById(id: string): Promise<Result<{ id: string }>>;
 }

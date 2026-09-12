@@ -2,6 +2,7 @@
 
 import { Result, ok, fail } from "../../shared/result";
 import { logDatabaseError } from "../../database/postgres-client";
+import { isForeignKeyViolation } from "../../database/foreign-key-violation";
 import type { DatabaseExecutor } from "../../database/database.types";
 import { RentalProperty } from "../../modules/property/property.model";
 import { NewRentalProperty, PropertyRepository, UpdateRentalProperty } from "../property.repository";
@@ -113,6 +114,29 @@ export class PostgresPropertyRepository implements PropertyRepository {
     } catch (error) {
       logDatabaseError("PostgresPropertyRepository.update", error);
       return fail("DATABASE_WRITE_FAILED", "Không thể cập nhật dữ liệu rental property vào database.");
+    }
+  }
+
+  /**
+   * Failure: `PROPERTY_HAS_DEPENDENCIES` khi vi phạm
+   * `rooms.property_id ON DELETE RESTRICT` (SQLSTATE 23503) — vẫn còn
+   * ít nhất một Room thuộc property này.
+   */
+  async deleteById(id: string): Promise<Result<{ id: string }>> {
+    try {
+      const rows = await this.sql<Array<{ id: string }>>`
+        DELETE FROM rental_properties WHERE id = ${id} RETURNING id
+      `;
+      if (rows.length === 0) {
+        return fail("PROPERTY_NOT_FOUND", `Không tìm thấy rental property với id = ${id}.`);
+      }
+      return ok({ id: rows[0].id });
+    } catch (error) {
+      if (isForeignKeyViolation(error)) {
+        return fail("PROPERTY_HAS_DEPENDENCIES", `Rental property với id = ${id} vẫn còn room tham chiếu, không thể xoá.`);
+      }
+      logDatabaseError("PostgresPropertyRepository.deleteById", error);
+      return fail("DATABASE_WRITE_FAILED", "Không thể xoá dữ liệu rental property khỏi database.");
     }
   }
 }
