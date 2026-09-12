@@ -151,3 +151,40 @@ test("MeterReadingManagementService.update: readingId không hợp lệ -> VALID
   if (!result.success) assert.equal(result.error.code, "VALIDATION_ERROR");
   assert.equal(meterReadingRepository.isReferencedByInvoiceCalls.length, 0);
 });
+
+test("MeterReadingManagementService.delete: reading chưa từng được invoice tham chiếu -> thành công", async () => {
+  const existing: MeterReading = { id: "1", roomId: "1", billingPeriod: BILLING_PERIOD, utilityType: "ELECTRICITY", previousReading: "0", currentReading: "120", meterMaximumValue: null, createdAt: BILLING_PERIOD };
+  const meterReadingRepository = createFakeMeterReadingRepository({ readings: [existing], isReferencedByInvoiceResult: { success: true, data: false } });
+  const service = new MeterReadingManagementService({ meterReadingRepository });
+  const result = await service.delete("1");
+  assert.equal(result.success, true);
+  if (result.success) assert.equal(result.data.id, "1");
+  assert.deepEqual(meterReadingRepository.deleteCalls, ["1"]);
+});
+
+test("MeterReadingManagementService.delete: reading ĐÃ được invoice tham chiếu -> METER_READING_IN_USE, không xoá", async () => {
+  const existing: MeterReading = { id: "1", roomId: "1", billingPeriod: BILLING_PERIOD, utilityType: "ELECTRICITY", previousReading: "0", currentReading: "120", meterMaximumValue: null, createdAt: BILLING_PERIOD };
+  const meterReadingRepository = createFakeMeterReadingRepository({ readings: [existing], isReferencedByInvoiceResult: { success: true, data: true } });
+  const service = new MeterReadingManagementService({ meterReadingRepository });
+  const result = await service.delete("1");
+  assert.equal(result.success, false);
+  if (!result.success) assert.equal(result.error.code, "METER_READING_IN_USE");
+  assert.equal(meterReadingRepository.deleteCalls.length, 0);
+});
+
+test("MeterReadingManagementService.delete: readingId không hợp lệ -> VALIDATION_ERROR trước khi gọi Repository", async () => {
+  const meterReadingRepository = createFakeMeterReadingRepository();
+  const service = new MeterReadingManagementService({ meterReadingRepository });
+  const result = await service.delete("not-an-id");
+  assert.equal(result.success, false);
+  if (!result.success) assert.equal(result.error.code, "VALIDATION_ERROR");
+  assert.equal(meterReadingRepository.isReferencedByInvoiceCalls.length, 0);
+});
+
+test("MeterReadingManagementService.delete: id không tồn tại -> METER_READING_NOT_FOUND", async () => {
+  const meterReadingRepository = createFakeMeterReadingRepository({ isReferencedByInvoiceResult: { success: true, data: false } });
+  const service = new MeterReadingManagementService({ meterReadingRepository });
+  const result = await service.delete("999");
+  assert.equal(result.success, false);
+  if (!result.success) assert.equal(result.error.code, "METER_READING_NOT_FOUND");
+});

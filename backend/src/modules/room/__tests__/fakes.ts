@@ -10,22 +10,26 @@ export interface FakeRoomRepositoryOptions {
   rooms?: Room[];
   createResult?: Result<Room>;
   updateResult?: Result<Room>;
+  deleteResult?: Result<{ id: string }>;
 }
 
 export interface FakeRoomRepository extends RoomRepository {
   readonly createCalls: NewRoom[];
   readonly updateCalls: Array<{ id: string; input: UpdateRoom }>;
+  readonly deleteCalls: string[];
 }
 
 export function createFakeRoomRepository(options: FakeRoomRepositoryOptions = {}): FakeRoomRepository {
   const rooms = options.rooms ?? [];
   const createCalls: NewRoom[] = [];
   const updateCalls: Array<{ id: string; input: UpdateRoom }> = [];
+  const deleteCalls: string[] = [];
   let nextId = 100;
 
   return {
     createCalls,
     updateCalls,
+    deleteCalls,
 
     async findById(id: string): Promise<Result<Room>> {
       const found = rooms.find((r) => r.id === id);
@@ -53,6 +57,15 @@ export function createFakeRoomRepository(options: FakeRoomRepositoryOptions = {}
       if (input.name !== undefined) found.name = input.name;
       if (input.tenantCount !== undefined) found.tenantCount = input.tenantCount;
       return ok(found);
+    },
+
+    async deleteById(id: string): Promise<Result<{ id: string }>> {
+      deleteCalls.push(id);
+      if (options.deleteResult) return options.deleteResult;
+      const index = rooms.findIndex((r) => r.id === id);
+      if (index === -1) return fail("ROOM_NOT_FOUND", `Không tìm thấy room với id = ${id}.`);
+      rooms.splice(index, 1);
+      return ok({ id });
     },
   };
 }

@@ -9,12 +9,14 @@ export interface FakeMeterReadingRepositoryOptions {
   createResult?: Result<MeterReading>;
   updateResult?: Result<MeterReading>;
   isReferencedByInvoiceResult?: Result<boolean>;
+  deleteResult?: Result<{ id: string }>;
 }
 
 export interface FakeMeterReadingRepository extends MeterReadingRepository {
   readonly createCalls: NewMeterReading[];
   readonly updateCalls: Array<{ id: string; input: UpdateMeterReading }>;
   readonly isReferencedByInvoiceCalls: string[];
+  readonly deleteCalls: string[];
 }
 
 export function createFakeMeterReadingRepository(options: FakeMeterReadingRepositoryOptions = {}): FakeMeterReadingRepository {
@@ -22,12 +24,14 @@ export function createFakeMeterReadingRepository(options: FakeMeterReadingReposi
   const createCalls: NewMeterReading[] = [];
   const updateCalls: Array<{ id: string; input: UpdateMeterReading }> = [];
   const isReferencedByInvoiceCalls: string[] = [];
+  const deleteCalls: string[] = [];
   let nextId = 100;
 
   return {
     createCalls,
     updateCalls,
     isReferencedByInvoiceCalls,
+    deleteCalls,
 
     async findById(id: string): Promise<Result<MeterReading>> {
       const found = readings.find((r) => r.id === id);
@@ -76,6 +80,15 @@ export function createFakeMeterReadingRepository(options: FakeMeterReadingReposi
     async isReferencedByInvoice(id: string): Promise<Result<boolean>> {
       isReferencedByInvoiceCalls.push(id);
       return options.isReferencedByInvoiceResult ?? ok(false);
+    },
+
+    async deleteById(id: string): Promise<Result<{ id: string }>> {
+      deleteCalls.push(id);
+      if (options.deleteResult) return options.deleteResult;
+      const index = readings.findIndex((r) => r.id === id);
+      if (index === -1) return fail("METER_READING_NOT_FOUND", `Không tìm thấy meter reading với id = ${id}.`);
+      readings.splice(index, 1);
+      return ok({ id });
     },
   };
 }

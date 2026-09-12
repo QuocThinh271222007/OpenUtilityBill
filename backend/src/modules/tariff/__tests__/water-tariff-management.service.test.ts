@@ -99,6 +99,43 @@ test("update: tariff ĐÃ bị tham chiếu -> TARIFF_IN_USE, không ghi", async
   assert.equal(waterTariffRepository.updateCalls.length, 0);
 });
 
+test("delete: tariff KHÔNG bị tham chiếu -> thành công", async () => {
+  const waterTariffRepository = createFakeWaterTariffRepository({
+    tariffs: [{ id: "1", name: "Old", effectiveFrom: new Date("2026-01-01"), effectiveTo: null, pricePerCubicMeter: "8000", pricePerPerson: "75000", vatRate: "0.05", environmentalFeeRate: "0.10", createdAt: new Date("2026-01-01") }],
+    isReferencedByInvoiceResult: { success: true, data: false },
+  });
+  const service = new WaterTariffManagementService({ waterTariffRepository });
+  const result = await service.delete("1");
+  assert.equal(result.success, true);
+  if (result.success) assert.equal(result.data.id, "1");
+  assert.deepEqual(waterTariffRepository.deleteCalls, ["1"]);
+});
+
+test("delete: tariff ĐÃ bị tham chiếu -> TARIFF_IN_USE, không xoá", async () => {
+  const waterTariffRepository = createFakeWaterTariffRepository({ isReferencedByInvoiceResult: { success: true, data: true } });
+  const service = new WaterTariffManagementService({ waterTariffRepository });
+  const result = await service.delete("1");
+  assert.equal(result.success, false);
+  if (!result.success) assert.equal(result.error.code, "TARIFF_IN_USE");
+  assert.equal(waterTariffRepository.deleteCalls.length, 0);
+});
+
+test("delete: tariffId không hợp lệ -> VALIDATION_ERROR", async () => {
+  const waterTariffRepository = createFakeWaterTariffRepository();
+  const service = new WaterTariffManagementService({ waterTariffRepository });
+  const result = await service.delete("not-an-id");
+  assert.equal(result.success, false);
+  if (!result.success) assert.equal(result.error.code, "VALIDATION_ERROR");
+});
+
+test("delete: id không tồn tại -> TARIFF_NOT_FOUND", async () => {
+  const waterTariffRepository = createFakeWaterTariffRepository({ isReferencedByInvoiceResult: { success: true, data: false } });
+  const service = new WaterTariffManagementService({ waterTariffRepository });
+  const result = await service.delete("999");
+  assert.equal(result.success, false);
+  if (!result.success) assert.equal(result.error.code, "TARIFF_NOT_FOUND");
+});
+
 test("database failure khi ghi (create) -> propagate", async () => {
   const waterTariffRepository = createFakeWaterTariffRepository({
     createResult: { success: false, error: { code: "DATABASE_WRITE_FAILED", message: "lỗi giả lập" } },

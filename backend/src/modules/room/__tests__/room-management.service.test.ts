@@ -111,3 +111,38 @@ test("RoomManagementService.update: id không tồn tại -> ROOM_NOT_FOUND", as
   assert.equal(result.success, false);
   if (!result.success) assert.equal(result.error.code, "ROOM_NOT_FOUND");
 });
+
+test("RoomManagementService.delete: xoá room không có phụ thuộc -> thành công", async () => {
+  const { service, roomRepository } = buildService([{ ...ROOM_101_IN_A }]);
+  const result = await service.delete("1");
+  assert.equal(result.success, true);
+  if (result.success) assert.equal(result.data.id, "1");
+  assert.deepEqual(roomRepository.deleteCalls, ["1"]);
+});
+
+test("RoomManagementService.delete: id không hợp lệ -> VALIDATION_ERROR, không gọi Repository", async () => {
+  const { service, roomRepository } = buildService([{ ...ROOM_101_IN_A }]);
+  const result = await service.delete("not-an-id");
+  assert.equal(result.success, false);
+  if (!result.success) assert.equal(result.error.code, "VALIDATION_ERROR");
+  assert.equal(roomRepository.deleteCalls.length, 0);
+});
+
+test("RoomManagementService.delete: id không tồn tại -> ROOM_NOT_FOUND", async () => {
+  const { service } = buildService([]);
+  const result = await service.delete("999");
+  assert.equal(result.success, false);
+  if (!result.success) assert.equal(result.error.code, "ROOM_NOT_FOUND");
+});
+
+test("RoomManagementService.delete: room còn meter reading/invoice tham chiếu -> ROOM_HAS_DEPENDENCIES", async () => {
+  const roomRepository = createFakeRoomRepository({
+    rooms: [{ ...ROOM_101_IN_A }],
+    deleteResult: { success: false, error: { code: "ROOM_HAS_DEPENDENCIES", message: "còn phụ thuộc" } },
+  });
+  const propertyRepository = createFakePropertyRepository([PROPERTY_A]);
+  const service = new RoomManagementService({ roomRepository, propertyRepository });
+  const result = await service.delete("1");
+  assert.equal(result.success, false);
+  if (!result.success) assert.equal(result.error.code, "ROOM_HAS_DEPENDENCIES");
+});

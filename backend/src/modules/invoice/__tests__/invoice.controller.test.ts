@@ -3,7 +3,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import type { Request, Response } from "express";
-import { createGetInvoiceController, createPostInvoiceController } from "../invoice.controller";
+import { createDeleteInvoiceController, createGetInvoiceController, createPostInvoiceController } from "../invoice.controller";
 import { Result, ok, fail } from "../../../shared/result";
 import { CreateInvoiceInput, CreateInvoiceResult } from "../create-invoice.types";
 import { GetInvoiceInput, GetInvoiceResult } from "../get-invoice.types";
@@ -40,8 +40,8 @@ function createFakeResponse(): { res: Response; state: { statusCode: number | nu
   return { res: res as unknown as Response, state };
 }
 
-function createFakeRequest(overrides: { body?: unknown; query?: Record<string, unknown> } = {}): Request {
-  return { body: overrides.body, query: overrides.query ?? {} } as unknown as Request;
+function createFakeRequest(overrides: { body?: unknown; query?: Record<string, unknown>; params?: Record<string, string> } = {}): Request {
+  return { body: overrides.body, query: overrides.query ?? {}, params: overrides.params ?? {} } as unknown as Request;
 }
 
 const SAMPLE_INVOICE: Invoice = {
@@ -291,4 +291,53 @@ test("GET invoices: Service trả DATABASE_READ_FAILED -> 500", async () => {
   await controller(createFakeRequest({ query: { roomId: "1", billingPeriod: "2026-09-01" } }), res);
 
   assert.equal(state.statusCode, 500);
+});
+
+// ---- DELETE /api/v1/invoices/:invoiceId ----
+
+function fakeDeleteService(result: Result<{ id: string }>): { execute(invoiceId: string): Promise<Result<{ id: string }>> } {
+  return { async execute() { return result; } };
+}
+
+test("DELETE invoices/:invoiceId: hợp lệ -> 200 với { id }", async () => {
+  const controller = createDeleteInvoiceController(() => fakeDeleteService(ok({ id: "42" })));
+  const { res, state } = createFakeResponse();
+
+  await controller(createFakeRequest({ params: { invoiceId: "42" } }), res);
+
+  assert.equal(state.statusCode, 200);
+  const body = state.body as { success: boolean; data: { id: string } };
+  assert.equal(body.success, true);
+  assert.equal(body.data.id, "42");
+});
+
+test("DELETE invoices/:invoiceId: Service trả INVOICE_NOT_FOUND -> 404", async () => {
+  const controller = createDeleteInvoiceController(() => fakeDeleteService(fail("INVOICE_NOT_FOUND", "không tìm thấy invoice")));
+  const { res, state } = createFakeResponse();
+
+  await controller(createFakeRequest({ params: { invoiceId: "999" } }), res);
+
+  assert.equal(state.statusCode, 404);
+});
+
+test("DELETE invoices/:invoiceId: Service trả VALIDATION_ERROR -> 400", async () => {
+  const controller = createDeleteInvoiceController(() => fakeDeleteService(fail("VALIDATION_ERROR", "invoiceId không hợp lệ")));
+  const { res, state } = createFakeResponse();
+
+  await controller(createFakeRequest({ params: { invoiceId: "abc" } }), res);
+
+  assert.equal(state.statusCode, 400);
+});
+
+test("DELETE invoices/:invoiceId: getService() throw -> 500 INTERNAL_ERROR", async () => {
+  const controller = createDeleteInvoiceController(() => {
+    throw new Error("DATABASE_URL missing");
+  });
+  const { res, state } = createFakeResponse();
+
+  await controller(createFakeRequest({ params: { invoiceId: "42" } }), res);
+
+  assert.equal(state.statusCode, 500);
+  const body = state.body as { error: { code: string } };
+  assert.equal(body.error.code, "INTERNAL_ERROR");
 });
