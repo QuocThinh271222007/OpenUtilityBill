@@ -17,3 +17,7 @@ export function createRoom(body: CreateRoomBody): Promise<ApiResult<Room>> {
 export function updateRoom(id: string, body: UpdateRoomBody): Promise<ApiResult<Room>> {
   return apiRequest<Room>(`/rooms/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(body) });
 }
+
+export function deleteRoom(id: string): Promise<ApiResult<{ id: string }>> {
+  return apiRequest<{ id: string }>(`/rooms/${encodeURIComponent(id)}`, { method: "DELETE" });
+}

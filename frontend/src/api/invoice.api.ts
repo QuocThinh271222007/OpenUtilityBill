@@ -14,3 +14,8 @@ export function fetchInvoice(roomId: string, billingPeriod: string): Promise<Api
   const params = new URLSearchParams({ roomId, billingPeriod });
   return apiRequest<GetInvoiceResult>(`/invoices?${params.toString()}`);
 }
+
+/** Xoá hóa đơn (và các dòng chi tiết của nó — cascade ở backend). KHÔNG xoá chỉ số công tơ/biểu giá liên quan. */
+export function deleteInvoice(id: string): Promise<ApiResult<{ id: string }>> {
+  return apiRequest<{ id: string }>(`/invoices/${encodeURIComponent(id)}`, { method: "DELETE" });
+}

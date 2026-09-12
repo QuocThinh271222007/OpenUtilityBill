@@ -178,7 +178,12 @@ export function renderInvoiceResult(
 
   regionEl.innerHTML = `
     <div class="card app-invoice-summary mb-4">
-      <div class="card-header">Hóa đơn — ${escapeHtml(roomLabel)}</div>
+      <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <span>Hóa đơn — ${escapeHtml(roomLabel)}</span>
+        <button type="button" class="btn btn-sm btn-outline-danger app-delete-invoice-btn" data-id="${escapeHtml(invoice.id)}">
+          Xóa hóa đơn
+        </button>
+      </div>
       <div class="card-body">
         <dl class="row mb-0">
           <dt class="col-sm-4">Kỳ hóa đơn</dt><dd class="col-sm-8">${escapeHtml(billingPeriodToMonthLabel(invoice.billingPeriod))} (${escapeHtml(isoDateToDisplayDate(invoice.billingPeriod))})</dd>

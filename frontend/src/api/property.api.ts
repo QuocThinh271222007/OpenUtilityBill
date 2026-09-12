@@ -16,3 +16,7 @@ export function createProperty(body: CreatePropertyBody): Promise<ApiResult<Rent
 export function updateProperty(id: string, body: UpdatePropertyBody): Promise<ApiResult<RentalProperty>> {
   return apiRequest<RentalProperty>(`/properties/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(body) });
 }
+
+export function deleteProperty(id: string): Promise<ApiResult<{ id: string }>> {
+  return apiRequest<{ id: string }>(`/properties/${encodeURIComponent(id)}`, { method: "DELETE" });
+}

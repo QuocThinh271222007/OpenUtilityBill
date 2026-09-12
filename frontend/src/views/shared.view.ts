@@ -101,6 +101,17 @@ export function setButtonBusyState(button: HTMLButtonElement, busy: boolean, bus
   }
 }
 
+/**
+ * Xác nhận một thao tác PHÁ HUỶ (xoá) TRƯỚC khi gửi request — dùng
+ * `window.confirm` (khả năng có sẵn của trình duyệt, KHÔNG thêm thư
+ * viện dialog mới, xem docs/MANAGEMENT_API.md mục "Xác nhận trước khi
+ * xoá"). `message` PHẢI nêu rõ đang xoá cái gì (ví dụ tên phòng/cơ sở
+ * cụ thể) để người dùng không xoá nhầm chỉ vì bấm nhanh.
+ */
+export function confirmDangerousAction(message: string): boolean {
+  return window.confirm(message);
+}
+
 /** Đoạn mô tả ngắn ngay dưới tiêu đề trang — dùng ở đầu mỗi `render*Page`. Chỉ MỘT dòng, không phải đoạn văn hướng dẫn dài. */
 export function pageIntroHtml(description: string): string {
   return `<p class="app-page-description">${escapeHtml(description)}</p>`;

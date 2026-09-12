@@ -121,9 +121,14 @@ export function renderReadingList(regionEl: HTMLElement, readings: MeterReading[
           <td class="app-numeric">${escapeHtml(reading.currentReading)} ${unit}</td>
           <td class="app-numeric">${reading.meterMaximumValue !== null ? `${escapeHtml(reading.meterMaximumValue)} ${unit}` : "—"}</td>
           <td>
-            <button type="button" class="btn btn-sm btn-outline-primary app-edit-reading-btn" data-id="${escapeHtml(reading.id)}">
-              Sửa
-            </button>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-sm btn-outline-primary app-edit-reading-btn" data-id="${escapeHtml(reading.id)}">
+                Sửa
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-danger app-delete-reading-btn" data-id="${escapeHtml(reading.id)}">
+                Xóa
+              </button>
+            </div>
           </td>
         </tr>
       `;

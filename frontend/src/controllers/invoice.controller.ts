@@ -2,9 +2,9 @@
 
 import { fetchProperties } from "../api/property.api";
 import { fetchRooms } from "../api/room.api";
-import { createInvoice, fetchInvoice } from "../api/invoice.api";
+import { createInvoice, deleteInvoice, fetchInvoice } from "../api/invoice.api";
 import { getContentContainer } from "../views/layout.view";
-import { renderLoading, renderSelectOptions, showGlobalAlert } from "../views/shared.view";
+import { confirmDangerousAction, renderLoading, renderSelectOptions, showGlobalAlert } from "../views/shared.view";
 import {
   renderInvoiceAlreadyExistsPrompt,
   renderInvoiceNotFound,
@@ -31,6 +31,11 @@ import type { Room } from "../types/room.types";
  * (xem docs/FRONTEND.md mục "Quy tắc chuỗi tài chính (quan trọng)").
  * `actualChargedAmount`
  * trống -> gửi `null`, KHÔNG BAO GIỜ gửi chuỗi rỗng `""`.
+ *
+ * Xóa hóa đơn là hành động phá huỷ LỊCH SỬ TÀI CHÍNH — xác nhận
+ * (`confirmDangerousAction`) với văn bản MẠNH hơn các màn hình khác,
+ * nêu rõ invoice_items cũng bị xoá theo (cascade ở backend) nhưng chỉ
+ * số công tơ/biểu giá KHÔNG bị ảnh hưởng (xem `handleDeleteInvoice`).
  *
  * Không chịu trách nhiệm: gọi lại Calculation Core, dựng lại breakdown từ
  * quantity × unitPrice.
@@ -176,6 +181,7 @@ async function submitCreateInvoice(): Promise<void> {
     showGlobalAlert("success", "Đã tạo hóa đơn.");
     if (regionEl) {
       renderInvoiceResult(regionEl, result.data.invoice, result.data.items, result.data.billingDifference, selectedRoomLabel);
+      wireDeleteInvoiceButton();
     }
   } finally {
     setInvoiceSubmitDisabled(false);
@@ -202,4 +208,36 @@ async function loadExistingInvoice(): Promise<void> {
   }
 
   renderInvoiceResult(regionEl, result.data.invoice, result.data.items, result.data.billingDifference, selectedRoomLabel);
+  wireDeleteInvoiceButton();
+}
+
+function wireDeleteInvoiceButton(): void {
+  const btn = document.querySelector<HTMLButtonElement>(".app-delete-invoice-btn");
+  btn?.addEventListener("click", () => void handleDeleteInvoice(btn));
+}
+
+async function handleDeleteInvoice(btn: HTMLButtonElement): Promise<void> {
+  const id = btn.dataset.id;
+  if (!id) return;
+
+  const confirmed = confirmDangerousAction(
+    "Thao tác này sẽ xóa hóa đơn và các dòng chi tiết của hóa đơn. Dữ liệu chỉ số công tơ và biểu giá không bị xóa. Bạn có muốn tiếp tục?"
+  );
+  if (!confirmed) return;
+
+  const result = await deleteInvoice(id);
+  if (!result.success) {
+    if (result.error.code === "INVOICE_NOT_FOUND") {
+      showGlobalAlert("warning", "Không tìm thấy hóa đơn để xóa — có thể đã bị xóa trước đó.");
+    } else {
+      showGlobalAlert("danger", result.error.message);
+    }
+    return;
+  }
+
+  showGlobalAlert("success", "Đã xóa hóa đơn.");
+  const regionEl = document.querySelector<HTMLElement>("#invoice-result-region");
+  if (regionEl) {
+    renderInvoiceNotFound(regionEl);
+  }
 }

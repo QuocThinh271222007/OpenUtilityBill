@@ -76,9 +76,19 @@ export function renderRoomList(
           <td>${escapeHtml(propertyNameById.get(room.propertyId) ?? room.propertyId)}</td>
           <td class="app-numeric">${room.tenantCount}</td>
           <td>
-            <button type="button" class="btn btn-sm btn-outline-primary app-edit-room-btn" data-id="${escapeHtml(room.id)}">
-              Sửa
-            </button>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-sm btn-outline-primary app-edit-room-btn" data-id="${escapeHtml(room.id)}">
+                Sửa
+              </button>
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-danger app-delete-room-btn"
+                data-id="${escapeHtml(room.id)}"
+                data-name="${escapeHtml(room.name)}"
+              >
+                Xóa
+              </button>
+            </div>
           </td>
         </tr>
       `

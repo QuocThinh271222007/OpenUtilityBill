@@ -3,13 +3,15 @@
 import {
   createElectricityTariff,
   createWaterTariff,
+  deleteElectricityTariff,
+  deleteWaterTariff,
   fetchElectricityTariffs,
   fetchWaterTariffs,
   updateElectricityTariff,
   updateWaterTariff,
 } from "../api/tariff.api";
 import { getContentContainer } from "../views/layout.view";
-import { renderEmptyState, renderLoading, showGlobalAlert } from "../views/shared.view";
+import { confirmDangerousAction, renderEmptyState, renderLoading, showGlobalAlert } from "../views/shared.view";
 import {
   renderElectricityTariffList,
   renderTariffPage,
@@ -74,6 +76,14 @@ function tariffErrorMessage(error: { code: string; message: string }): string {
   return error.message;
 }
 
+/** Message THÂN THIỆN riêng cho xoá — `TARIFF_IN_USE` khi xoá nghĩa là biểu giá đang được dùng, không thể xoá (khác câu gợi ý "tạo phiên bản mới" của sửa). */
+function tariffDeleteErrorMessage(error: { code: string; message: string }): string {
+  if (error.code === "TARIFF_IN_USE") {
+    return "Không thể xóa biểu giá này vì đã được dùng trong hóa đơn lịch sử.";
+  }
+  return error.message;
+}
+
 // ==================== Electricity ====================
 
 async function loadElectricityTariffList(): Promise<void> {
@@ -106,6 +116,32 @@ function wireElectricityEditButtons(): void {
       document.querySelector<HTMLElement>("#electricity-tariff-form-title")?.scrollIntoView({ behavior: "smooth" });
     });
   });
+
+  document.querySelectorAll<HTMLButtonElement>(".app-delete-electricity-tariff-btn").forEach((btn) => {
+    btn.addEventListener("click", () => void handleDeleteElectricityTariff(btn));
+  });
+}
+
+async function handleDeleteElectricityTariff(btn: HTMLButtonElement): Promise<void> {
+  const id = btn.dataset.id;
+  const name = btn.dataset.name ?? "";
+  if (!id) return;
+
+  if (!confirmDangerousAction(`Bạn có chắc muốn xóa biểu giá điện "${name}"?`)) return;
+
+  const result = await deleteElectricityTariff(id);
+  if (!result.success) {
+    showGlobalAlert("danger", tariffDeleteErrorMessage(result.error));
+    return;
+  }
+
+  showGlobalAlert("success", "Đã xóa biểu giá điện.");
+  if (editingElectricityTariffId === id) {
+    editingElectricityTariffId = null;
+    setElectricityTariffFormMode("create");
+    resetTierEditor();
+  }
+  await loadElectricityTariffList();
 }
 
 function wireElectricityTariffForm(): void {
@@ -374,6 +410,31 @@ function wireWaterEditButtons(): void {
       document.querySelector<HTMLElement>("#water-tariff-form-title")?.scrollIntoView({ behavior: "smooth" });
     });
   });
+
+  document.querySelectorAll<HTMLButtonElement>(".app-delete-water-tariff-btn").forEach((btn) => {
+    btn.addEventListener("click", () => void handleDeleteWaterTariff(btn));
+  });
+}
+
+async function handleDeleteWaterTariff(btn: HTMLButtonElement): Promise<void> {
+  const id = btn.dataset.id;
+  const name = btn.dataset.name ?? "";
+  if (!id) return;
+
+  if (!confirmDangerousAction(`Bạn có chắc muốn xóa biểu giá nước "${name}"?`)) return;
+
+  const result = await deleteWaterTariff(id);
+  if (!result.success) {
+    showGlobalAlert("danger", tariffDeleteErrorMessage(result.error));
+    return;
+  }
+
+  showGlobalAlert("success", "Đã xóa biểu giá nước.");
+  if (editingWaterTariffId === id) {
+    editingWaterTariffId = null;
+    setWaterTariffFormMode("create");
+  }
+  await loadWaterTariffList();
 }
 
 function wireWaterTariffForm(): void {

@@ -7,9 +7,10 @@ import type { RentalProperty } from "../types/property.types";
 /**
  * Trách nhiệm:
  * Render trang "Cơ sở" — form thêm/sửa (dùng chung MỘT form, chuyển
- * chế độ qua `setPropertyFormMode`) và bảng danh sách.
+ * chế độ qua `setPropertyFormMode`) và bảng danh sách (kèm nút Xóa —
+ * xem `property.controller.ts` cho luồng xác nhận trước khi xoá).
  *
- * Không chịu trách nhiệm: gọi API, quyết định khi nào submit — Controller lo việc đó.
+ * Không chịu trách nhiệm: gọi API, quyết định khi nào submit/xoá — Controller lo việc đó.
  */
 export function renderPropertyPage(container: HTMLElement): void {
   container.innerHTML = `
@@ -57,9 +58,19 @@ export function renderPropertyList(regionEl: HTMLElement, properties: RentalProp
           <td>${escapeHtml(property.name)}</td>
           <td>${property.address !== null ? escapeHtml(property.address) : "—"}</td>
           <td>
-            <button type="button" class="btn btn-sm btn-outline-primary app-edit-property-btn" data-id="${escapeHtml(property.id)}">
-              Sửa
-            </button>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-sm btn-outline-primary app-edit-property-btn" data-id="${escapeHtml(property.id)}">
+                Sửa
+              </button>
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-danger app-delete-property-btn"
+                data-id="${escapeHtml(property.id)}"
+                data-name="${escapeHtml(property.name)}"
+              >
+                Xóa
+              </button>
+            </div>
           </td>
         </tr>
       `

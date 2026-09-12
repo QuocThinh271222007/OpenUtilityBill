@@ -208,9 +208,19 @@ function electricityTariffCardHtml(data: ElectricityTariffWithTiers): string {
     <div class="card mb-3">
       <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
         <span>${escapeHtml(tariff.name)}</span>
-        <button type="button" class="btn btn-sm btn-outline-primary app-edit-electricity-tariff-btn" data-id="${escapeHtml(tariff.id)}">
-          Sửa
-        </button>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-sm btn-outline-primary app-edit-electricity-tariff-btn" data-id="${escapeHtml(tariff.id)}">
+            Sửa
+          </button>
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-danger app-delete-electricity-tariff-btn"
+            data-id="${escapeHtml(tariff.id)}"
+            data-name="${escapeHtml(tariff.name)}"
+          >
+            Xóa
+          </button>
+        </div>
       </div>
       <div class="card-body">
         <dl class="row mb-3">
@@ -288,9 +298,19 @@ function waterTariffCardHtml(tariff: WaterTariff): string {
     <div class="card mb-3">
       <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
         <span>${escapeHtml(tariff.name)}</span>
-        <button type="button" class="btn btn-sm btn-outline-primary app-edit-water-tariff-btn" data-id="${escapeHtml(tariff.id)}">
-          Sửa
-        </button>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-sm btn-outline-primary app-edit-water-tariff-btn" data-id="${escapeHtml(tariff.id)}">
+            Sửa
+          </button>
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-danger app-delete-water-tariff-btn"
+            data-id="${escapeHtml(tariff.id)}"
+            data-name="${escapeHtml(tariff.name)}"
+          >
+            Xóa
+          </button>
+        </div>
       </div>
       <div class="card-body">
         <dl class="row mb-0">
