@@ -9,7 +9,7 @@ import { PostgresWaterTariffRepository } from "../postgres/postgres-water-tariff
 /**
  * Trách nhiệm:
  * Chứng minh, bằng PostgreSQL THẬT, rằng các Repository đọc đúng dữ liệu
- * seed chính thức (`database/seeds/001_competition_defaults.sql`)
+ * seed chính thức (`database/seeds/001_default_tariffs.sql`)
  * — không phải dữ liệu giả lập trong unit test.
  *
  * Không chịu trách nhiệm:
@@ -19,7 +19,7 @@ import { PostgresWaterTariffRepository } from "../postgres/postgres-water-tariff
  *   chạy trên database đó — SKIP rõ ràng.
  *
  * Điều kiện trước khi chạy: migration 001+002 và seed
- * 001_competition_defaults.sql đã chạy trên database mà DATABASE_URL
+ * 001_default_tariffs.sql đã chạy trên database mà DATABASE_URL
  * trỏ tới.
  *
  * Về định dạng chuỗi NUMERIC kỳ vọng bên dưới (QUAN TRỌNG):
@@ -51,7 +51,7 @@ test(
       assert.equal(result.success, true);
       if (!result.success) return;
 
-      assert.equal(result.data.tariff.name, "Competition Default Electricity Tariff");
+      assert.equal(result.data.tariff.name, "Biểu giá điện mặc định");
       // electricity_vat_rate là NUMERIC(5, 4) -> "0.0800", không phải
       // "0.08" (xem giải thích scale ở đầu file).
       assert.equal(result.data.tariff.electricityVatRate, "0.0800");
@@ -85,7 +85,7 @@ test(
       assert.equal(result.success, true);
       if (!result.success) return;
 
-      assert.equal(result.data.name, "Competition Default Water Tariff");
+      assert.equal(result.data.name, "Biểu giá nước mặc định");
       // price_per_cubic_meter/price_per_person là NUMERIC(14, 2);
       // vat_rate/environmental_fee_rate là NUMERIC(5, 4) — xem giải
       // thích scale ở đầu file.

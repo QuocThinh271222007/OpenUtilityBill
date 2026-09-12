@@ -8,7 +8,7 @@ import type { DatabaseExecutor } from "../../database/database.types";
 test("mapTariffRow / mapTierRow: ánh xạ đúng, giữ nguyên chuỗi thập phân", () => {
   const tariffRow = {
     id: "1",
-    name: "Competition Default Electricity Tariff",
+    name: "Biểu giá điện mặc định",
     effective_from: new Date("2025-05-10T00:00:00.000Z"),
     effective_to: new Date("2026-12-31T00:00:00.000Z"),
     electricity_vat_rate: "0.08",

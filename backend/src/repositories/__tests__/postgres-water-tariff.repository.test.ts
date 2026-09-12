@@ -8,7 +8,7 @@ import type { DatabaseExecutor } from "../../database/database.types";
 test("mapWaterTariffRow: ánh xạ đúng, giữ nguyên chuỗi thập phân", () => {
   const row = {
     id: "1",
-    name: "Competition Default Water Tariff",
+    name: "Biểu giá nước mặc định",
     effective_from: new Date("2026-09-06T00:00:00.000Z"),
     effective_to: null,
     price_per_cubic_meter: "8500",

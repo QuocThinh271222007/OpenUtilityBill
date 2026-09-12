@@ -14,7 +14,7 @@
 -- Không chịu trách nhiệm:
 -- - xoá bất kỳ dòng nào KHÔNG khớp chính xác các tiền tố trên. Không có
 --   câu lệnh nào trong file này chạm tới dữ liệu tên
---   "Competition Default ..." (dữ liệu seed chính thức mặc định).
+--   "Biểu giá ... mặc định" (dữ liệu seed chính thức mặc định).
 -- - cần chạy trong tình huống bình thường. Cả ba file validation đều
 --   được thiết kế để KHÔNG BAO GIỜ commit dữ liệu thử nghiệm (không
 --   file nào chứa câu lệnh COMMIT) — mọi block validation tự dọn dẹp
@@ -140,7 +140,7 @@ FROM (
 ) AS leftovers;
 -- Kỳ vọng: 0.
 
-SELECT COUNT(*) AS competition_seed_rows_still_present
+SELECT COUNT(*) AS default_seed_rows_still_present
 FROM electricity_tariffs
-WHERE name = 'Competition Default Electricity Tariff';
+WHERE name = 'Biểu giá điện mặc định';
 -- Kỳ vọng: 1 (không bị chạm tới bởi bất kỳ câu lệnh nào ở trên).

@@ -26,10 +26,10 @@ import { Result } from "../../../shared/result";
  * KHÔNG mocking library) — xem `fakes.ts`.
  *
  * Dữ liệu tariff/tier dùng ở đây TRÙNG với
- * database/seeds/001_competition_defaults.sql (1984, 2050, 2380, 8500,
+ * database/seeds/001_default_tariffs.sql (1984, 2050, 2380, 8500,
  * ...) CHỈ VÌ đây là fixture test — Calculation Core/Service sản xuất
- * KHÔNG chứa các hằng số này (xem "Hard-code audit" trong
- * docs/CREATE_INVOICE_WORKFLOW.md).
+ * KHÔNG chứa các hằng số này (xem "Không hard-code hằng số tariff"
+ * trong docs/MANAGEMENT_API.md).
  */
 
 const BILLING_PERIOD = new Date("2026-09-01T00:00:00.000Z");

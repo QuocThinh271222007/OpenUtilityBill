@@ -10,9 +10,9 @@
 -- bởi database/migrations/001_initial_domain_schema.sql.
 --
 -- Đây là DỮ LIỆU cấu hình mặc định — KHÔNG phải quy tắc bất biến
--- (immutable rule) của chương trình. Giá trị này có thể được thay thế
--- sau này qua giao diện quản trị (admin configuration, task sau),
--- không cần sửa Calculation Core hay schema.
+-- (immutable rule) của chương trình. Các giá trị này có thể được thay
+-- đổi bằng API/giao diện quản lý biểu giá (xem docs/MANAGEMENT_API.md,
+-- docs/FRONTEND.md) mà không cần sửa Calculation Core hay schema.
 --
 -- Không chịu trách nhiệm:
 -- - chứa công thức tính toán (không có phép nhân/cộng ở đây, chỉ có
@@ -56,7 +56,7 @@ INSERT INTO electricity_tariffs (
     people_per_quota_unit,
     fallback_tier_number
 ) VALUES (
-    'Competition Default Electricity Tariff',
+    'Biểu giá điện mặc định',
     '2025-05-10',
     '2026-12-31',
     0.08,   -- VAT điện 8%, có hiệu lực tới hết 2026-12-31.
@@ -80,7 +80,7 @@ CROSS JOIN (VALUES
     (5, 100::numeric,  3350::numeric),
     (6, NULL::numeric, 3460::numeric)
 ) AS tier(tier_number, threshold_kwh, unit_price)
-WHERE t.name = 'Competition Default Electricity Tariff'
+WHERE t.name = 'Biểu giá điện mặc định'
   AND t.effective_from = '2025-05-10'
 ON CONFLICT (tariff_id, tier_number) DO NOTHING;
 
@@ -103,7 +103,7 @@ INSERT INTO water_tariffs (
     vat_rate,
     environmental_fee_rate
 ) VALUES (
-    'Competition Default Water Tariff',
+    'Biểu giá nước mặc định',
     '2026-09-06',
     NULL,
     8500,    -- VND / m3

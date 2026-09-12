@@ -16,7 +16,7 @@
 -- Không chịu trách nhiệm:
 -- - implement Calculation Core, CRUD, Repository, hay business logic.
 -- - dùng PL/pgSQL, stored procedure, hay một "test framework" tự chế.
--- - sửa đổi dữ liệu seed chính thức (Competition Default ...) — mọi
+-- - sửa đổi dữ liệu seed chính thức (Biểu giá ... mặc định) — mọi
 --   dòng test dùng tiền tố tên "VALIDATION_CONSTRAINT_D<n>_..." để
 --   không thể nhầm với dữ liệu thật.
 --

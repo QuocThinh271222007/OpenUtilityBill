@@ -30,7 +30,7 @@
 -- ĐIỀU KIỆN TRƯỚC KHI CHẠY FILE NÀY:
 -- 1) database/migrations/001_initial_domain_schema.sql đã chạy thành
 --    công (Phần A tự kiểm chứng lại điều này).
--- 2) database/seeds/001_competition_defaults.sql đã chạy ít nhất một
+-- 2) database/seeds/001_default_tariffs.sql đã chạy ít nhất một
 --    lần (Phần B tự kiểm chứng lại điều này).
 
 -- ============================================================
@@ -85,23 +85,23 @@ SELECT
     people_per_quota_unit,
     fallback_tier_number
 FROM electricity_tariffs
-WHERE name = 'Competition Default Electricity Tariff'
+WHERE name = 'Biểu giá điện mặc định'
   AND effective_from = '2025-05-10';
 -- Kỳ vọng: đúng 1 dòng —
 --   effective_from = 2025-05-10, effective_to = 2026-12-31,
 --   electricity_vat_rate = 0.0800, people_per_quota_unit = 4,
 --   fallback_tier_number = 3.
 
-SELECT COUNT(*) AS competition_electricity_tariff_count
+SELECT COUNT(*) AS default_electricity_tariff_count
 FROM electricity_tariffs
-WHERE name = 'Competition Default Electricity Tariff'
+WHERE name = 'Biểu giá điện mặc định'
   AND effective_from = '2025-05-10';
 -- Kỳ vọng: 1 (dù seed đã chạy 1 lần hay nhiều lần).
 
 SELECT tier.tier_number, tier.threshold_kwh, tier.unit_price
 FROM electricity_tariff_tiers tier
 JOIN electricity_tariffs t ON t.id = tier.tariff_id
-WHERE t.name = 'Competition Default Electricity Tariff'
+WHERE t.name = 'Biểu giá điện mặc định'
   AND t.effective_from = '2025-05-10'
 ORDER BY tier.tier_number;
 -- Kỳ vọng: đúng 6 dòng theo thứ tự —
@@ -112,10 +112,10 @@ ORDER BY tier.tier_number;
 --   5 | 100 | 3350
 --   6 |NULL | 3460
 
-SELECT COUNT(*) AS competition_electricity_tier_count
+SELECT COUNT(*) AS default_electricity_tier_count
 FROM electricity_tariff_tiers tier
 JOIN electricity_tariffs t ON t.id = tier.tariff_id
-WHERE t.name = 'Competition Default Electricity Tariff'
+WHERE t.name = 'Biểu giá điện mặc định'
   AND t.effective_from = '2025-05-10';
 -- Kỳ vọng: 6 (không tăng lên 12 sau lần seed thứ hai).
 
@@ -128,16 +128,16 @@ SELECT
     vat_rate,
     environmental_fee_rate
 FROM water_tariffs
-WHERE name = 'Competition Default Water Tariff'
+WHERE name = 'Biểu giá nước mặc định'
   AND effective_from = '2026-09-06';
 -- Kỳ vọng: đúng 1 dòng —
 --   effective_from = 2026-09-06, effective_to = NULL,
 --   price_per_cubic_meter = 8500.00, price_per_person = 80000.00,
 --   vat_rate = 0.0500, environmental_fee_rate = 0.1000.
 
-SELECT COUNT(*) AS competition_water_tariff_count
+SELECT COUNT(*) AS default_water_tariff_count
 FROM water_tariffs
-WHERE name = 'Competition Default Water Tariff'
+WHERE name = 'Biểu giá nước mặc định'
   AND effective_from = '2026-09-06';
 -- Kỳ vọng: 1.
 
@@ -195,8 +195,10 @@ WHERE p.name = 'VALIDATION_SUCCESS_Property_A' AND r.name = '101';
 -- QUAN TRỌNG: câu lệnh này CHỈ chứng minh schema CHO PHÉP dữ liệu có
 -- "hình dạng" rollover (không sai lầm áp đặt current_reading >=
 -- previous_reading). Nó KHÔNG chứng minh công thức tính rollover —
--- Calculation Core (việc tính usage thực tế khi công tơ quay vòng)
--- chưa tồn tại và không phải phạm vi của task này.
+-- phép tính usage thực tế khi công tơ quay vòng thuộc về Calculation
+-- Core (`calculateMeterUsage`, xem
+-- backend/src/calculation/meter/calculate-meter-usage.ts), được kiểm
+-- chứng bằng unit test TypeScript riêng, không phải bằng SQL này.
 INSERT INTO meter_readings (
     room_id, billing_period, utility_type,
     previous_reading, current_reading, meter_maximum_value
@@ -240,12 +242,12 @@ JOIN rental_properties p ON p.id = r.property_id
 WHERE p.name LIKE 'VALIDATION_SUCCESS_%';
 -- Kỳ vọng: 0.
 
-SELECT COUNT(*) AS competition_electricity_tariff_still_present
+SELECT COUNT(*) AS default_electricity_tariff_still_present
 FROM electricity_tariffs
-WHERE name = 'Competition Default Electricity Tariff' AND effective_from = '2025-05-10';
+WHERE name = 'Biểu giá điện mặc định' AND effective_from = '2025-05-10';
 -- Kỳ vọng: 1 (dữ liệu seed chính thức KHÔNG bị ảnh hưởng bởi validation).
 
-SELECT COUNT(*) AS competition_water_tariff_still_present
+SELECT COUNT(*) AS default_water_tariff_still_present
 FROM water_tariffs
-WHERE name = 'Competition Default Water Tariff' AND effective_from = '2026-09-06';
+WHERE name = 'Biểu giá nước mặc định' AND effective_from = '2026-09-06';
 -- Kỳ vọng: 1.
