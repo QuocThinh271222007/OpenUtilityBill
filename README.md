@@ -217,7 +217,7 @@ dụng cho mọi nơi; giá theo m³, giá theo người, VAT và phí môi trư
 
 ### Yêu cầu
 
-- Node.js 20 trở lên; CI hiện chạy với Node.js 20.
+- Node.js 20 trở lên.
 - npm.
 - PostgreSQL/Supabase nếu muốn sử dụng các chức năng có truy cập dữ liệu.
 
@@ -334,8 +334,6 @@ Frontend → npm ci → typecheck → build
 
 CI không sử dụng `DATABASE_URL` thật, vì vậy các integration test cần
 PostgreSQL sẽ tự `SKIP` trong môi trường này.
-
-Badge **CI** ở đầu README phản ánh trực tiếp trạng thái của workflow.
 
 ## Đóng góp
 
