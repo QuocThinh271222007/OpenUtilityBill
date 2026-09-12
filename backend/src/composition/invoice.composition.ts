@@ -9,6 +9,7 @@ import { PostgresInvoiceRepository } from "../repositories/postgres/postgres-inv
 import { PostgresInvoiceUnitOfWork } from "../repositories/postgres/postgres-invoice-unit-of-work";
 import { CreateInvoiceService } from "../modules/invoice/create-invoice.service";
 import { GetInvoiceService } from "../modules/invoice/get-invoice.service";
+import { DeleteInvoiceService } from "../modules/invoice/delete-invoice.service";
 
 /**
  * Trách nhiệm:
@@ -54,6 +55,13 @@ export function getCreateInvoiceService(): CreateInvoiceService {
 export function getGetInvoiceService(): GetInvoiceService {
   const sql = getDatabaseClient();
   return new GetInvoiceService({
+    invoiceRepository: new PostgresInvoiceRepository(sql),
+  });
+}
+
+export function getDeleteInvoiceService(): DeleteInvoiceService {
+  const sql = getDatabaseClient();
+  return new DeleteInvoiceService({
     invoiceRepository: new PostgresInvoiceRepository(sql),
   });
 }

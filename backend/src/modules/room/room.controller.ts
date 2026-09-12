@@ -25,6 +25,7 @@ interface RoomManagementServiceLike {
   list(propertyId?: string): Promise<Result<Room[]>>;
   create(input: CreateRoomInput): Promise<Result<Room>>;
   update(id: string, input: UpdateRoomInput): Promise<Result<Room>>;
+  delete(id: string): Promise<Result<{ id: string }>>;
 }
 
 export function createListRoomsController(getService: () => RoomManagementServiceLike) {
@@ -117,6 +118,21 @@ export function createUpdateRoomController(getService: () => RoomManagementServi
       res.status(200).json({ success: true, data: serializeRoom(result.data) });
     } catch (error) {
       sendInternalError("room.controller.updateRoom", error, res);
+    }
+  };
+}
+
+export function createDeleteRoomController(getService: () => RoomManagementServiceLike) {
+  return async function deleteRoom(req: Request, res: Response): Promise<void> {
+    try {
+      const result = await getService().delete(req.params.roomId);
+      if (!result.success) {
+        res.status(mapResultErrorCodeToHttpStatus(result.error.code)).json({ success: false, error: result.error });
+        return;
+      }
+      res.status(200).json({ success: true, data: { id: result.data.id } });
+    } catch (error) {
+      sendInternalError("room.controller.deleteRoom", error, res);
     }
   };
 }

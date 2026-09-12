@@ -28,6 +28,7 @@ interface PropertyManagementServiceLike {
   list(): Promise<Result<RentalProperty[]>>;
   create(input: CreatePropertyInput): Promise<Result<RentalProperty>>;
   update(id: string, input: UpdatePropertyInput): Promise<Result<RentalProperty>>;
+  delete(id: string): Promise<Result<{ id: string }>>;
 }
 
 export function createListPropertiesController(getService: () => PropertyManagementServiceLike) {
@@ -113,6 +114,21 @@ export function createUpdatePropertyController(getService: () => PropertyManagem
       res.status(200).json({ success: true, data: serializeProperty(result.data) });
     } catch (error) {
       sendInternalError("property.controller.updateProperty", error, res);
+    }
+  };
+}
+
+export function createDeletePropertyController(getService: () => PropertyManagementServiceLike) {
+  return async function deleteProperty(req: Request, res: Response): Promise<void> {
+    try {
+      const result = await getService().delete(req.params.propertyId);
+      if (!result.success) {
+        res.status(mapResultErrorCodeToHttpStatus(result.error.code)).json({ success: false, error: result.error });
+        return;
+      }
+      res.status(200).json({ success: true, data: { id: result.data.id } });
+    } catch (error) {
+      sendInternalError("property.controller.deleteProperty", error, res);
     }
   };
 }

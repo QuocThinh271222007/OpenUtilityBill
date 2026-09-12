@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 
 import { Router } from "express";
-import { createGetInvoiceController, createPostInvoiceController } from "./invoice.controller";
-import { getCreateInvoiceService, getGetInvoiceService } from "../../composition/invoice.composition";
+import { createDeleteInvoiceController, createGetInvoiceController, createPostInvoiceController } from "./invoice.controller";
+import { getCreateInvoiceService, getDeleteInvoiceService, getGetInvoiceService } from "../../composition/invoice.composition";
 
 /**
  * Trách nhiệm:
@@ -28,5 +28,6 @@ const invoiceRoutes = Router();
 
 invoiceRoutes.post("/invoices", createPostInvoiceController(getCreateInvoiceService));
 invoiceRoutes.get("/invoices", createGetInvoiceController(getGetInvoiceService));
+invoiceRoutes.delete("/invoices/:invoiceId", createDeleteInvoiceController(getDeleteInvoiceService));
 
 export default invoiceRoutes;

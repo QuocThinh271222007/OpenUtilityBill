@@ -24,8 +24,8 @@ import { CreateMeterReadingInput, MeterReadingManagementDependencies, UpdateMete
  * - `create`/`update`: `METER_READING_ALREADY_EXISTS` propagate từ
  *   Repository khi vi phạm `UNIQUE(room_id, billing_period,
  *   utility_type)`.
- * - `update`: `METER_READING_IN_USE` khi reading đã được một invoice
- *   tham chiếu — xem "Bảo vệ tham chiếu lịch sử" bên dưới.
+ * - `update`/`delete`: `METER_READING_IN_USE` khi reading đã được một
+ *   invoice tham chiếu — xem "Bảo vệ tham chiếu lịch sử" bên dưới.
  *
  * Important invariant — TÁI SỬ DỤNG Calculation Core, không tự viết lại
  * kiểm tra rollover:
@@ -48,7 +48,6 @@ import { CreateMeterReadingInput, MeterReadingManagementDependencies, UpdateMete
  *
  * Không chịu trách nhiệm:
  * - chứa SQL/Postgres.js import.
- * - implement `delete`.
  */
 const UTILITY_TYPES: ReadonlySet<string> = new Set<UtilityType>(["ELECTRICITY", "WATER"]);
 
@@ -182,5 +181,28 @@ export class MeterReadingManagementService {
       currentReading: validated.currentReading,
       meterMaximumValue: validated.meterMaximumValue,
     });
+  }
+
+  /**
+   * Xoá đúng MỘT meter reading — CHỈ được phép khi CHƯA từng được một
+   * invoice tham chiếu (cùng bất biến với `update`, xem "Bảo vệ tham
+   * chiếu lịch sử" ở trên). Pre-check bằng `isReferencedByInvoice` cho
+   * message rõ ràng; FK constraint (`ON DELETE RESTRICT`) vẫn là nguồn
+   * thẩm quyền cuối cùng cho race condition.
+   */
+  async delete(id: string): Promise<Result<{ id: string }>> {
+    if (!isPositiveIntegerId(id)) {
+      return fail("VALIDATION_ERROR", `readingId không hợp lệ (phải là chuỗi số nguyên dương): "${id}".`);
+    }
+
+    const referencedResult = await this.deps.meterReadingRepository.isReferencedByInvoice(id);
+    if (!referencedResult.success) {
+      return referencedResult;
+    }
+    if (referencedResult.data) {
+      return fail("METER_READING_IN_USE", `Meter reading với id = ${id} đã được một invoice tham chiếu, không thể xoá.`);
+    }
+
+    return this.deps.meterReadingRepository.deleteById(id);
   }
 }

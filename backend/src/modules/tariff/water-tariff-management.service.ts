@@ -25,13 +25,12 @@ import { CreateWaterTariffInput, UpdateWaterTariffInput, WaterTariffManagementDe
  *   `tariff-period-overlap.ts`.
  * - `create`: `TARIFF_ALREADY_EXISTS` propagate khi vi phạm
  *   `UNIQUE(name, effective_from)`.
- * - `update`: `TARIFF_IN_USE` khi tariff đã được một invoice tham
- *   chiếu.
+ * - `update`/`delete`: `TARIFF_IN_USE` khi tariff đã được một invoice
+ *   tham chiếu.
  *
  * Không chịu trách nhiệm:
  * - chứa hằng số biểu giá cụ thể nào.
  * - chứa SQL/Postgres.js import.
- * - implement `delete`.
  */
 function normalizeName(name: string): Result<string> {
   const trimmed = name.trim();
@@ -176,5 +175,28 @@ export class WaterTariffManagementService {
     }
 
     return this.deps.waterTariffRepository.update(id, validated);
+  }
+
+  /**
+   * Xoá đúng MỘT water tariff — CHỈ được phép khi CHƯA từng được một
+   * invoice tham chiếu (cùng bất biến với `update`). Pre-check bằng
+   * `isReferencedByInvoice` cho message rõ ràng; FK constraint (`ON
+   * DELETE RESTRICT` trên `invoices.water_tariff_id`) vẫn là nguồn thẩm
+   * quyền cuối cùng cho race condition.
+   */
+  async delete(id: string): Promise<Result<{ id: string }>> {
+    if (!isPositiveIntegerId(id)) {
+      return fail("VALIDATION_ERROR", `tariffId không hợp lệ (phải là chuỗi số nguyên dương): "${id}".`);
+    }
+
+    const referencedResult = await this.deps.waterTariffRepository.isReferencedByInvoice(id);
+    if (!referencedResult.success) {
+      return referencedResult;
+    }
+    if (referencedResult.data) {
+      return fail("TARIFF_IN_USE", `Water tariff với id = ${id} đã được một invoice tham chiếu, không thể xoá.`);
+    }
+
+    return this.deps.waterTariffRepository.deleteById(id);
   }
 }
