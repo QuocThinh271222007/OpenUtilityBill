@@ -2,9 +2,9 @@
 
 import { fetchProperties } from "../api/property.api";
 import { fetchRooms } from "../api/room.api";
-import { createMeterReading, fetchMeterReadings, updateMeterReading } from "../api/meter-reading.api";
+import { createMeterReading, deleteMeterReading, fetchMeterReadings, updateMeterReading } from "../api/meter-reading.api";
 import { getContentContainer } from "../views/layout.view";
-import { renderEmptyState, renderLoading, renderSelectOptions, showGlobalAlert } from "../views/shared.view";
+import { confirmDangerousAction, renderEmptyState, renderLoading, renderSelectOptions, showGlobalAlert } from "../views/shared.view";
 import {
   renderMeterReadingPage,
   renderReadingList,
@@ -14,7 +14,8 @@ import {
   setReadingSubmitDisabled,
   setReadingUnitSuffix,
 } from "../views/meter-reading.view";
-import { monthDisplayToBillingPeriod } from "../utils/format";
+import { billingPeriodToMonthDisplay, monthDisplayToBillingPeriod } from "../utils/format";
+import { utilityTypeDisplayLabel } from "../utils/labels";
 import { wireMonthInputMask } from "../utils/masked-text-input";
 import type { MeterReading, MeterReadingBody, UtilityType } from "../types/meter-reading.types";
 import type { Room } from "../types/room.types";
@@ -30,11 +31,12 @@ import type { Room } from "../types/room.types";
  * của tổ hợp previous/current/max (âm, vượt max, rollover, ...) hoàn
  * toàn do backend quyết định (`calculateMeterUsage`) — frontend KHÔNG
  * tái hiện logic đó (xem docs/FRONTEND.md mục "Quy tắc chuỗi tài chính (quan trọng)").
- * `METER_READING_IN_USE` được hiển thị NGUYÊN VĂN message backend, KHÔNG
- * có cách nào bỏ qua (xem docs/MANAGEMENT_API.md mục "Historical
- * reference protection").
+ * Xóa PHẢI được xác nhận (`confirmDangerousAction`) TRƯỚC khi gọi API.
+ * `METER_READING_IN_USE` (sửa HOẶC xoá) hiển thị message THÂN THIỆN
+ * riêng (`readingErrorMessage`) thay vì message thô của backend — xem
+ * docs/MANAGEMENT_API.md mục "Historical reference protection".
  *
- * Không chịu trách nhiệm: có nút Xóa.
+ * Không chịu trách nhiệm: implement CSDL/SQL — chỉ gọi API và render.
  */
 let selectedPropertyId: string | null = null;
 let selectedRoomId: string | null = null;
@@ -171,6 +173,42 @@ function wireEditButtons(): void {
       document.querySelector<HTMLElement>("#reading-form-card")?.scrollIntoView({ behavior: "smooth" });
     });
   });
+
+  document.querySelectorAll<HTMLButtonElement>(".app-delete-reading-btn").forEach((btn) => {
+    btn.addEventListener("click", () => void handleDeleteReading(btn));
+  });
+}
+
+/** Message THÂN THIỆN cho `METER_READING_IN_USE`; mọi mã lỗi khác hiển thị nguyên văn message backend. */
+function readingErrorMessage(error: { code: string; message: string }): string {
+  if (error.code === "METER_READING_IN_USE") {
+    return "Không thể xóa/sửa chỉ số này vì đã được dùng để tính hóa đơn.";
+  }
+  return error.message;
+}
+
+async function handleDeleteReading(btn: HTMLButtonElement): Promise<void> {
+  const id = btn.dataset.id;
+  if (!id) return;
+  const reading = cachedReadings.find((r) => r.id === id);
+  const description = reading
+    ? `${utilityTypeDisplayLabel(reading.utilityType)} kỳ ${billingPeriodToMonthDisplay(reading.billingPeriod)}`
+    : "này";
+
+  if (!confirmDangerousAction(`Bạn có chắc muốn xóa chỉ số công tơ ${description}?`)) return;
+
+  const result = await deleteMeterReading(id);
+  if (!result.success) {
+    showGlobalAlert("danger", readingErrorMessage(result.error));
+    return;
+  }
+
+  showGlobalAlert("success", "Đã xóa chỉ số.");
+  if (editingReadingId === id) {
+    editingReadingId = null;
+    setReadingFormMode("create");
+  }
+  await loadReadingList();
 }
 
 function wireReadingForm(): void {
@@ -249,7 +287,7 @@ async function submitReadingForm(): Promise<void> {
     const result = editingReadingId ? await updateMeterReading(editingReadingId, body) : await createMeterReading(body);
 
     if (!result.success) {
-      showGlobalAlert("danger", result.error.message);
+      showGlobalAlert("danger", readingErrorMessage(result.error));
       return;
     }
 

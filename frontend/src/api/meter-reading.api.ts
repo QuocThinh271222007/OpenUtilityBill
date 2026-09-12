@@ -20,3 +20,7 @@ export function createMeterReading(body: MeterReadingBody): Promise<ApiResult<Me
 export function updateMeterReading(id: string, body: MeterReadingBody): Promise<ApiResult<MeterReading>> {
   return apiRequest<MeterReading>(`/meter-readings/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(body) });
 }
+
+export function deleteMeterReading(id: string): Promise<ApiResult<{ id: string }>> {
+  return apiRequest<{ id: string }>(`/meter-readings/${encodeURIComponent(id)}`, { method: "DELETE" });
+}

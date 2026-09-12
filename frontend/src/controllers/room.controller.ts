@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 
 import { fetchProperties } from "../api/property.api";
-import { createRoom, fetchRooms, updateRoom } from "../api/room.api";
+import { createRoom, deleteRoom, fetchRooms, updateRoom } from "../api/room.api";
 import { getContentContainer } from "../views/layout.view";
-import { renderEmptyState, renderLoading, renderSelectOptions, showGlobalAlert } from "../views/shared.view";
+import { confirmDangerousAction, renderEmptyState, renderLoading, renderSelectOptions, showGlobalAlert } from "../views/shared.view";
 import { renderRoomList, renderRoomPage, setRoomFormMode, setRoomSubmitDisabled } from "../views/room.view";
 import type { RentalProperty } from "../types/property.types";
 import type { Room } from "../types/room.types";
@@ -19,7 +19,13 @@ import type { Room } from "../types/room.types";
  * `name`/`tenantCount`) — khớp `UpdateRoomBody` (propertyId immutable
  * trên PATCH, xem docs/MANAGEMENT_API.md).
  *
- * Không chịu trách nhiệm: có nút Xóa — cùng lý do với property.controller.ts.
+ * Xóa PHẢI được xác nhận (`confirmDangerousAction`) TRƯỚC khi gọi API.
+ * Khi backend trả 409 `ROOM_HAS_DEPENDENCIES` (phòng còn chỉ số công
+ * tơ/hóa đơn), hiển thị message THÂN THIỆN riêng
+ * (`roomDeleteErrorMessage`) — cùng cách tiếp cận với
+ * `property.controller.ts`.
+ *
+ * Không chịu trách nhiệm: implement CSDL/SQL — chỉ gọi API và render.
  */
 let editingRoomId: string | null = null;
 let cachedProperties: RentalProperty[] = [];
@@ -88,6 +94,40 @@ function wireRoomEditButtons(): void {
       window.scrollTo({ top: 0, behavior: "smooth" });
     });
   });
+
+  document.querySelectorAll<HTMLButtonElement>(".app-delete-room-btn").forEach((btn) => {
+    btn.addEventListener("click", () => void handleDeleteRoom(btn));
+  });
+}
+
+/** Message THÂN THIỆN cho `ROOM_HAS_DEPENDENCIES`; mọi mã lỗi khác hiển thị nguyên văn message backend. */
+function roomDeleteErrorMessage(error: { code: string; message: string }): string {
+  if (error.code === "ROOM_HAS_DEPENDENCIES") {
+    return "Không thể xóa phòng vì phòng đang có chỉ số công tơ hoặc hóa đơn liên quan.";
+  }
+  return error.message;
+}
+
+async function handleDeleteRoom(btn: HTMLButtonElement): Promise<void> {
+  const id = btn.dataset.id;
+  const name = btn.dataset.name ?? "";
+  if (!id) return;
+
+  if (!confirmDangerousAction(`Bạn có chắc muốn xóa phòng ${name}?`)) return;
+
+  const result = await deleteRoom(id);
+  if (!result.success) {
+    showGlobalAlert("danger", roomDeleteErrorMessage(result.error));
+    return;
+  }
+
+  showGlobalAlert("success", "Đã xóa phòng.");
+  if (editingRoomId === id) {
+    editingRoomId = null;
+    setRoomFormMode("create");
+  }
+  const filterSelect = document.querySelector<HTMLSelectElement>("#room-filter-select");
+  await loadRoomList(filterSelect?.value || undefined);
 }
 
 function wireRoomForm(): void {

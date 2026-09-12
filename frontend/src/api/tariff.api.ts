@@ -20,6 +20,10 @@ export function updateElectricityTariff(id: string, body: ElectricityTariffBody)
   });
 }
 
+export function deleteElectricityTariff(id: string): Promise<ApiResult<{ id: string }>> {
+  return apiRequest<{ id: string }>(`/tariffs/electricity/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
 export function fetchWaterTariffs(): Promise<ApiResult<WaterTariff[]>> {
   return apiRequest<WaterTariff[]>("/tariffs/water");
 }
@@ -30,4 +34,8 @@ export function createWaterTariff(body: WaterTariffBody): Promise<ApiResult<Wate
 
 export function updateWaterTariff(id: string, body: WaterTariffBody): Promise<ApiResult<WaterTariff>> {
   return apiRequest<WaterTariff>(`/tariffs/water/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(body) });
+}
+
+export function deleteWaterTariff(id: string): Promise<ApiResult<{ id: string }>> {
+  return apiRequest<{ id: string }>(`/tariffs/water/${encodeURIComponent(id)}`, { method: "DELETE" });
 }

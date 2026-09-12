@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 
-import { createProperty, fetchProperties, updateProperty } from "../api/property.api";
+import { createProperty, deleteProperty, fetchProperties, updateProperty } from "../api/property.api";
 import { getContentContainer } from "../views/layout.view";
-import { renderEmptyState, renderLoading, showGlobalAlert } from "../views/shared.view";
+import { confirmDangerousAction, renderEmptyState, renderLoading, showGlobalAlert } from "../views/shared.view";
 import { renderPropertyList, renderPropertyPage, setPropertyFormMode, setPropertySubmitDisabled } from "../views/property.view";
 import type { RentalProperty } from "../types/property.types";
 
@@ -13,8 +13,11 @@ import type { RentalProperty } from "../types/property.types";
  * `editingPropertyId`).
  *
  * Bất biến quan trọng:
- * KHÔNG có nút Xóa — xem docs/MANAGEMENT_API.md mục "No DELETE
- * endpoints"; đây là chủ đích, không phải thiếu sót.
+ * Xóa PHẢI được xác nhận (`confirmDangerousAction`) TRƯỚC khi gọi API —
+ * không bao giờ xoá ngay từ một cú bấm nhầm. Khi backend trả 409
+ * `PROPERTY_HAS_DEPENDENCIES` (cơ sở còn phòng), hiển thị message THÂN
+ * THIỆN riêng (`propertyDeleteErrorMessage`) thay vì message thô của
+ * backend — xem docs/MANAGEMENT_API.md mục "Xác nhận trước khi xoá".
  *
  * Không chịu trách nhiệm: tự validate business rule (trim/empty-to-null cho address)
  * — backend (`PropertyManagementService`) là nơi xác thực có thẩm
@@ -59,6 +62,39 @@ function wirePropertyEditButtons(): void {
       window.scrollTo({ top: 0, behavior: "smooth" });
     });
   });
+
+  document.querySelectorAll<HTMLButtonElement>(".app-delete-property-btn").forEach((btn) => {
+    btn.addEventListener("click", () => void handleDeleteProperty(btn));
+  });
+}
+
+/** Message THÂN THIỆN cho `PROPERTY_HAS_DEPENDENCIES`; mọi mã lỗi khác hiển thị nguyên văn message backend. */
+function propertyDeleteErrorMessage(error: { code: string; message: string }): string {
+  if (error.code === "PROPERTY_HAS_DEPENDENCIES") {
+    return "Không thể xóa cơ sở vì cơ sở đang có phòng liên quan.";
+  }
+  return error.message;
+}
+
+async function handleDeleteProperty(btn: HTMLButtonElement): Promise<void> {
+  const id = btn.dataset.id;
+  const name = btn.dataset.name ?? "";
+  if (!id) return;
+
+  if (!confirmDangerousAction(`Bạn có chắc muốn xóa cơ sở "${name}"?`)) return;
+
+  const result = await deleteProperty(id);
+  if (!result.success) {
+    showGlobalAlert("danger", propertyDeleteErrorMessage(result.error));
+    return;
+  }
+
+  showGlobalAlert("success", "Đã xóa cơ sở.");
+  if (editingPropertyId === id) {
+    editingPropertyId = null;
+    setPropertyFormMode("create");
+  }
+  await loadPropertyList();
 }
 
 function wirePropertyForm(): void {
