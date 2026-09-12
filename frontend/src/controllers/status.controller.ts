@@ -1,23 +1,24 @@
 // SPDX-License-Identifier: MIT
 
+import { BACKEND_OFFLINE_EVENT, BACKEND_ONLINE_EVENT } from "../api/api-client";
 import { fetchHealth } from "../api/health.api";
 import { renderBackendOffline, renderBackendOnline } from "../views/status.view";
 
 /**
- * Trách nhiệm:
- * Điều phối luồng kiểm tra trạng thái backend: gọi api/health.api.ts,
- * rồi gọi View phù hợp (views/status.view.ts) theo kết quả.
- *
- * Không chịu trách nhiệm:
- * - gọi fetch trực tiếp
- * - thao tác DOM trực tiếp
- *
- * Lý do:
- * Controller là nơi duy nhất biết "làm gì tiếp theo" dựa trên kết quả
- * API, giữ cho api/ và views/ không phụ thuộc lẫn nhau — cùng ranh
- * giới Route → Controller → Service được mô tả ở phía backend, áp
- * dụng tương tự cho phía frontend.
+ * Khởi tạo trạng thái backend và giữ badge đồng bộ với các request thật.
+ * Mọi HTTP response đều chứng minh backend đang phản hồi; chỉ lỗi fetch
+ * hoàn toàn mới chuyển trạng thái sang offline.
  */
+export function initBackendStatusTracking(): void {
+  window.addEventListener(BACKEND_ONLINE_EVENT, () => renderBackendOnline());
+  window.addEventListener(BACKEND_OFFLINE_EVENT, (event) => {
+    const detail = (event as CustomEvent<{ message?: string }>).detail;
+    renderBackendOffline(detail?.message ?? "Không thể kết nối tới backend.");
+  });
+
+  void checkBackendStatus();
+}
+
 export async function checkBackendStatus(): Promise<void> {
   const result = await fetchHealth();
 
