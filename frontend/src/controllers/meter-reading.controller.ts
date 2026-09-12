@@ -12,8 +12,10 @@ import {
   setReadingFormMode,
   setReadingFormVisible,
   setReadingSubmitDisabled,
+  setReadingUnitSuffix,
 } from "../views/meter-reading.view";
-import { monthInputToBillingPeriod } from "../utils/format";
+import { monthDisplayToBillingPeriod } from "../utils/format";
+import { wireMonthInputMask } from "../utils/masked-text-input";
 import type { MeterReading, MeterReadingBody, UtilityType } from "../types/meter-reading.types";
 import type { Room } from "../types/room.types";
 
@@ -66,6 +68,7 @@ function wireSelectors(): void {
   const roomSelect = document.querySelector<HTMLSelectElement>("#reading-room-select");
   const monthFilter = document.querySelector<HTMLInputElement>("#reading-month-filter");
   const addBtn = document.querySelector<HTMLButtonElement>("#reading-add-btn");
+  if (monthFilter) wireMonthInputMask(monthFilter);
 
   propertySelect?.addEventListener("change", () => void handlePropertyChange());
   roomSelect?.addEventListener("change", () => void handleRoomChange());
@@ -134,8 +137,17 @@ async function loadReadingList(): Promise<void> {
   if (!region || !selectedRoomId) return;
   renderLoading(region);
 
-  const monthFilterValue = document.querySelector<HTMLInputElement>("#reading-month-filter")?.value;
-  const billingPeriodFilter = monthFilterValue ? monthInputToBillingPeriod(monthFilterValue) : undefined;
+  const monthFilterValue = document.querySelector<HTMLInputElement>("#reading-month-filter")?.value.trim();
+  let billingPeriodFilter: string | undefined;
+  if (monthFilterValue) {
+    const converted = monthDisplayToBillingPeriod(monthFilterValue);
+    if (converted === null) {
+      showGlobalAlert("warning", "Kỳ lọc không hợp lệ. Hãy nhập theo định dạng MM/YYYY.");
+      renderEmptyState(region, "Không thể lọc theo kỳ đã nhập.");
+      return;
+    }
+    billingPeriodFilter = converted;
+  }
 
   const result = await fetchMeterReadings(selectedRoomId, billingPeriodFilter);
   if (!result.success) {
@@ -145,7 +157,7 @@ async function loadReadingList(): Promise<void> {
   }
 
   cachedReadings = result.data;
-  renderReadingList(region, cachedReadings);
+  renderReadingList(region, cachedReadings, billingPeriodFilter !== undefined);
   wireEditButtons();
 }
 
@@ -164,6 +176,13 @@ function wireEditButtons(): void {
 function wireReadingForm(): void {
   const form = document.querySelector<HTMLFormElement>("#reading-form");
   const cancelBtn = document.querySelector<HTMLButtonElement>("#reading-cancel-btn");
+  const utilitySelect = document.querySelector<HTMLSelectElement>("#reading-utility-type");
+  const monthInput = document.querySelector<HTMLInputElement>("#reading-billing-month");
+  if (monthInput) wireMonthInputMask(monthInput);
+
+  utilitySelect?.addEventListener("change", () => {
+    setReadingUnitSuffix(utilitySelect.value as UtilityType);
+  });
 
   form?.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -195,8 +214,13 @@ async function submitReadingForm(): Promise<void> {
   const maxInput = document.querySelector<HTMLInputElement>("#reading-max");
   if (!utilitySelect || !monthInput || !previousInput || !currentInput || !maxInput) return;
 
-  if (!monthInput.value) {
-    showGlobalAlert("warning", "Vui lòng chọn kỳ (tháng).");
+  if (!monthInput.value.trim()) {
+    showGlobalAlert("warning", "Vui lòng nhập kỳ (tháng).");
+    return;
+  }
+  const billingPeriod = monthDisplayToBillingPeriod(monthInput.value);
+  if (billingPeriod === null) {
+    showGlobalAlert("warning", "Kỳ (tháng) không hợp lệ. Hãy nhập theo định dạng MM/YYYY.");
     return;
   }
   const previous = previousInput.value.trim();
@@ -213,7 +237,7 @@ async function submitReadingForm(): Promise<void> {
 
   const body: MeterReadingBody = {
     roomId: selectedRoomId,
-    billingPeriod: monthInputToBillingPeriod(monthInput.value),
+    billingPeriod,
     utilityType: utilitySelect.value as UtilityType,
     previousReading: previous,
     currentReading: current,

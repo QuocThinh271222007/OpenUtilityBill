@@ -25,6 +25,26 @@ export function utilityTypeDisplayLabel(utilityType: UtilityType): string {
   return utilityType === "ELECTRICITY" ? "Điện" : "Nước";
 }
 
+/**
+ * `InvoiceItem.unitName` là một định danh kỹ thuật cố định của API
+ * (`"kWh"`, `"m3"`, `"person"`, hoặc `null` cho các dòng VAT/phí không
+ * theo đơn vị) — tách riêng khỏi nhãn hiển thị đơn vị tiếng Việt dùng
+ * sau dấu "/" của đơn giá (ví dụ "1.984 ₫/kWh"). Giá trị enum thật
+ * không bao giờ đổi.
+ */
+export function unitNameDisplaySuffix(unitName: string | null): string | null {
+  switch (unitName) {
+    case "kWh":
+      return "kWh";
+    case "m3":
+      return "m³";
+    case "person":
+      return "người/tháng";
+    default:
+      return null;
+  }
+}
+
 export function invoiceItemCategoryDisplayLabel(category: InvoiceItemCategory): string {
   switch (category) {
     case "ELECTRICITY_TIER":

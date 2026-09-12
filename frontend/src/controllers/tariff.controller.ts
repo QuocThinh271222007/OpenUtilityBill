@@ -21,6 +21,9 @@ import {
   tierRowHtml,
   wireTariffTabs,
 } from "../views/tariff.view";
+import { displayDateToIsoDate, moneyDisplayToCanonical, percentInputToRateCanonical } from "../utils/format";
+import { wireMoneyInput } from "../utils/money-input";
+import { wireDateInputMask } from "../utils/masked-text-input";
 import type { ElectricityTariffBody, ElectricityTariffTierInput, ElectricityTariffWithTiers, WaterTariff, WaterTariffBody } from "../types/tariff.types";
 
 /**
@@ -109,6 +112,10 @@ function wireElectricityTariffForm(): void {
   const form = document.querySelector<HTMLFormElement>("#electricity-tariff-form");
   const cancelBtn = document.querySelector<HTMLButtonElement>("#electricity-tariff-cancel-btn");
   const addTierBtn = document.querySelector<HTMLButtonElement>("#electricity-tier-add-btn");
+  const fromInput = document.querySelector<HTMLInputElement>("#electricity-tariff-effective-from");
+  const toInput = document.querySelector<HTMLInputElement>("#electricity-tariff-effective-to");
+  if (fromInput) wireDateInputMask(fromInput);
+  if (toInput) wireDateInputMask(toInput);
 
   form?.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -212,6 +219,8 @@ function wireTierRow(rowEl: HTMLElement | null | undefined): void {
   const removeBtn = rowEl.querySelector<HTMLButtonElement>(".app-tier-remove-btn");
   const unlimitedCheckbox = rowEl.querySelector<HTMLInputElement>(".app-tier-unlimited");
   const thresholdInput = rowEl.querySelector<HTMLInputElement>(".app-tier-threshold");
+  const priceInput = rowEl.querySelector<HTMLInputElement>(".app-tier-price");
+  if (priceInput) wireMoneyInput(priceInput);
 
   removeBtn?.addEventListener("click", () => removeTierRow(rowEl));
   unlimitedCheckbox?.addEventListener("change", () => {
@@ -227,10 +236,11 @@ function collectTierRows(): ElectricityTariffTierInput[] {
     const thresholdInput = row.querySelector<HTMLInputElement>(".app-tier-threshold");
     const priceInput = row.querySelector<HTMLInputElement>(".app-tier-price");
     const isUnlimited = unlimitedCheckbox?.checked ?? false;
+    const unitPriceCanonical = priceInput ? moneyDisplayToCanonical(priceInput.value) : null;
     return {
       tierNumber: index + 1,
       thresholdKwh: isUnlimited ? null : (thresholdInput?.value.trim() ?? ""),
-      unitPrice: priceInput?.value.trim() ?? "",
+      unitPrice: unitPriceCanonical ?? "",
     };
   });
 }
@@ -260,13 +270,22 @@ async function submitElectricityTariffForm(): Promise<void> {
     showGlobalAlert("warning", "Vui lòng nhập tên biểu giá.");
     return;
   }
-  if (!fromInput.value) {
-    showGlobalAlert("warning", "Vui lòng nhập ngày hiệu lực từ.");
+  const effectiveFrom = displayDateToIsoDate(fromInput.value);
+  if (effectiveFrom === null) {
+    showGlobalAlert("warning", "Ngày hiệu lực từ không hợp lệ. Hãy nhập theo định dạng DD/MM/YYYY.");
     return;
   }
-  const vatRate = vatInput.value.trim();
-  if (vatRate.length === 0) {
-    showGlobalAlert("warning", "Vui lòng nhập VAT điện.");
+  let effectiveTo: string | null = null;
+  if (toInput.value.trim().length > 0) {
+    effectiveTo = displayDateToIsoDate(toInput.value);
+    if (effectiveTo === null) {
+      showGlobalAlert("warning", "Ngày hiệu lực đến không hợp lệ. Hãy nhập theo định dạng DD/MM/YYYY.");
+      return;
+    }
+  }
+  const electricityVatRate = percentInputToRateCanonical(vatInput.value);
+  if (electricityVatRate === null) {
+    showGlobalAlert("warning", "VAT điện không hợp lệ.");
     return;
   }
 
@@ -287,7 +306,7 @@ async function submitElectricityTariffForm(): Promise<void> {
 
   const tiers = collectTierRows();
   if (tiers.some((t) => t.unitPrice.length === 0)) {
-    showGlobalAlert("warning", "Vui lòng nhập đơn giá cho mọi bậc.");
+    showGlobalAlert("warning", "Số tiền không hợp lệ. Vui lòng nhập đơn giá cho mọi bậc.");
     return;
   }
   if (tiers.some((t) => t.thresholdKwh === "" )) {
@@ -297,9 +316,9 @@ async function submitElectricityTariffForm(): Promise<void> {
 
   const body: ElectricityTariffBody = {
     name,
-    effectiveFrom: fromInput.value,
-    effectiveTo: toInput.value ? toInput.value : null,
-    electricityVatRate: vatRate,
+    effectiveFrom,
+    effectiveTo,
+    electricityVatRate,
     peoplePerQuotaUnit,
     fallbackTierNumber,
     tiers,
@@ -360,6 +379,14 @@ function wireWaterEditButtons(): void {
 function wireWaterTariffForm(): void {
   const form = document.querySelector<HTMLFormElement>("#water-tariff-form");
   const cancelBtn = document.querySelector<HTMLButtonElement>("#water-tariff-cancel-btn");
+  const cubicInput = document.querySelector<HTMLInputElement>("#water-tariff-price-cubic-meter");
+  const personInput = document.querySelector<HTMLInputElement>("#water-tariff-price-person");
+  const fromInput = document.querySelector<HTMLInputElement>("#water-tariff-effective-from");
+  const toInput = document.querySelector<HTMLInputElement>("#water-tariff-effective-to");
+  if (cubicInput) wireMoneyInput(cubicInput);
+  if (personInput) wireMoneyInput(personInput);
+  if (fromInput) wireDateInputMask(fromInput);
+  if (toInput) wireDateInputMask(toInput);
 
   form?.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -387,23 +414,36 @@ async function submitWaterTariffForm(): Promise<void> {
     showGlobalAlert("warning", "Vui lòng nhập tên biểu giá.");
     return;
   }
-  if (!fromInput.value) {
-    showGlobalAlert("warning", "Vui lòng nhập ngày hiệu lực từ.");
+  const effectiveFrom = displayDateToIsoDate(fromInput.value);
+  if (effectiveFrom === null) {
+    showGlobalAlert("warning", "Ngày hiệu lực từ không hợp lệ. Hãy nhập theo định dạng DD/MM/YYYY.");
     return;
   }
-  const pricePerCubicMeter = cubicInput.value.trim();
-  const pricePerPerson = personInput.value.trim();
-  const vatRate = vatInput.value.trim();
-  const environmentalFeeRate = feeInput.value.trim();
-  if (!pricePerCubicMeter || !pricePerPerson || !vatRate || !environmentalFeeRate) {
-    showGlobalAlert("warning", "Vui lòng nhập đầy đủ giá và tỉ lệ.");
+  let effectiveTo: string | null = null;
+  if (toInput.value.trim().length > 0) {
+    effectiveTo = displayDateToIsoDate(toInput.value);
+    if (effectiveTo === null) {
+      showGlobalAlert("warning", "Ngày hiệu lực đến không hợp lệ. Hãy nhập theo định dạng DD/MM/YYYY.");
+      return;
+    }
+  }
+  const pricePerCubicMeter = moneyDisplayToCanonical(cubicInput.value);
+  const pricePerPerson = moneyDisplayToCanonical(personInput.value);
+  if (pricePerCubicMeter === null || pricePerPerson === null) {
+    showGlobalAlert("warning", "Số tiền không hợp lệ.");
+    return;
+  }
+  const vatRate = percentInputToRateCanonical(vatInput.value);
+  const environmentalFeeRate = percentInputToRateCanonical(feeInput.value);
+  if (vatRate === null || environmentalFeeRate === null) {
+    showGlobalAlert("warning", "VAT hoặc phí môi trường không hợp lệ.");
     return;
   }
 
   const body: WaterTariffBody = {
     name,
-    effectiveFrom: fromInput.value,
-    effectiveTo: toInput.value ? toInput.value : null,
+    effectiveFrom,
+    effectiveTo,
     pricePerCubicMeter,
     pricePerPerson,
     vatRate,

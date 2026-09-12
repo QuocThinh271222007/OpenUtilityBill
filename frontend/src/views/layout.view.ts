@@ -76,7 +76,13 @@ export function closeMobileSidebar(): void {
 
 export function setActiveNavItem(hash: string): void {
   document.querySelectorAll<HTMLAnchorElement>(".app-nav-link").forEach((link) => {
-    link.classList.toggle("active", link.dataset.hash === hash);
+    const isActive = link.dataset.hash === hash;
+    link.classList.toggle("active", isActive);
+    if (isActive) {
+      link.setAttribute("aria-current", "page");
+    } else {
+      link.removeAttribute("aria-current");
+    }
   });
 }
 

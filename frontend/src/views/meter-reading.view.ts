@@ -1,9 +1,14 @@
 // SPDX-License-Identifier: MIT
 
-import { escapeHtml } from "../utils/format";
+import { billingPeriodToMonthDisplay, escapeHtml } from "../utils/format";
 import { utilityTypeDisplayLabel } from "../utils/labels";
-import { renderEmptyState } from "./shared.view";
-import type { MeterReading } from "../types/meter-reading.types";
+import { pageIntroHtml, renderEmptyState, setButtonBusyState } from "./shared.view";
+import type { MeterReading, UtilityType } from "../types/meter-reading.types";
+
+/** "ELECTRICITY" -> "kWh", "WATER" -> "m³" — đơn vị hiển thị cho chỉ số trước/hiện tại/giá trị tối đa. */
+function meterUnitSuffix(utilityType: UtilityType): string {
+  return utilityType === "ELECTRICITY" ? "kWh" : "m³";
+}
 
 /**
  * Trách nhiệm:
@@ -17,6 +22,7 @@ import type { MeterReading } from "../types/meter-reading.types";
  */
 export function renderMeterReadingPage(container: HTMLElement): void {
   container.innerHTML = `
+    ${pageIntroHtml("Nhập và xem lại chỉ số công tơ điện, nước theo từng kỳ.")}
     <div class="card mb-4">
       <div class="card-header">Chọn phòng và kỳ</div>
       <div class="card-body row g-3">
@@ -29,13 +35,14 @@ export function renderMeterReadingPage(container: HTMLElement): void {
           <select class="form-select" id="reading-room-select" disabled><option value="">-- Chọn phòng --</option></select>
         </div>
         <div class="col-md-4">
-          <label for="reading-month-filter" class="form-label">Lọc theo kỳ (không bắt buộc)</label>
-          <input type="month" class="form-control" id="reading-month-filter" />
+          <label for="reading-month-filter" class="form-label">Lọc theo kỳ</label>
+          <input type="text" inputmode="numeric" class="form-control" id="reading-month-filter" placeholder="mm/yyyy" aria-describedby="reading-month-filter-help" />
+          <div class="form-text" id="reading-month-filter-help">Để trống để xem mọi kỳ.</div>
         </div>
       </div>
     </div>
 
-    <div class="card mb-4 d-none" id="reading-form-card">
+    <div class="card mb-4 d-none app-form-card" id="reading-form-card">
       <div class="card-header" id="reading-form-title">Thêm chỉ số</div>
       <div class="card-body">
         <form id="reading-form" novalidate>
@@ -50,21 +57,31 @@ export function renderMeterReadingPage(container: HTMLElement): void {
             </div>
             <div class="col-md-4">
               <label for="reading-billing-month" class="form-label">Kỳ (tháng)</label>
-              <input type="month" class="form-control" id="reading-billing-month" required />
+              <input type="text" inputmode="numeric" class="form-control" id="reading-billing-month" placeholder="mm/yyyy" required />
             </div>
           </div>
           <div class="row g-3 mt-1">
             <div class="col-md-4">
               <label for="reading-previous" class="form-label">Chỉ số trước</label>
-              <input type="text" inputmode="decimal" class="form-control" id="reading-previous" required />
+              <div class="input-group">
+                <input type="text" inputmode="decimal" class="form-control" id="reading-previous" required />
+                <span class="input-group-text app-reading-unit">kWh</span>
+              </div>
             </div>
             <div class="col-md-4">
               <label for="reading-current" class="form-label">Chỉ số hiện tại</label>
-              <input type="text" inputmode="decimal" class="form-control" id="reading-current" required />
+              <div class="input-group">
+                <input type="text" inputmode="decimal" class="form-control" id="reading-current" required />
+                <span class="input-group-text app-reading-unit">kWh</span>
+              </div>
             </div>
             <div class="col-md-4">
-              <label for="reading-max" class="form-label">Giá trị tối đa (nếu có)</label>
-              <input type="text" inputmode="decimal" class="form-control" id="reading-max" placeholder="Để trống nếu không có" />
+              <label for="reading-max" class="form-label">Giá trị tối đa</label>
+              <div class="input-group">
+                <input type="text" inputmode="decimal" class="form-control" id="reading-max" aria-describedby="reading-max-help" />
+                <span class="input-group-text app-reading-unit">kWh</span>
+              </div>
+              <div class="form-text" id="reading-max-help">Để trống nếu công tơ không có giá trị tối đa.</div>
             </div>
           </div>
           <div class="d-flex gap-2 mt-3">
@@ -87,39 +104,36 @@ export function renderMeterReadingPage(container: HTMLElement): void {
   `;
 }
 
-function billingPeriodToMonthLabel(billingPeriod: string): string {
-  return `${billingPeriod.slice(5, 7)}/${billingPeriod.slice(0, 4)}`;
-}
-
-export function renderReadingList(regionEl: HTMLElement, readings: MeterReading[]): void {
+export function renderReadingList(regionEl: HTMLElement, readings: MeterReading[], isFilteredByMonth: boolean): void {
   if (readings.length === 0) {
-    renderEmptyState(regionEl, "Chưa có chỉ số nào cho phòng này.");
+    renderEmptyState(regionEl, isFilteredByMonth ? "Chưa có chỉ số cho kỳ đã chọn." : "Chưa có chỉ số nào cho phòng này.");
     return;
   }
 
   const rows = readings
-    .map(
-      (reading) => `
+    .map((reading) => {
+      const unit = meterUnitSuffix(reading.utilityType);
+      return `
         <tr>
-          <td>${escapeHtml(billingPeriodToMonthLabel(reading.billingPeriod))}</td>
+          <td>${escapeHtml(billingPeriodToMonthDisplay(reading.billingPeriod))}</td>
           <td>${escapeHtml(utilityTypeDisplayLabel(reading.utilityType))}</td>
-          <td>${escapeHtml(reading.previousReading)}</td>
-          <td>${escapeHtml(reading.currentReading)}</td>
-          <td>${reading.meterMaximumValue !== null ? escapeHtml(reading.meterMaximumValue) : "—"}</td>
+          <td class="app-numeric">${escapeHtml(reading.previousReading)} ${unit}</td>
+          <td class="app-numeric">${escapeHtml(reading.currentReading)} ${unit}</td>
+          <td class="app-numeric">${reading.meterMaximumValue !== null ? `${escapeHtml(reading.meterMaximumValue)} ${unit}` : "—"}</td>
           <td>
             <button type="button" class="btn btn-sm btn-outline-primary app-edit-reading-btn" data-id="${escapeHtml(reading.id)}">
               Sửa
             </button>
           </td>
         </tr>
-      `
-    )
+      `;
+    })
     .join("");
 
   regionEl.innerHTML = `
     <div class="table-responsive">
-      <table class="table table-hover align-middle">
-        <thead><tr><th>Kỳ</th><th>Loại</th><th>Chỉ số trước</th><th>Chỉ số hiện tại</th><th>Giá trị tối đa</th><th>Thao tác</th></tr></thead>
+      <table class="table table-hover align-middle app-table">
+        <thead><tr><th>Kỳ</th><th>Loại</th><th class="app-numeric">Chỉ số trước</th><th class="app-numeric">Chỉ số hiện tại</th><th class="app-numeric">Giá trị tối đa</th><th>Thao tác</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>
@@ -150,7 +164,7 @@ export function setReadingFormMode(mode: "create" | "edit", reading?: MeterReadi
     title.textContent = "Sửa chỉ số";
     idInput.value = reading.id;
     utilitySelect.value = reading.utilityType;
-    monthInput.value = reading.billingPeriod.slice(0, 7);
+    monthInput.value = billingPeriodToMonthDisplay(reading.billingPeriod);
     previousInput.value = reading.previousReading;
     currentInput.value = reading.currentReading;
     maxInput.value = reading.meterMaximumValue ?? "";
@@ -165,9 +179,18 @@ export function setReadingFormMode(mode: "create" | "edit", reading?: MeterReadi
     maxInput.value = "";
     cancelBtn.classList.add("d-none");
   }
+  setReadingUnitSuffix(utilitySelect.value as UtilityType);
+}
+
+/** Cập nhật đơn vị hiển thị (kWh/m³) của chỉ số trước/hiện tại/giá trị tối đa theo loại đang chọn — gọi lại mỗi khi `#reading-utility-type` đổi. */
+export function setReadingUnitSuffix(utilityType: UtilityType): void {
+  const unit = meterUnitSuffix(utilityType);
+  document.querySelectorAll<HTMLElement>(".app-reading-unit").forEach((el) => {
+    el.textContent = unit;
+  });
 }
 
 export function setReadingSubmitDisabled(disabled: boolean): void {
   const btn = document.querySelector<HTMLButtonElement>("#reading-submit-btn");
-  if (btn) btn.disabled = disabled;
+  if (btn) setButtonBusyState(btn, disabled, "Đang lưu…");
 }

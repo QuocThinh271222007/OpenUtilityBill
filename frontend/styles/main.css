@@ -1,86 +1,69 @@
 /* SPDX-License-Identifier: MIT */
 
 /*
- * CSS tuỳ chỉnh cho app shell (sidebar + nội dung), bổ sung cho
- * Bootstrap. Font hệ thống (system font stack) — không phụ thuộc font
- * ngoài. Responsive: sidebar cố định trên desktop, thu gọn thành thanh
- * điều hướng có thể mở/đóng trên màn hình nhỏ (xem #app-nav-toggle).
+ * CSS tuỳ chỉnh cho app shell + các thành phần dùng chung, bổ sung cho
+ * Bootstrap (không thay thế, không nạp thư viện UI khác). Font hệ
+ * thống (system font stack) — không phụ thuộc font ngoài.
+ *
+ * Tổ chức theo khu vực (đọc theo thứ tự dưới đây khi cần sửa):
+ *   1. Design tokens
+ *   2. Layout / app shell
+ *   3. Sidebar / navigation
+ *   4. Page header (tiêu đề + mô tả ngắn)
+ *   5. Cards
+ *   6. Forms
+ *   7. Tables
+ *   8. Invoice summary / trạng thái chênh lệch
+ *   9. Trạng thái rỗng / đang tải / cảnh báo
+ *   10. Responsive adjustments
+ *
+ * Ưu tiên class dùng lại (reusable) — tránh selector riêng cho từng
+ * màn hình trừ khi thực sự cần (ví dụ `.app-invoice-total` vì đây là
+ * điểm nhấn số tiền quan trọng nhất của một trang cụ thể).
  */
 
+/* ==================== 1. Design tokens ==================== */
+
 :root {
-  --app-sidebar-width: 240px;
+  --app-sidebar-width: 250px;
   --app-font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  --app-color-bg: #f5f7fa;
+  --app-color-surface: #ffffff;
+  --app-color-border: #dee2e6;
+  --app-color-text-muted: #6c757d;
+
+  --app-sidebar-bg: #1f2937;
+  --app-sidebar-text: #cbd5e1;
+  --app-sidebar-text-active: #ffffff;
+  --app-sidebar-accent: #0d6efd;
+
+  --app-radius: 0.5rem;
+  --app-form-max-width: 900px;
 }
 
 body {
-  background-color: #f8f9fa;
+  background-color: var(--app-color-bg);
   font-family: var(--app-font-stack);
 }
 
-/* ---------------- App shell layout ---------------- */
+/* Trạng thái focus rõ ràng, nhất quán cho mọi phần tử tương tác — bàn
+   phím phải luôn thấy được đang ở đâu (yêu cầu accessibility). */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+.app-nav-link:focus-visible {
+  outline: 2px solid var(--app-sidebar-accent);
+  outline-offset: 2px;
+}
+
+/* ==================== 2. Layout / app shell ==================== */
 
 .app-shell {
   display: flex;
   min-height: 100vh;
-}
-
-.app-sidebar {
-  width: var(--app-sidebar-width);
-  flex-shrink: 0;
-  background-color: #1f2937;
-  color: #e5e7eb;
-  display: flex;
-  flex-direction: column;
-  padding: 1rem 0;
-}
-
-.app-brand {
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: #ffffff;
-  padding: 0 1.25rem 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  margin-bottom: 0.5rem;
-}
-
-.app-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-  flex: 1 1 auto;
-}
-
-.app-nav-link {
-  display: block;
-  padding: 0.6rem 1.25rem;
-  color: #cbd5e1;
-  text-decoration: none;
-  font-size: 0.95rem;
-  border-left: 3px solid transparent;
-}
-
-.app-nav-link:hover {
-  background-color: rgba(255, 255, 255, 0.06);
-  color: #ffffff;
-}
-
-.app-nav-link.active {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
-  border-left-color: #0d6efd;
-  font-weight: 600;
-}
-
-.app-sidebar-footer {
-  padding: 1rem 1.25rem 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  margin-top: 1rem;
-}
-
-.app-backend-status-detail {
-  font-size: 0.75rem;
-  margin-top: 0.25rem;
-  color: #94a3b8 !important;
 }
 
 .app-main {
@@ -95,8 +78,8 @@ body {
   align-items: center;
   gap: 0.75rem;
   padding: 1rem 1.5rem;
-  background-color: #ffffff;
-  border-bottom: 1px solid #dee2e6;
+  background-color: var(--app-color-surface);
+  border-bottom: 1px solid var(--app-color-border);
 }
 
 .app-page-title {
@@ -122,14 +105,102 @@ body {
   flex: 1 1 auto;
 }
 
-/* ---------------- Content elements ---------------- */
+/* ==================== 3. Sidebar / navigation ==================== */
+
+.app-sidebar {
+  width: var(--app-sidebar-width);
+  flex-shrink: 0;
+  background-color: var(--app-sidebar-bg);
+  color: var(--app-sidebar-text);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+
+.app-brand {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #ffffff;
+  padding: 1.1rem 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.app-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  flex: 1 1 auto;
+  padding: 0.75rem 0.6rem;
+}
+
+/* Nhãn dễ scan + vùng bấm đủ lớn (>= 44px chiều cao, hướng dẫn touch
+   target tối thiểu) — quan trọng cho cả chuột lẫn cảm ứng di động. */
+.app-nav-link {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.375rem;
+  color: var(--app-sidebar-text);
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 500;
+  border-left: 3px solid transparent;
+}
+
+.app-nav-link:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+/* Mục đang active: nền + màu chữ + viền trái CÙNG lúc — không chỉ dựa
+   vào một mình màu sắc để phân biệt (accessibility). */
+.app-nav-link.active {
+  background-color: rgba(255, 255, 255, 0.12);
+  color: var(--app-sidebar-text-active);
+  border-left-color: var(--app-sidebar-accent);
+  font-weight: 600;
+}
+
+.app-sidebar-footer {
+  padding: 0.85rem 1.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* Badge trạng thái backend — cố ý nhỏ/mờ hơn điều hướng chính, vì đây
+   là thông tin phụ trợ (chẩn đoán), không phải một mục điều hướng. */
+.app-backend-status-detail {
+  font-size: 0.75rem;
+  margin-top: 0.3rem;
+  color: #94a3b8 !important;
+}
+
+/* ==================== 4. Page header ==================== */
+
+.app-page-description {
+  color: var(--app-color-text-muted);
+  font-size: 0.95rem;
+  margin: -0.25rem 0 1.25rem;
+  max-width: 60ch;
+}
+
+/* ==================== 5. Cards ==================== */
+
+.card {
+  border-color: var(--app-color-border);
+}
+
+.card-header {
+  background-color: var(--app-color-surface);
+  font-weight: 600;
+}
 
 .app-stat-card .card-body {
   text-align: center;
 }
 
 .app-stat-label {
-  color: #6c757d;
+  color: var(--app-color-text-muted);
   font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.03em;
@@ -140,19 +211,22 @@ body {
   font-weight: 700;
 }
 
+/* ==================== 6. Forms ==================== */
+
+/* Form chính không nên kéo dài hết chiều ngang trên desktop rộng — dễ
+   quét hơn khi giới hạn độ rộng. Danh sách/bảng phía dưới KHÔNG dùng
+   class này, vẫn chiếm toàn bộ chiều ngang sẵn có. */
+.app-form-card {
+  max-width: var(--app-form-max-width);
+}
+
 .app-inline-filter {
   min-width: 200px;
 }
 
-.app-empty-state,
-.app-loading {
-  padding: 1rem 0;
-  margin: 0;
-}
-
 .app-tier-row {
-  background-color: #f8f9fa;
-  border: 1px solid #e9ecef;
+  background-color: var(--app-color-bg);
+  border: 1px solid var(--app-color-border);
   border-radius: 0.375rem;
   padding: 0.75rem;
 }
@@ -161,23 +235,90 @@ body {
   width: 4.5rem;
 }
 
-/* ---------------- Invoice emphasis ---------------- */
+/* Đơn vị dài (đ/người/tháng, đ/kWh, ...) không bao giờ tự xuống dòng
+   giữa chừng — tránh vỡ layout trên màn hình hẹp. */
+.input-group-text {
+  white-space: nowrap;
+}
+
+@media (max-width: 374.98px) {
+  .input-group-text {
+    font-size: 0.8rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+}
+
+/* ==================== 7. Tables ==================== */
+
+.app-table thead th {
+  background-color: var(--app-color-bg);
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #495057;
+  border-bottom-width: 1px;
+}
+
+/* Cột số/tiền: căn phải + chữ số đều nhau (tabular figures) để dễ so
+   sánh giữa các dòng — không đổi giá trị, chỉ đổi cách hiển thị. */
+.app-numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ==================== 8. Invoice summary / trạng thái chênh lệch ==================== */
 
 .app-invoice-summary .card-header,
 .app-invoice-total,
-.app-invoice-difference .card-header {
+.app-invoice-section .card-header {
   background-color: #eef4ff;
 }
 
 .app-invoice-total {
-  border: 2px solid #0d6efd;
+  border: 2px solid var(--app-sidebar-accent);
 }
 
 .app-invoice-total .card-body {
   padding: 1.25rem 1.5rem;
 }
 
-/* ---------------- Responsive ---------------- */
+.app-invoice-section + .app-invoice-section {
+  margin-top: 1rem;
+}
+
+/* Trạng thái chênh lệch: viền trái theo mức ý nghĩa (thu cao hơn/thấp
+   hơn/khớp) CỘNG với badge + văn bản rõ ràng — không chỉ dựa vào màu. */
+.app-invoice-difference {
+  border-left: 4px solid var(--app-color-border);
+}
+
+.app-invoice-difference[data-diff-status="over"] {
+  border-left-color: #ffc107;
+}
+
+.app-invoice-difference[data-diff-status="under"] {
+  border-left-color: #dc3545;
+}
+
+.app-invoice-difference[data-diff-status="exact"] {
+  border-left-color: #198754;
+}
+
+/* ==================== 9. Trạng thái rỗng / đang tải / cảnh báo ==================== */
+
+.app-empty-state,
+.app-loading {
+  padding: 1.25rem 0;
+  margin: 0;
+  text-align: center;
+}
+
+.app-empty-state-action {
+  margin-top: 0.75rem;
+}
+
+/* ==================== 10. Responsive adjustments ==================== */
 
 @media (max-width: 991.98px) {
   .app-sidebar {
@@ -219,5 +360,14 @@ body {
 
   .app-page-title {
     font-size: 1.1rem;
+  }
+
+  .app-page-description {
+    font-size: 0.875rem;
+  }
+
+  /* Nút chính không co lại quá nhỏ trên di động — vẫn dễ bấm. */
+  .app-content .btn {
+    min-height: 2.5rem;
   }
 }

@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 
-import { escapeHtml, formatDateDisplay, formatVndDisplay, classifyBillingDifference } from "../utils/format";
-import { electricityMethodDisplayLabel, invoiceItemCategoryDisplayLabel, waterMethodDisplayLabel } from "../utils/labels";
-import type { Invoice, InvoiceItem } from "../types/invoice.types";
+import { escapeHtml, isoDateToDisplayDate, formatVndDisplay, classifyBillingDifference } from "../utils/format";
+import { electricityMethodDisplayLabel, invoiceItemCategoryDisplayLabel, unitNameDisplaySuffix, waterMethodDisplayLabel } from "../utils/labels";
+import { pageIntroHtml, setButtonBusyState } from "./shared.view";
+import type { Invoice, InvoiceItem, InvoiceItemCategory } from "../types/invoice.types";
 
 /**
  * Trách nhiệm:
@@ -21,7 +22,8 @@ import type { Invoice, InvoiceItem } from "../types/invoice.types";
  */
 export function renderInvoicePage(container: HTMLElement): void {
   container.innerHTML = `
-    <div class="card mb-4">
+    ${pageIntroHtml("Tạo và kiểm tra chi phí điện nước theo từng kỳ.")}
+    <div class="card mb-4 app-form-card">
       <div class="card-header">Tạo hóa đơn</div>
       <div class="card-body">
         <form id="invoice-form" novalidate>
@@ -36,7 +38,7 @@ export function renderInvoicePage(container: HTMLElement): void {
             </div>
             <div class="col-md-4">
               <label for="invoice-month" class="form-label">Kỳ hóa đơn (tháng)</label>
-              <input type="month" class="form-control" id="invoice-month" required />
+              <input type="text" inputmode="numeric" class="form-control" id="invoice-month" placeholder="mm/yyyy" required />
             </div>
           </div>
           <div class="row g-3 mt-1">
@@ -57,8 +59,12 @@ export function renderInvoicePage(container: HTMLElement): void {
           </div>
           <div class="row g-3 mt-1">
             <div class="col-md-6">
-              <label for="invoice-actual-charged" class="form-label">Số tiền thực thu (không bắt buộc)</label>
-              <input type="text" inputmode="decimal" class="form-control" id="invoice-actual-charged" placeholder="Để trống nếu chưa thu" />
+              <label for="invoice-actual-charged" class="form-label">Số tiền thực thu</label>
+              <div class="input-group">
+                <input type="text" inputmode="decimal" class="form-control" id="invoice-actual-charged" aria-describedby="invoice-actual-charged-help" />
+                <span class="input-group-text">đ</span>
+              </div>
+              <div class="form-text" id="invoice-actual-charged-help">Để trống nếu chưa có số tiền thực thu.</div>
             </div>
           </div>
           <div class="d-flex flex-wrap gap-2 mt-3">
@@ -74,7 +80,7 @@ export function renderInvoicePage(container: HTMLElement): void {
 
 export function setInvoiceSubmitDisabled(disabled: boolean): void {
   const btn = document.querySelector<HTMLButtonElement>("#invoice-submit-btn");
-  if (btn) btn.disabled = disabled;
+  if (btn) setButtonBusyState(btn, disabled, "Đang tạo hóa đơn…");
 }
 
 function billingPeriodToMonthLabel(billingPeriod: string): string {
@@ -88,34 +94,72 @@ function itemDescriptionLabel(item: InvoiceItem): string {
 }
 
 function itemRowHtml(item: InvoiceItem): string {
+  const unitSuffix = unitNameDisplaySuffix(item.unitName);
+  const unitPriceDisplay = item.unitPrice !== null ? `${formatVndDisplay(item.unitPrice)}${unitSuffix ? `/${unitSuffix}` : ""}` : "—";
   return `
     <tr>
       <td>${escapeHtml(itemDescriptionLabel(item))}</td>
-      <td>${item.quantity !== null ? escapeHtml(item.quantity) : "—"}</td>
-      <td>${item.unitName !== null ? escapeHtml(item.unitName) : "—"}</td>
-      <td>${item.unitPrice !== null ? escapeHtml(item.unitPrice) : "—"}</td>
-      <td class="text-end">${escapeHtml(formatVndDisplay(item.amount))}</td>
+      <td class="app-numeric">${item.quantity !== null ? escapeHtml(item.quantity) : "—"}</td>
+      <td>${unitSuffix !== null ? escapeHtml(unitSuffix) : "—"}</td>
+      <td class="app-numeric">${escapeHtml(unitPriceDisplay)}</td>
+      <td class="app-numeric">${escapeHtml(formatVndDisplay(item.amount))}</td>
     </tr>
+  `;
+}
+
+const ELECTRICITY_CATEGORIES: readonly InvoiceItemCategory[] = ["ELECTRICITY_TIER", "ELECTRICITY_VAT"];
+const WATER_CATEGORIES: readonly InvoiceItemCategory[] = ["WATER_BASE", "WATER_VAT", "WATER_ENVIRONMENTAL_FEE"];
+
+/**
+ * Nhóm các dòng breakdown theo điện/nước ĐỂ HIỂN THỊ trong hai khối
+ * riêng (xem `renderInvoiceResult`) — CHỈ lọc theo `category`, KHÔNG
+ * cộng dồn `amount` thành một dòng "tổng phụ" mới: backend không trả
+ * sẵn tổng phụ theo từng loại tiện ích, và cộng số tiền ở đây sẽ là một
+ * phép tính tài chính trên frontend (bị cấm — xem bất biến ở đầu file).
+ * "Tổng hợp pháp" hiển thị bên dưới vẫn LUÔN là `invoice.calculatedTotal`
+ * nguyên văn từ backend.
+ */
+function itemsSectionHtml(title: string, items: InvoiceItem[]): string {
+  if (items.length === 0) return "";
+  const rows = items.map(itemRowHtml).join("");
+  return `
+    <div class="card mb-3 app-invoice-section">
+      <div class="card-header">${escapeHtml(title)}</div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-bordered align-middle mb-0 app-table">
+            <thead><tr><th>Nội dung</th><th class="app-numeric">Số lượng</th><th>Đơn vị</th><th class="app-numeric">Đơn giá</th><th class="app-numeric">Thành tiền</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   `;
 }
 
 function differenceBlockHtml(invoice: Invoice, billingDifference: string): string {
   const status = classifyBillingDifference(billingDifference);
   const statusLabel =
-    status === "over" ? "Thu cao hơn mức tính hợp pháp" : status === "under" ? "Thu thấp hơn mức tính hợp pháp" : "Khớp";
+    status === "over"
+      ? "Thu cao hơn mức tính hợp pháp"
+      : status === "under"
+        ? "Thu thấp hơn mức tính hợp pháp"
+        : "Khớp với mức tính hợp pháp";
   const badgeClass = status === "over" ? "text-bg-warning" : status === "under" ? "text-bg-danger" : "text-bg-success";
   const actualChargedDisplay = invoice.actualChargedAmount !== null ? formatVndDisplay(invoice.actualChargedAmount) : "—";
 
   return `
-    <div class="card app-invoice-difference">
-      <div class="card-header">Đối chiếu thực thu / hợp pháp</div>
-      <div class="card-body">
-        <dl class="row mb-3">
-          <dt class="col-sm-4">Số tiền thực thu</dt><dd class="col-sm-8">${escapeHtml(actualChargedDisplay)}</dd>
-          <dt class="col-sm-4">Số tiền hợp pháp</dt><dd class="col-sm-8">${escapeHtml(formatVndDisplay(invoice.calculatedTotal))}</dd>
-          <dt class="col-sm-4">Chênh lệch</dt><dd class="col-sm-8">${escapeHtml(formatVndDisplay(billingDifference))}</dd>
-        </dl>
+    <div class="card app-invoice-difference" data-diff-status="${status}">
+      <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <span>Đối chiếu thực thu / hợp pháp</span>
         <span class="badge ${badgeClass}">${escapeHtml(statusLabel)}</span>
+      </div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-sm-5">Số tiền thực thu</dt><dd class="col-sm-7 app-numeric">${escapeHtml(actualChargedDisplay)}</dd>
+          <dt class="col-sm-5">Số tiền hợp pháp</dt><dd class="col-sm-7 app-numeric">${escapeHtml(formatVndDisplay(invoice.calculatedTotal))}</dd>
+          <dt class="col-sm-5">Chênh lệch</dt><dd class="col-sm-7 app-numeric">${escapeHtml(formatVndDisplay(billingDifference))}</dd>
+        </dl>
       </div>
     </div>
   `;
@@ -128,7 +172,8 @@ export function renderInvoiceResult(
   billingDifference: string | null,
   roomLabel: string
 ): void {
-  const itemRows = items.map(itemRowHtml).join("");
+  const electricityItems = items.filter((item) => ELECTRICITY_CATEGORIES.includes(item.category));
+  const waterItems = items.filter((item) => WATER_CATEGORIES.includes(item.category));
   const differenceHtml = billingDifference !== null ? differenceBlockHtml(invoice, billingDifference) : "";
 
   regionEl.innerHTML = `
@@ -136,7 +181,7 @@ export function renderInvoiceResult(
       <div class="card-header">Hóa đơn — ${escapeHtml(roomLabel)}</div>
       <div class="card-body">
         <dl class="row mb-0">
-          <dt class="col-sm-4">Kỳ hóa đơn</dt><dd class="col-sm-8">${escapeHtml(billingPeriodToMonthLabel(invoice.billingPeriod))} (${escapeHtml(formatDateDisplay(invoice.billingPeriod))})</dd>
+          <dt class="col-sm-4">Kỳ hóa đơn</dt><dd class="col-sm-8">${escapeHtml(billingPeriodToMonthLabel(invoice.billingPeriod))} (${escapeHtml(isoDateToDisplayDate(invoice.billingPeriod))})</dd>
           <dt class="col-sm-4">Số người dùng để tính</dt><dd class="col-sm-8">${invoice.tenantCountUsed}</dd>
           <dt class="col-sm-4">Phương pháp tính điện</dt><dd class="col-sm-8">${escapeHtml(electricityMethodDisplayLabel(invoice.electricityBillingMethod))}</dd>
           <dt class="col-sm-4">Phương pháp tính nước</dt><dd class="col-sm-8">${escapeHtml(waterMethodDisplayLabel(invoice.waterBillingMethod))}</dd>
@@ -144,22 +189,13 @@ export function renderInvoiceResult(
       </div>
     </div>
 
-    <div class="card mb-4">
-      <div class="card-header">Chi tiết tính hóa đơn</div>
-      <div class="card-body">
-        <div class="table-responsive">
-          <table class="table table-bordered align-middle mb-0">
-            <thead><tr><th>Nội dung</th><th>Số lượng</th><th>Đơn vị</th><th>Đơn giá</th><th class="text-end">Thành tiền</th></tr></thead>
-            <tbody>${itemRows}</tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+    ${itemsSectionHtml("Chi phí điện", electricityItems)}
+    ${itemsSectionHtml("Chi phí nước", waterItems)}
 
     <div class="card app-invoice-total mb-4">
-      <div class="card-body d-flex justify-content-between align-items-center">
+      <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-2">
         <span class="fs-5">Tổng hợp pháp</span>
-        <span class="fs-4 fw-bold">${escapeHtml(formatVndDisplay(invoice.calculatedTotal))}</span>
+        <span class="fs-4 fw-bold app-numeric">${escapeHtml(formatVndDisplay(invoice.calculatedTotal))}</span>
       </div>
     </div>
 
@@ -172,12 +208,12 @@ export function renderInvoiceAlreadyExistsPrompt(regionEl: HTMLElement): void {
     <div class="alert alert-warning d-flex flex-wrap justify-content-between align-items-center gap-2">
       <span>Hóa đơn cho phòng và kỳ này đã tồn tại.</span>
       <button type="button" class="btn btn-sm btn-primary" id="invoice-load-existing-btn">
-        Hóa đơn đã tồn tại — tải hóa đơn đã lưu
+        Xem hóa đơn đã lưu
       </button>
     </div>
   `;
 }
 
 export function renderInvoiceNotFound(regionEl: HTMLElement): void {
-  regionEl.innerHTML = `<div class="alert alert-secondary">Chưa có hóa đơn đã lưu cho phòng và kỳ này.</div>`;
+  regionEl.innerHTML = `<div class="alert alert-secondary">Chưa có hóa đơn cho phòng và kỳ này.</div>`;
 }

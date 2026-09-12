@@ -6,9 +6,10 @@ import { escapeHtml } from "../utils/format";
  * Trách nhiệm:
  * Các hàm render DÙNG CHUNG bởi mọi screen: vùng cảnh báo toàn cục
  * (`#app-alert-region`, do `views/layout.view.ts` tạo), trạng thái
- * "đang tải", trạng thái rỗng, và render `<option>` cho các `<select>`
- * dùng lặp lại (cơ sở, phòng) ở nhiều screen (room, meter-reading,
- * invoice).
+ * "đang tải", trạng thái rỗng (có thể kèm một hành động tiếp theo),
+ * trạng thái "đang xử lý" của nút submit, đoạn mô tả ngắn dưới tiêu đề
+ * trang, và render `<option>` cho các `<select>` dùng lặp lại (cơ sở,
+ * phòng) ở nhiều screen (room, meter-reading, invoice).
  *
  * Không chịu trách nhiệm:
  * - gọi API hay quyết định NỘI DUNG cảnh báo — Controller quyết định
@@ -57,12 +58,52 @@ export function clearGlobalAlerts(): void {
   if (region) region.textContent = "";
 }
 
-export function renderLoading(container: HTMLElement, label = "Đang tải..."): void {
+export function renderLoading(container: HTMLElement, label = "Đang tải dữ liệu…"): void {
   container.innerHTML = `<p class="text-muted app-loading">${escapeHtml(label)}</p>`;
 }
 
-export function renderEmptyState(container: HTMLElement, message: string): void {
-  container.innerHTML = `<p class="text-muted app-empty-state">${escapeHtml(message)}</p>`;
+/**
+ * `actionHtml` là HTML TIN CẬY do chính view gọi truyền vào (ví dụ một
+ * `<a class="btn btn-primary" href="#/properties">Tạo cơ sở</a>`), KHÔNG
+ * BAO GIỜ nội suy dữ liệu người dùng/backend trực tiếp vào đó — nếu cần
+ * hiển thị dữ liệu động bên trong, phải tự `escapeHtml` trước ở nơi gọi.
+ * `message` (văn bản chính) vẫn luôn được escape ở đây.
+ */
+export function renderEmptyState(container: HTMLElement, message: string, actionHtml?: string): void {
+  container.innerHTML = `
+    <div class="app-empty-state">
+      <p class="text-muted mb-0">${escapeHtml(message)}</p>
+      ${actionHtml ? `<div class="app-empty-state-action">${actionHtml}</div>` : ""}
+    </div>
+  `;
+}
+
+/**
+ * Chuyển một nút submit vào/ra trạng thái "đang xử lý" — đổi nhãn tạm
+ * thời (lưu nhãn gốc vào `dataset.originalLabel` lần đầu) và bật/tắt
+ * `disabled`. Dùng chung cho mọi form Lưu/Tạo để người dùng thấy rõ yêu
+ * cầu đang chạy, và để ngăn double-submit (nút đã `disabled` trong lúc
+ * xử lý) — không đổi hành vi transaction/idempotency của backend, chỉ
+ * là trạng thái hiển thị phía UI.
+ */
+export function setButtonBusyState(button: HTMLButtonElement, busy: boolean, busyLabel = "Đang xử lý…"): void {
+  if (busy) {
+    if (button.dataset.originalLabel === undefined) {
+      button.dataset.originalLabel = button.textContent ?? "";
+    }
+    button.disabled = true;
+    button.textContent = busyLabel;
+  } else {
+    button.disabled = false;
+    if (button.dataset.originalLabel !== undefined) {
+      button.textContent = button.dataset.originalLabel;
+    }
+  }
+}
+
+/** Đoạn mô tả ngắn ngay dưới tiêu đề trang — dùng ở đầu mỗi `render*Page`. Chỉ MỘT dòng, không phải đoạn văn hướng dẫn dài. */
+export function pageIntroHtml(description: string): string {
+  return `<p class="app-page-description">${escapeHtml(description)}</p>`;
 }
 
 /**
