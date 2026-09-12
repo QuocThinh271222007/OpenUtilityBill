@@ -129,6 +129,7 @@ khi lỗi mạng — xem `docs/FRONTEND.md` mục "Ranh giới API client"). Xem
 
 ```
 OpenUtilityBill/
+  .github/workflows/   CI (typecheck/build/test backend + frontend)
   backend/     REST API Node.js + TypeScript + Express, domain model,
                Calculation Core (backend/src/calculation/), adapter
                database (backend/src/database/), tầng Repository
@@ -140,3 +141,11 @@ OpenUtilityBill/
   docs/        Tài liệu kiến trúc, truy cập database, tính toán, API/
                API quản lý, frontend, và cơ sở lựa chọn kỹ thuật
 ```
+
+## CI
+
+`.github/workflows/ci.yml` chạy trên mỗi `push`/`pull_request`:
+typecheck + build + test cho backend, typecheck + build cho frontend.
+CI KHÔNG cấu hình `DATABASE_URL` — các test tích hợp database
+(`*.integration.test.ts`) tự động SKIP trong CI đúng như khi chạy local
+không có biến này (xem mục "Backend" ở trên).
