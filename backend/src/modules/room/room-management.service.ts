@@ -23,6 +23,9 @@ import { CreateRoomInput, RoomManagementDependencies, UpdateRoomInput } from "./
  *   Service không tự làm pre-check riêng vì `UNIQUE` là ràng buộc DB
  *   đã đủ mạnh cho race condition này, không cần một pre-check bổ sung
  *   như invoice's `findByRoomAndPeriod`).
+ * - `delete`: `ROOM_HAS_DEPENDENCIES` propagate từ Repository khi vẫn
+ *   còn meter reading hoặc invoice thuộc room này — KHÔNG cascade xoá
+ *   các bản ghi đó.
  *
  * Bất biến quan trọng:
  * `Room.tenantCount` là trạng thái HIỆN TẠI — sửa nó qua `update`
@@ -106,5 +109,17 @@ export class RoomManagementService {
     }
 
     return this.deps.roomRepository.update(id, update);
+  }
+
+  /**
+   * Xoá đúng MỘT room — KHÔNG cascade xoá meter reading/invoice. Nếu
+   * vẫn còn bản ghi thuộc room này, Repository trả `ROOM_HAS_DEPENDENCIES`
+   * (dịch từ FK violation `ON DELETE RESTRICT`).
+   */
+  async delete(id: string): Promise<Result<{ id: string }>> {
+    if (!isPositiveIntegerId(id)) {
+      return fail("VALIDATION_ERROR", `roomId không hợp lệ (phải là chuỗi số nguyên dương): "${id}".`);
+    }
+    return this.deps.roomRepository.deleteById(id);
   }
 }

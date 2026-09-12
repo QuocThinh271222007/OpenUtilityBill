@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: MIT
 
 import { Router } from "express";
-import { createCreatePropertyController, createListPropertiesController, createUpdatePropertyController } from "./property.controller";
+import {
+  createCreatePropertyController,
+  createDeletePropertyController,
+  createListPropertiesController,
+  createUpdatePropertyController,
+} from "./property.controller";
 import { getPropertyManagementService } from "../../composition/property.composition";
 
 /**
@@ -19,5 +24,6 @@ const propertyRoutes = Router();
 propertyRoutes.get("/properties", createListPropertiesController(getPropertyManagementService));
 propertyRoutes.post("/properties", createCreatePropertyController(getPropertyManagementService));
 propertyRoutes.patch("/properties/:propertyId", createUpdatePropertyController(getPropertyManagementService));
+propertyRoutes.delete("/properties/:propertyId", createDeletePropertyController(getPropertyManagementService));
 
 export default propertyRoutes;

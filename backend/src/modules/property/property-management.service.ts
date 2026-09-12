@@ -16,8 +16,11 @@ import { CreatePropertyInput, PropertyManagementDependencies, UpdatePropertyInpu
  * Điều kiện lỗi:
  * - `create`/`update`: `VALIDATION_ERROR` khi `name` rỗng sau khi trim,
  *   hoặc PATCH không có field nào.
- * - `update`: `VALIDATION_ERROR` khi `id` không đúng hình dạng BIGINT;
- *   `PROPERTY_NOT_FOUND` propagate từ Repository khi không có property.
+ * - `update`/`delete`: `VALIDATION_ERROR` khi `id` không đúng hình dạng
+ *   BIGINT; `PROPERTY_NOT_FOUND` propagate từ Repository khi không có
+ *   property.
+ * - `delete`: `PROPERTY_HAS_DEPENDENCIES` propagate từ Repository khi
+ *   vẫn còn Room thuộc property này — KHÔNG cascade xoá room.
  *
  * Bất biến quan trọng:
  * `name` luôn được trim TRƯỚC khi lưu; `address` cũng được trim, và một
@@ -28,7 +31,6 @@ import { CreatePropertyInput, PropertyManagementDependencies, UpdatePropertyInpu
  * Không chịu trách nhiệm:
  * - chứa SQL/Postgres.js import — chỉ phụ thuộc `PropertyRepository`
  *   interface.
- * - implement `delete` — xem docs/MANAGEMENT_API.md.
  */
 
 /** `name` phải KHÔNG RỖNG sau khi trim — một property không tên không có ý nghĩa nghiệp vụ. */
@@ -96,5 +98,17 @@ export class PropertyManagementService {
     }
 
     return this.deps.propertyRepository.update(id, update);
+  }
+
+  /**
+   * Xoá đúng MỘT property — KHÔNG cascade xoá room. Nếu vẫn còn room
+   * thuộc property này, Repository trả `PROPERTY_HAS_DEPENDENCIES`
+   * (dịch từ FK violation `rooms.property_id ON DELETE RESTRICT`).
+   */
+  async delete(id: string): Promise<Result<{ id: string }>> {
+    if (!isPositiveIntegerId(id)) {
+      return fail("VALIDATION_ERROR", `propertyId không hợp lệ (phải là chuỗi số nguyên dương): "${id}".`);
+    }
+    return this.deps.propertyRepository.deleteById(id);
   }
 }

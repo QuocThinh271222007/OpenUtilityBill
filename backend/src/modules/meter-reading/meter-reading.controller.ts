@@ -25,6 +25,7 @@ interface MeterReadingManagementServiceLike {
   list(roomId: string, billingPeriod?: Date): Promise<Result<MeterReading[]>>;
   create(input: CreateMeterReadingInput): Promise<Result<MeterReading>>;
   update(id: string, input: UpdateMeterReadingInput): Promise<Result<MeterReading>>;
+  delete(id: string): Promise<Result<{ id: string }>>;
 }
 
 function extractBody(
@@ -141,6 +142,21 @@ export function createUpdateMeterReadingController(getService: () => MeterReadin
       res.status(200).json({ success: true, data: serializeMeterReading(result.data) });
     } catch (error) {
       sendInternalError("meter-reading.controller.updateMeterReading", error, res);
+    }
+  };
+}
+
+export function createDeleteMeterReadingController(getService: () => MeterReadingManagementServiceLike) {
+  return async function deleteMeterReading(req: Request, res: Response): Promise<void> {
+    try {
+      const result = await getService().delete(req.params.readingId);
+      if (!result.success) {
+        res.status(mapResultErrorCodeToHttpStatus(result.error.code)).json({ success: false, error: result.error });
+        return;
+      }
+      res.status(200).json({ success: true, data: { id: result.data.id } });
+    } catch (error) {
+      sendInternalError("meter-reading.controller.deleteMeterReading", error, res);
     }
   };
 }

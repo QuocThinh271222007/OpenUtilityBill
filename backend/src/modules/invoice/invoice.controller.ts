@@ -52,6 +52,10 @@ interface GetInvoiceServiceLike {
   execute(input: GetInvoiceInput): Promise<Result<GetInvoiceResult>>;
 }
 
+interface DeleteInvoiceServiceLike {
+  execute(invoiceId: string): Promise<Result<{ id: string }>>;
+}
+
 export function createPostInvoiceController(getService: () => CreateInvoiceServiceLike) {
   return async function postInvoice(req: Request, res: Response): Promise<void> {
     try {
@@ -129,6 +133,21 @@ export function createGetInvoiceController(getService: () => GetInvoiceServiceLi
       res.status(200).json({ success: true, data: serializeGetInvoiceResult(result.data) });
     } catch (error) {
       sendInternalError("invoice.controller.getInvoice", error, res);
+    }
+  };
+}
+
+export function createDeleteInvoiceController(getService: () => DeleteInvoiceServiceLike) {
+  return async function deleteInvoice(req: Request, res: Response): Promise<void> {
+    try {
+      const result = await getService().execute(req.params.invoiceId);
+      if (!result.success) {
+        res.status(mapResultErrorCodeToHttpStatus(result.error.code)).json({ success: false, error: result.error });
+        return;
+      }
+      res.status(200).json({ success: true, data: { id: result.data.id } });
+    } catch (error) {
+      sendInternalError("invoice.controller.deleteInvoice", error, res);
     }
   };
 }

@@ -28,12 +28,14 @@ interface ElectricityTariffManagementServiceLike {
   list(): Promise<Result<ElectricityTariffWithTiers[]>>;
   create(input: CreateElectricityTariffInput): Promise<Result<ElectricityTariffWithTiers>>;
   update(id: string, input: UpdateElectricityTariffInput): Promise<Result<ElectricityTariffWithTiers>>;
+  delete(id: string): Promise<Result<{ id: string }>>;
 }
 
 interface WaterTariffManagementServiceLike {
   list(): Promise<Result<WaterTariff[]>>;
   create(input: CreateWaterTariffInput): Promise<Result<WaterTariff>>;
   update(id: string, input: UpdateWaterTariffInput): Promise<Result<WaterTariff>>;
+  delete(id: string): Promise<Result<{ id: string }>>;
 }
 
 function extractCommonTariffFields(
@@ -226,6 +228,21 @@ export function createUpdateElectricityTariffController(getService: () => Electr
   };
 }
 
+export function createDeleteElectricityTariffController(getService: () => ElectricityTariffManagementServiceLike) {
+  return async function deleteElectricityTariff(req: Request, res: Response): Promise<void> {
+    try {
+      const result = await getService().delete(req.params.tariffId);
+      if (!result.success) {
+        res.status(mapResultErrorCodeToHttpStatus(result.error.code)).json({ success: false, error: result.error });
+        return;
+      }
+      res.status(200).json({ success: true, data: { id: result.data.id } });
+    } catch (error) {
+      sendInternalError("tariff.controller.deleteElectricityTariff", error, res);
+    }
+  };
+}
+
 // ---- Water ----
 
 export function createListWaterTariffsController(getService: () => WaterTariffManagementServiceLike) {
@@ -277,6 +294,21 @@ export function createUpdateWaterTariffController(getService: () => WaterTariffM
       res.status(200).json({ success: true, data: serializeWaterTariff(result.data) });
     } catch (error) {
       sendInternalError("tariff.controller.updateWaterTariff", error, res);
+    }
+  };
+}
+
+export function createDeleteWaterTariffController(getService: () => WaterTariffManagementServiceLike) {
+  return async function deleteWaterTariff(req: Request, res: Response): Promise<void> {
+    try {
+      const result = await getService().delete(req.params.tariffId);
+      if (!result.success) {
+        res.status(mapResultErrorCodeToHttpStatus(result.error.code)).json({ success: false, error: result.error });
+        return;
+      }
+      res.status(200).json({ success: true, data: { id: result.data.id } });
+    } catch (error) {
+      sendInternalError("tariff.controller.deleteWaterTariff", error, res);
     }
   };
 }

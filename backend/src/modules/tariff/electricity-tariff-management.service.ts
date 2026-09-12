@@ -42,8 +42,8 @@ import {
  *   (loại trừ chính tariff đang sửa khi `update`).
  * - `create`: `TARIFF_ALREADY_EXISTS` propagate khi vi phạm
  *   `UNIQUE(name, effective_from)`.
- * - `update`: `TARIFF_IN_USE` khi tariff đã được một invoice tham
- *   chiếu — xem docs/MANAGEMENT_API.md mục "Historical tariff
+ * - `update`/`delete`: `TARIFF_IN_USE` khi tariff đã được một invoice
+ *   tham chiếu — xem docs/MANAGEMENT_API.md mục "Historical tariff
  *   protection".
  *
  * Important invariant — atomic parent + tiers:
@@ -51,12 +51,14 @@ import {
  * — bên trong MỘT transaction, `createTariff`/`updateTariffParent` rồi
  * `replaceTiers` cùng chạy hoặc cùng rollback. KHÔNG BAO GIỜ gọi hai
  * thao tác đó qua `electricityTariffRepository` (chỉ dùng cho đọc) —
- * xem `electricity-tariff-management.types.ts`.
+ * xem `electricity-tariff-management.types.ts`. `delete` KHÔNG cần Unit
+ * of Work: xoá cha bằng MỘT câu `DELETE` duy nhất, tier con tự cascade
+ * theo schema (`ON DELETE CASCADE`), nên gọi thẳng
+ * `electricityTariffRepository.deleteById`.
  *
  * Không chịu trách nhiệm:
  * - hard-code số lượng bậc hay bất kỳ hằng số biểu giá cụ thể nào.
  * - chứa SQL/Postgres.js import.
- * - implement `delete`.
  */
 function normalizeName(name: string): Result<string> {
   const trimmed = name.trim();
@@ -285,5 +287,28 @@ export class ElectricityTariffManagementService {
 
       return ok({ tariff: tariffResult.data, tiers: tiersResult.data });
     });
+  }
+
+  /**
+   * Xoá đúng MỘT electricity tariff (cha + tiers) — CHỈ được phép khi
+   * CHƯA từng được một invoice tham chiếu (cùng bất biến với `update`).
+   * Pre-check bằng `isReferencedByInvoice` cho message rõ ràng; FK
+   * constraint (`ON DELETE RESTRICT` trên `invoices.electricity_tariff_id`)
+   * vẫn là nguồn thẩm quyền cuối cùng cho race condition.
+   */
+  async delete(id: string): Promise<Result<{ id: string }>> {
+    if (!isPositiveIntegerId(id)) {
+      return fail("VALIDATION_ERROR", `tariffId không hợp lệ (phải là chuỗi số nguyên dương): "${id}".`);
+    }
+
+    const referencedResult = await this.deps.electricityTariffRepository.isReferencedByInvoice(id);
+    if (!referencedResult.success) {
+      return referencedResult;
+    }
+    if (referencedResult.data) {
+      return fail("TARIFF_IN_USE", `Electricity tariff với id = ${id} đã được một invoice tham chiếu, không thể xoá.`);
+    }
+
+    return this.deps.electricityTariffRepository.deleteById(id);
   }
 }
