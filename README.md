@@ -389,6 +389,5 @@ Các hạng mục sau hiện chưa được cài đặt:
 
 - Xác thực và phân quyền theo vai trò.
 - Khu vực quản trị/người dùng có kiểm soát quyền riêng biệt.
-- Endpoint `DELETE` cho các tài nguyên có ràng buộc lịch sử.
 - Triển khai production và continuous deployment (CD) tự động.
 - Biểu đồ và số liệu phân tích tổng hợp.

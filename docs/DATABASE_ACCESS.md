@@ -58,11 +58,12 @@ Mỗi domain có một **Repository interface** nhỏ, tường minh
 và ghi theo ngôn ngữ domain — ví dụ
 `RoomRepository.findById(id): Promise<Result<Room>>`. Interface không
 có SQL và không import Postgres.js. Mọi Repository nay đều có phương
-thức ghi (`Property`, `Room`, `MeterReading`, `ElectricityTariff`,
-`WaterTariff`, cộng thêm `Invoice`) — được thêm cho management API (xem
-`docs/MANAGEMENT_API.md`); mỗi cái vẫn chỉ cài đặt đúng các thao tác
-một use case thật cần (không có `delete` ở bất kỳ đâu, theo mục "Không
-có endpoint DELETE" của tài liệu đó).
+thức ghi VÀ xoá (`Property`, `Room`, `MeterReading`, `ElectricityTariff`,
+`WaterTariff`, `Invoice`) — được thêm cho management API (xem
+`docs/MANAGEMENT_API.md` mục "Xóa an toàn (SAFE DELETE)"); mỗi cái vẫn
+chỉ cài đặt đúng các thao tác một use case thật cần, `deleteById`
+(hoặc tương đương) trả về `Result<{ id: string }>`, KHÔNG có
+`GenericRepository<T>` hay khung CRUD tổng quát nào.
 
 **Implementation Postgres**
 (`backend/src/repositories/postgres/postgres-*.repository.ts`) là nơi
@@ -384,15 +385,15 @@ có file test hay source nào nội suy một credential thật.
 ## Cố ý hoãn lại
 
 Nền tảng persistence, luồng ghi hoá đơn (`CreateInvoiceService`, xem
-`docs/CREATE_INVOICE_WORKFLOW.md`), và management API
-(property/room/meter-reading/tariff — xem `docs/MANAGEMENT_API.md`)
-nay đã được cài đặt đầy đủ. Vẫn cố ý **chưa** cài đặt: DELETE cho bất
-kỳ tài nguyên nào (một quyết định về phạm vi, không phải một lỗ hổng —
-xem `docs/MANAGEMENT_API.md` mục "Không có endpoint DELETE (theo
-thiết kế)"), một bảng
-ánh xạ mã lỗi PostgreSQL sang lỗi domain tổng quát (mỗi Repository chỉ
-dịch đúng một case `SQLSTATE 23505` mà nó thực sự cần, qua kiểm tra cấu
-trúc dùng chung `backend/src/database/unique-violation.ts`), và xác
-thực/phân quyền/khu vực quản trị riêng. Giao diện trình duyệt (frontend)
-đã được cài đặt đầy đủ — xem `docs/FRONTEND.md`; đây không còn là công
-việc hoãn lại.
+`docs/CREATE_INVOICE_WORKFLOW.md`), management API
+(property/room/meter-reading/tariff — xem `docs/MANAGEMENT_API.md`),
+và SAFE DELETE cho toàn bộ tài nguyên quản lý (xem
+`docs/MANAGEMENT_API.md` mục "Xóa an toàn (SAFE DELETE)") nay đã được
+cài đặt đầy đủ. Vẫn cố ý **chưa** cài đặt: một bảng ánh xạ mã lỗi
+PostgreSQL sang lỗi domain tổng quát (mỗi Repository chỉ dịch đúng các
+case `SQLSTATE` mà nó thực sự cần — `23505` qua
+`backend/src/database/unique-violation.ts`, `23503` qua
+`backend/src/database/foreign-key-violation.ts`), và xác thực/phân
+quyền/khu vực quản trị riêng. Giao diện trình duyệt (frontend) đã được
+cài đặt đầy đủ — xem `docs/FRONTEND.md`; đây không còn là công việc
+hoãn lại.

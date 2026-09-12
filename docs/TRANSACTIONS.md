@@ -6,15 +6,14 @@ Service phải tuân thủ. Tài liệu này bổ sung cho
 [`docs/DOMAIN_MODEL.md`](DOMAIN_MODEL.md) và
 [`docs/DATABASE_DESIGN.md`](DATABASE_DESIGN.md).
 
-**`CreateInvoice` (mục A) và cấu hình biểu giá điện (mục C) đều đã
-được cài đặt đầy đủ**, cả hai đều đã được kiểm chứng commit/rollback
-thật bằng PostgreSQL thật (xem `docs/CREATE_INVOICE_WORKFLOW.md` cho
-`CreateInvoice`). Thao tác xoá (mục B) vẫn là một ranh giới transaction
-*dự định* — nếu chức năng xoá được bổ sung trong tương lai, nó sẽ cần
-tuân theo ranh giới này; hiện chưa có workflow xoá nào được cài đặt, vì
-ứng dụng cố ý chưa có DELETE cho bất kỳ tài nguyên nào (xem
-`docs/MANAGEMENT_API.md` mục "Không có endpoint DELETE (theo thiết
-kế)").
+**`CreateInvoice` (mục A), thao tác xoá (mục B), và cấu hình biểu giá
+điện (mục C) đều đã được cài đặt đầy đủ** — `CreateInvoice` và thao tác
+xoá đều đã được kiểm chứng commit/rollback/RESTRICT/CASCADE thật bằng
+PostgreSQL thật (xem `docs/CREATE_INVOICE_WORKFLOW.md` cho
+`CreateInvoice`, và `backend/src/modules/invoice/__tests__/delete-management.integration.test.ts`
+cho DELETE). Xoá một hàng cha bằng một câu `DELETE` duy nhất đã tự
+nguyên tử — không cần một transaction nhiều bước như `CreateInvoice`
+hay cấu hình biểu giá điện.
 
 ## ACID, trong bối cảnh OpenUtilityBill
 
@@ -114,26 +113,39 @@ và `TRANSACTION_ROLLBACK_RUNTIME=PASS`.
 
 ## B. Thao tác xoá
 
-Chưa có workflow xoá nào được cài đặt (ứng dụng cố ý chưa có DELETE cho
-bất kỳ tài nguyên nào — xem `docs/MANAGEMENT_API.md` mục "Không có
-endpoint DELETE"). Khi một workflow như vậy được thêm vào, nó phải tuân
-theo chính sách `ON DELETE` đã thiết lập sẵn trong schema (xem
-`docs/DATABASE_DESIGN.md`):
+**Đã cài đặt** — mỗi tài nguyên quản lý có một endpoint
+`DELETE /api/v1/...` (xem `docs/MANAGEMENT_API.md` mục "Xóa an toàn
+(SAFE DELETE)"), tuân thủ ĐÚNG chính sách `ON DELETE` đã thiết lập sẵn
+trong schema từ migration 001 (xem `docs/DATABASE_DESIGN.md`) — không
+có constraint nào bị nới lỏng để đơn giản hoá việc xoá
+(`DATABASE_MIGRATION_REQUIRED=false`).
 
-- Xoá một `RentalProperty`, `Room`, dòng biểu giá, hay `MeterReading`
-  vẫn còn được dữ liệu khác tham chiếu sẽ bị database `RESTRICT` — thao
-  tác xoá sẽ thất bại với lỗi vi phạm khoá ngoại, không tự động cascade
-  âm thầm. Một workflow xoá tương lai phải dịch điều đó thành một lỗi
-  domain rõ ràng (ví dụ `ROOM_HAS_DEPENDENT_RECORDS`), không phải để lộ
-  lỗi database thô ra cho người dùng (xem `docs/ERROR_HANDLING.md` về
-  chi tiết lỗi hiển thị cho người dùng so với cho developer).
-- Xoá một `Invoice` sẽ cascade tới các dòng `InvoiceItem` của nó, vì
-  một dòng breakdown không có ý nghĩa gì nếu thiếu invoice cha của nó —
-  nhưng bản thân việc xoá một `Invoice` là xoá một bản ghi lịch sử/tài
-  chính và nên được coi là một hành động quản trị cố ý, tường minh, và
-  nhiều khả năng bị hạn chế một khi workflow đó tồn tại — không phải
-  thứ được cài đặt tuỳ tiện. Chưa có workflow như vậy được thiết kế ở
-  đây.
+- Xoá một `RentalProperty`, `Room`, hay `MeterReading` vẫn còn được dữ
+  liệu khác tham chiếu bị database `RESTRICT` — thao tác xoá thất bại
+  với một lỗi vi phạm khoá ngoại THẬT (SQLSTATE `23503`), được
+  Repository dịch sang lỗi domain rõ ràng
+  (`PROPERTY_HAS_DEPENDENCIES`/`ROOM_HAS_DEPENDENCIES`/
+  `METER_READING_IN_USE`, xem `backend/src/database/foreign-key-violation.ts`)
+  — không lộ lỗi database thô ra cho người dùng (xem
+  `docs/ERROR_HANDLING.md`). Không có bước nào cascade-xoá tài nguyên
+  phụ thuộc để "cho phép" xoá tài nguyên cha — người dùng phải tự xoá/
+  di dời phụ thuộc trước.
+- Xoá một `ElectricityTariff`/`WaterTariff` đã được một `Invoice` tham
+  chiếu cũng bị `RESTRICT`, dịch sang `TARIFF_IN_USE` (dùng chung mã
+  với xung đột UPDATE, xem "Historical tariff protection" trong
+  `docs/MANAGEMENT_API.md`). Khi KHÔNG bị tham chiếu, xoá một
+  `ElectricityTariff` cascade tới các `electricity_tariff_tiers` của nó
+  (`ON DELETE CASCADE` có sẵn ở schema) — một câu `DELETE` cha là đủ,
+  KHÔNG cần một Unit of Work riêng như `create`/`update` (xem mục C bên
+  dưới), vì xoá đúng một hàng cha bằng một câu SQL duy nhất đã tự
+  nguyên tử.
+- Xoá một `Invoice` cascade tới các dòng `InvoiceItem` của nó (`ON
+  DELETE CASCADE`), vì một dòng breakdown không có ý nghĩa gì nếu thiếu
+  invoice cha của nó. Đây là hành động phá huỷ một bản ghi lịch sử/tài
+  chính, được yêu cầu tường minh và xác nhận MẠNH ở frontend trước khi
+  gửi request (xem `docs/MANAGEMENT_API.md` mục "Xác nhận trước khi
+  xoá") — KHÔNG BAO GIỜ đụng tới room/meter_readings/tariffs liên quan,
+  và KHÔNG có revision/khôi phục sau khi xoá.
 
 ## C. Cấu hình biểu giá điện
 

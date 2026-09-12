@@ -16,24 +16,103 @@ rồi gọi `POST`/`GET /api/v1/invoices` sẵn có. Giao diện trình duyệt
 
 | Tài nguyên | List | Create | Update | Delete |
 |---|---|---|---|---|
-| Properties | `GET /api/v1/properties` | `POST /api/v1/properties` | `PATCH /api/v1/properties/:propertyId` | chưa cài đặt |
-| Rooms | `GET /api/v1/rooms` (`?propertyId=` tuỳ chọn) | `POST /api/v1/rooms` | `PATCH /api/v1/rooms/:roomId` | chưa cài đặt |
-| Meter readings | `GET /api/v1/meter-readings?roomId=` (`&billingPeriod=` tuỳ chọn) | `POST /api/v1/meter-readings` | `PUT /api/v1/meter-readings/:readingId` | chưa cài đặt |
-| Electricity tariffs | `GET /api/v1/tariffs/electricity` | `POST /api/v1/tariffs/electricity` | `PUT /api/v1/tariffs/electricity/:tariffId` | chưa cài đặt |
-| Water tariffs | `GET /api/v1/tariffs/water` | `POST /api/v1/tariffs/water` | `PUT /api/v1/tariffs/water/:tariffId` | chưa cài đặt |
+| Properties | `GET /api/v1/properties` | `POST /api/v1/properties` | `PATCH /api/v1/properties/:propertyId` | `DELETE /api/v1/properties/:propertyId` |
+| Rooms | `GET /api/v1/rooms` (`?propertyId=` tuỳ chọn) | `POST /api/v1/rooms` | `PATCH /api/v1/rooms/:roomId` | `DELETE /api/v1/rooms/:roomId` |
+| Meter readings | `GET /api/v1/meter-readings?roomId=` (`&billingPeriod=` tuỳ chọn) | `POST /api/v1/meter-readings` | `PUT /api/v1/meter-readings/:readingId` | `DELETE /api/v1/meter-readings/:readingId` |
+| Electricity tariffs | `GET /api/v1/tariffs/electricity` | `POST /api/v1/tariffs/electricity` | `PUT /api/v1/tariffs/electricity/:tariffId` | `DELETE /api/v1/tariffs/electricity/:tariffId` |
+| Water tariffs | `GET /api/v1/tariffs/water` | `POST /api/v1/tariffs/water` | `PUT /api/v1/tariffs/water/:tariffId` | `DELETE /api/v1/tariffs/water/:tariffId` |
+| Invoices | `GET /api/v1/invoices` (xem docs/API.md) | `POST /api/v1/invoices` (xem docs/API.md) | không hỗ trợ update chung (xem bên dưới) | `DELETE /api/v1/invoices/:invoiceId` (xem docs/API.md) |
 
-## Không có endpoint DELETE (theo thiết kế)
+## CRUD matrix quản lý
 
-Room, meter reading, tariff, và invoice tạo thành các quan hệ dữ liệu
-tài chính lịch sử với khoá ngoại `RESTRICT` (xem migration 001). Ngữ
-nghĩa xoá CRUD mù quáng sẽ đòi hỏi các quyết định sản phẩm mà dự án này
-chưa đưa ra: xoá hẳn hay lưu trữ (archive), điều gì xảy ra với tính
-toàn vẹn lịch sử khi một dòng được tham chiếu bị xoá, một thao tác xoá
-có cần khôi phục được không. Không quyết định nào trong số đó là cần
-thiết cho phạm vi hiện tại, nên DELETE **cố ý chưa được cài đặt** ở
-bất kỳ đâu trong API này — `DELETE_NOT_IMPLEMENTED_BY_DESIGN=true`.
-Đây là một management API cho các field hiện được hỗ trợ, không phải
-một tuyên bố về CRUD đầy đủ tổng quát.
+```
+Resource              Create  Read  Update  Delete
+--------------------------------------------------
+RentalProperty         YES     YES   YES     YES
+Room                   YES     YES   YES     YES
+MeterReading           YES     YES   YES     YES
+ElectricityTariff      YES     YES   YES     YES
+WaterTariff            YES     YES   YES     YES
+Invoice                YES     YES   NO*     YES
+```
+
+Các tài nguyên quản lý chính (property, room, meter reading, cả hai
+loại tariff) hỗ trợ CRUD đầy đủ. Việc sửa (mutate) invoice là **cố ý bị
+hạn chế**: invoice hỗ trợ create/read/delete nhưng không có endpoint
+update tổng quát nào — một invoice đã tạo là một bản ghi lịch sử (đọc
+lại qua `GET`, xem docs/CREATE_INVOICE_WORKFLOW.md mục "Snapshot của
+room"); nếu số liệu đầu vào sai, quy trình đúng là **xoá invoice đó**
+(`DELETE /api/v1/invoices/:invoiceId`) rồi tạo lại, không phải PATCH/PUT
+một phần dữ liệu tài chính đã chốt.
+
+**KHÔNG** đọc bảng trên là "mọi entity đều có CRUD đầy đủ" — hãy nói
+chính xác: "Các tài nguyên quản lý chính hỗ trợ CRUD đầy đủ. Việc sửa
+invoice bị hạn chế có chủ đích; invoice hỗ trợ create/read/delete
+nhưng không có update tổng quát."
+
+## Xóa an toàn (SAFE DELETE) — nguyên tắc và ngữ nghĩa từng tài nguyên
+
+Xóa **không phải** là quyền thực hiện cascade phá huỷ. Mô hình mong
+muốn: người dùng yêu cầu DELETE → Service xác thực ý định/tài nguyên →
+Repository phát ra một câu `DELETE` có giới hạn → PostgreSQL thi hành
+ràng buộc tham chiếu (migration 001) → thành công HOẶC một lỗi xung đột
+`409` có ý nghĩa. Dữ liệu lịch sử được bảo toàn theo mặc định — DELETE
+**không bao giờ** làm yếu các ràng buộc `ON DELETE RESTRICT` sẵn có chỉ
+để một request xoá "đi qua" dễ dàng hơn.
+
+Vì `SELECT` rồi mới `DELETE` không loại trừ race condition (một
+transaction khác có thể tạo ra phụ thuộc mới NGAY GIỮA hai bước đó),
+mọi Repository dùng **hai lớp bảo vệ**: (1) một pre-check tuỳ chọn (khi
+đã sẵn có, ví dụ `isReferencedByInvoice`) để trả một message rõ ràng
+hơn, VÀ (2) bắt lỗi FOREIGN KEY violation thật (SQLSTATE `23503`, xem
+`backend/src/database/foreign-key-violation.ts`) do chính PostgreSQL
+ném ra tại thời điểm `DELETE` — đây mới là nguồn thẩm quyền cuối cùng.
+
+| Tài nguyên | Điều kiện chặn (409) | Mã lỗi |
+|---|---|---|
+| RentalProperty | Còn Room tham chiếu (`rooms.property_id` RESTRICT) | `PROPERTY_HAS_DEPENDENCIES` |
+| Room | Còn MeterReading/Invoice tham chiếu (`meter_readings.room_id`/`invoices.room_id` RESTRICT) | `ROOM_HAS_DEPENDENCIES` |
+| MeterReading | Đã được một Invoice tham chiếu (`invoices.electricity_reading_id`/`water_reading_id` RESTRICT) | `METER_READING_IN_USE` |
+| ElectricityTariff | Đã được một Invoice tham chiếu (`invoices.electricity_tariff_id` RESTRICT) | `TARIFF_IN_USE` (dùng chung mã với xung đột UPDATE — xem "Historical tariff protection") |
+| WaterTariff | Đã được một Invoice tham chiếu (`invoices.water_tariff_id` RESTRICT) | `TARIFF_IN_USE` |
+| Invoice | Không có (invoice là "đỉnh" của mọi FK) | — |
+
+Không có bước nào ở trên **cascade-xoá** một tài nguyên phụ thuộc để
+"cho phép" xoá tài nguyên cha — ví dụ xoá một RentalProperty **không
+bao giờ** tự động xoá các Room của nó; người dùng phải tự xoá/di dời
+Room trước.
+
+Hai ngoại lệ CASCADE đã có sẵn ở schema (migration 001), không phải quy
+tắc mới do tính năng này thêm vào:
+
+- Xoá một ElectricityTariff xoá luôn các `electricity_tariff_tiers` của
+  nó (`ON DELETE CASCADE`) — tier con không có ý nghĩa độc lập với
+  tariff cha.
+- Xoá một Invoice xoá luôn các `invoice_items` của nó (`ON DELETE
+  CASCADE`) — dòng chi tiết không có ý nghĩa độc lập với invoice cha.
+  Xoá Invoice **không** đụng tới room/meter_readings/tariffs liên quan.
+
+`DATABASE_MIGRATION_REQUIRED=false` cho toàn bộ tính năng SAFE DELETE —
+mọi ngữ nghĩa RESTRICT/CASCADE cần thiết đã có sẵn từ migration 001,
+không có constraint nào bị nới lỏng để đơn giản hoá việc xoá.
+
+## Xác nhận trước khi xoá (frontend)
+
+Mọi nút "Xóa" trên giao diện quản lý PHẢI hiện một hộp thoại xác nhận
+(`window.confirm`, dùng qua `confirmDangerousAction` trong
+`frontend/src/views/shared.view.ts` — không thêm thư viện dialog mới)
+nêu rõ đang xoá cái gì, TRƯỚC khi gửi request — không bao giờ xoá ngay
+từ một cú bấm nhầm. Khi backend trả `409`, giao diện hiển thị một
+message thân thiện giải thích lý do (không lộ tên bảng/constraint nội
+bộ) thay vì message thô của backend. Sau khi xoá thành công: hiện
+thông báo thành công theo phong cách sẵn có, và làm mới danh sách/state
+liên quan — không cần người dùng tự tải lại trang.
+
+Xoá invoice có văn bản xác nhận MẠNH hơn vì nó xoá lịch sử tài chính:
+"Thao tác này sẽ xóa hóa đơn và các dòng chi tiết của hóa đơn. Dữ liệu
+chỉ số công tơ và biểu giá không bị xóa. Bạn có muốn tiếp tục?". Tính
+năng này KHÔNG có revision/khôi phục lịch sử — một invoice đã xoá là
+xoá vĩnh viễn.
 
 ## PATCH so với PUT
 
