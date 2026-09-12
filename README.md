@@ -215,58 +215,182 @@ dụng cho mọi nơi; giá theo m³, giá theo người, VAT và phí môi trư
 
 ## Hướng dẫn cài đặt & Chạy trên máy
 
-### Yêu cầu
+Phần này dành cho người muốn tải mã nguồn và chạy OpenUtilityBill trên
+máy cá nhân. `backend/` và `frontend/` là **hai package npm độc lập**;
+repository không có `package.json` ở thư mục gốc, vì vậy cần cài dependency
+và chạy lệnh trong đúng thư mục tương ứng.
 
-- Node.js 20 trở lên.
-- npm.
-- PostgreSQL/Supabase nếu muốn sử dụng các chức năng có truy cập dữ liệu.
+### Yêu cầu trước khi cài đặt
 
-### 1. Clone repository
+- **Git** để clone repository.
+- **Node.js 20 trở lên** và **npm**.
+- Một database **PostgreSQL**. Có thể dùng Supabase như cấu hình tham chiếu
+  của dự án; không bắt buộc phải cài PostgreSQL local nếu đã có database từ xa.
+- Trình duyệt web hiện đại để sử dụng frontend.
+
+Có thể kiểm tra nhanh môi trường bằng:
+
+```bash
+git --version
+node --version
+npm --version
+```
+
+### 1. Tải mã nguồn
 
 ```bash
 git clone https://github.com/QuocThinh271222007/OpenUtilityBill.git
 cd OpenUtilityBill
 ```
 
-### 2. Cài đặt và chạy backend
+Sau khi clone, thư mục gốc tối thiểu phải có các thư mục:
+
+```text
+backend/
+frontend/
+database/
+docs/
+```
+
+> Không chạy `npm install` ở thư mục gốc. Hãy chạy riêng trong
+> `backend/` và `frontend/` như các bước bên dưới.
+
+### 2. Chuẩn bị database PostgreSQL
+
+OpenUtilityBill cần schema và dữ liệu cấu hình biểu giá trước khi các
+endpoint nghiệp vụ có thể hoạt động. Chạy migration và seed theo đúng thứ
+tự sau:
+
+```text
+1. database/migrations/001_initial_domain_schema.sql
+2. database/migrations/002_preserve_invoice_item_precision.sql
+3. database/seeds/001_default_tariffs.sql
+```
+
+#### Cách A — dùng Supabase SQL Editor
+
+1. Tạo hoặc mở một project Supabase.
+2. Mở **SQL Editor**.
+3. Mở từng file SQL phía trên trong repository, copy toàn bộ nội dung và
+   chạy theo đúng thứ tự `001 migration → 002 migration → seed`.
+4. Mỗi bước phải hoàn tất không lỗi trước khi chạy bước tiếp theo.
+
+Seed mặc định được thiết kế để có thể chạy lại mà không tạo thêm bản cấu
+hình trùng. Hướng dẫn kiểm chứng database chi tiết hơn nằm tại
+[`database/README.md`](database/README.md).
+
+#### Cách B — dùng `psql`
+
+Nếu máy đã có PostgreSQL client `psql` và đã có `DATABASE_URL`:
+
+```bash
+psql "$DATABASE_URL" -f database/migrations/001_initial_domain_schema.sql
+psql "$DATABASE_URL" -f database/migrations/002_preserve_invoice_item_precision.sql
+psql "$DATABASE_URL" -f database/seeds/001_default_tariffs.sql
+```
+
+Trên Windows PowerShell, có thể truyền connection string trực tiếp cho
+`psql` nếu cần, nhưng **không lưu mật khẩu thật vào file đã commit**.
+
+### 3. Thiết lập `DATABASE_URL` cho backend
+
+File [`backend/.env.example`](backend/.env.example) chỉ mô tả các biến môi
+trường mà backend sử dụng. Backend hiện **không dùng `dotenv` và không tự
+động đọc `backend/.env`**; `DATABASE_URL` phải có mặt trong môi trường của
+chính tiến trình Node.
+
+Định dạng chung:
+
+```text
+postgresql://USER:PASSWORD@HOST:PORT/DATABASE
+```
+
+Hãy lấy connection string PostgreSQL từ nhà cung cấp database của bạn
+(ví dụ Supabase) và chỉ đặt nó trong môi trường local.
+
+**Windows PowerShell:**
+
+```powershell
+$env:DATABASE_URL = '<POSTGRESQL_DATABASE_URL>'
+$env:PORT = '3000'   # tùy chọn; bỏ qua nếu dùng cổng mặc định 3000
+```
+
+Kiểm tra biến đã tồn tại mà không in credential thật:
+
+```powershell
+if ($env:DATABASE_URL) { "DATABASE_URL is set" } else { "DATABASE_URL is missing" }
+```
+
+**Bash / Linux / macOS:**
+
+```bash
+export DATABASE_URL='<POSTGRESQL_DATABASE_URL>'
+export PORT=3000      # tùy chọn
+```
+
+Kiểm tra:
+
+```bash
+if [ -n "$DATABASE_URL" ]; then echo "DATABASE_URL is set"; else echo "DATABASE_URL is missing"; fi
+```
+
+Biến môi trường này chỉ tồn tại trong terminal/session nơi bạn đã đặt nó
+(và các tiến trình con). Nếu mở terminal mới, hãy đặt lại trước khi chạy
+backend.
+
+> Không commit `DATABASE_URL`, mật khẩu database, Supabase service-role
+> key hoặc secret thật vào repository.
+
+### 4. Cài đặt và chạy backend
+
+Từ thư mục gốc repository:
 
 ```bash
 cd backend
 npm install
-```
-
-Backend đọc `DATABASE_URL` từ biến môi trường của tiến trình Node và
-không tự động nạp file `.env`.
-
-Windows PowerShell:
-
-```powershell
-$env:DATABASE_URL = '<SUPABASE_DATABASE_URL>'
 npm run dev
 ```
 
-Bash/Linux:
+`npm run dev` chạy Express backend bằng `tsx watch`, vì vậy source thay đổi
+sẽ tự khởi động lại server trong quá trình phát triển.
 
-```bash
-export DATABASE_URL='<SUPABASE_DATABASE_URL>'
-npm run dev
-```
-
-Backend mặc định chạy tại:
+Mặc định backend lắng nghe tại:
 
 ```text
 http://localhost:3000
 ```
 
-Kiểm tra health endpoint:
+Mở terminal khác và kiểm tra health endpoint:
 
-```text
-http://localhost:3000/api/v1/health
+```bash
+curl http://localhost:3000/api/v1/health
 ```
 
-### 3. Cài đặt và chạy frontend
+Kết quả mong đợi:
 
-Mở terminal thứ hai tại thư mục repository:
+```json
+{"success":true,"data":{"status":"ok"}}
+```
+
+`/api/v1/health` không truy cập database, vì vậy endpoint này vẫn có thể
+trả `ok` khi chưa cấu hình `DATABASE_URL`. Các endpoint quản lý, biểu giá
+và hóa đơn cần database đã được cấu hình đúng.
+
+Nếu muốn chạy backend theo dạng build thay vì dev watcher:
+
+```bash
+npm run typecheck
+npm run build
+npm start
+```
+
+`npm run build` tạo JavaScript đã biên dịch trong `backend/dist/`; `npm
+start` chạy `node dist/server.js`.
+
+### 5. Cài đặt và chạy frontend
+
+Giữ backend đang chạy. Mở **terminal thứ hai**, quay về thư mục gốc của
+repository rồi chạy:
 
 ```bash
 cd frontend
@@ -274,18 +398,65 @@ npm install
 npm run dev
 ```
 
-Vite sẽ in URL local, thông thường:
+Vite sẽ in địa chỉ local ra terminal, thông thường là:
 
 ```text
 http://localhost:5173
 ```
 
-Frontend dev server proxy các request `/api` sang backend tại
-`http://localhost:3000`.
+Mở địa chỉ đó trong trình duyệt. Ở chế độ development, Vite proxy mọi
+request bắt đầu bằng `/api` tới backend tại `http://localhost:3000`, nên
+không cần sửa URL API thủ công khi chạy theo cấu hình mặc định.
 
-> Không commit `backend/.env`, `DATABASE_URL`, mật khẩu hoặc secret thật.
+Nếu cổng `5173` đã được sử dụng, Vite có thể chọn một cổng trống khác;
+hãy mở đúng URL được in trong terminal.
 
-Hướng dẫn chi tiết hơn: [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).
+### 6. Kiểm tra nhanh sau khi cài đặt
+
+Sau khi cả backend và frontend đang chạy:
+
+1. Mở frontend trong trình duyệt.
+2. Kiểm tra sidebar hiển thị trạng thái backend hoạt động.
+3. Mở các màn hình **Cơ sở**, **Phòng**, **Ghi chỉ số**, **Hóa đơn** và
+   **Biểu giá** để xác nhận dữ liệu có thể được tải.
+4. Tạo dữ liệu thử theo thứ tự hợp lý: cơ sở → phòng → chỉ số công tơ →
+   hóa đơn.
+5. Nếu cần kiểm tra sâu hơn, dùng checklist tại
+   [`docs/FINAL_SMOKE_CHECKLIST.md`](docs/FINAL_SMOKE_CHECKLIST.md).
+
+### 7. Dừng và chạy lại ứng dụng
+
+Nhấn `Ctrl + C` trong terminal backend/frontend để dừng từng tiến trình.
+Khi chạy lại:
+
+```bash
+# terminal 1
+cd backend
+npm run dev
+
+# terminal 2
+cd frontend
+npm run dev
+```
+
+Nếu terminal backend mới chưa có `DATABASE_URL`, đặt lại biến môi trường
+trước `npm run dev`.
+
+### Xử lý lỗi cài đặt thường gặp
+
+| Hiện tượng | Nguyên nhân thường gặp | Cách kiểm tra / xử lý |
+|---|---|---|
+| `npm` báo không tìm thấy `package.json` | Đang chạy lệnh npm ở thư mục gốc hoặc sai thư mục. | Chạy backend trong `OpenUtilityBill/backend` và frontend trong `OpenUtilityBill/frontend`. |
+| Health endpoint chạy nhưng màn hình không tải dữ liệu | `/health` không cần DB nhưng các Repository endpoint cần `DATABASE_URL`. | Kiểm tra `DATABASE_URL` trong **cùng terminal đang chạy backend** và kiểm tra migration/seed đã được áp dụng. |
+| PostgreSQL báo `relation ... does not exist` | Schema chưa được tạo hoặc đang kết nối nhầm database. | Chạy lại migration 001, migration 002 và seed trên đúng database. |
+| Frontend báo không kết nối được backend | Backend chưa chạy, dùng cổng khác hoặc tiến trình đã dừng. | Kiểm tra `http://localhost:3000/api/v1/health` và terminal backend. |
+| Backend không dùng giá trị trong `backend/.env` | Đây là hành vi hiện tại theo thiết kế; project không tự load `.env`. | Đặt biến bằng `$env:DATABASE_URL=...` trên PowerShell hoặc `export DATABASE_URL=...` trên Bash trước khi chạy Node. |
+| Một số integration test hiện `SKIP` | Không có `DATABASE_URL` trong môi trường test. | Đây là hành vi mong đợi; đặt `DATABASE_URL` tới database test đã migrate/seed nếu muốn chạy test PostgreSQL thật. |
+| Cổng 3000 đã được sử dụng | Một tiến trình khác đang chiếm cổng mặc định. | Dừng tiến trình đó hoặc đặt biến `PORT` sang cổng khác; khi đổi cổng backend, cấu hình proxy frontend cũng phải được điều chỉnh tương ứng. |
+
+Hướng dẫn phát triển và giải thích chi tiết từng lệnh nằm tại
+[`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md). Hướng dẫn database chi tiết
+nằm tại [`database/README.md`](database/README.md).
 
 ## Hướng dẫn chạy kiểm thử tự động
 
