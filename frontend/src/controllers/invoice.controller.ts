@@ -12,7 +12,8 @@ import {
   renderInvoiceResult,
   setInvoiceSubmitDisabled,
 } from "../views/invoice.view";
-import { monthInputToBillingPeriod } from "../utils/format";
+import { moneyDisplayToCanonical, monthDisplayToBillingPeriod } from "../utils/format";
+import { wireMoneyInput } from "../utils/money-input";
 import type { CreateInvoiceBody } from "../types/invoice.types";
 import type { Room } from "../types/room.types";
 
@@ -64,6 +65,8 @@ function wireInvoiceForm(): void {
   const roomSelect = document.querySelector<HTMLSelectElement>("#invoice-room-select");
   const form = document.querySelector<HTMLFormElement>("#invoice-form");
   const viewExistingBtn = document.querySelector<HTMLButtonElement>("#invoice-view-existing-btn");
+  const actualInput = document.querySelector<HTMLInputElement>("#invoice-actual-charged");
+  if (actualInput) wireMoneyInput(actualInput);
 
   propertySelect?.addEventListener("change", () => void handlePropertyChange());
   roomSelect?.addEventListener("change", () => {
@@ -110,11 +113,16 @@ function readInvoiceFormCommon(): { roomId: string; billingPeriod: string } | nu
     showGlobalAlert("warning", "Vui lòng chọn phòng.");
     return null;
   }
-  if (!monthInput || !monthInput.value) {
-    showGlobalAlert("warning", "Vui lòng chọn kỳ hóa đơn.");
+  if (!monthInput || monthInput.value.trim().length === 0) {
+    showGlobalAlert("warning", "Vui lòng nhập kỳ hóa đơn.");
     return null;
   }
-  return { roomId: selectedRoomId, billingPeriod: monthInputToBillingPeriod(monthInput.value) };
+  const billingPeriod = monthDisplayToBillingPeriod(monthInput.value);
+  if (billingPeriod === null) {
+    showGlobalAlert("warning", "Kỳ hóa đơn không hợp lệ. Hãy nhập theo định dạng MM/YYYY.");
+    return null;
+  }
+  return { roomId: selectedRoomId, billingPeriod };
 }
 
 async function submitCreateInvoice(): Promise<void> {
@@ -127,6 +135,14 @@ async function submitCreateInvoice(): Promise<void> {
   if (!electricitySelect || !waterSelect || !actualInput) return;
 
   const actualRaw = actualInput.value.trim();
+  let actualChargedAmount: string | null = null;
+  if (actualRaw.length > 0) {
+    actualChargedAmount = moneyDisplayToCanonical(actualRaw);
+    if (actualChargedAmount === null) {
+      showGlobalAlert("warning", "Số tiền không hợp lệ.");
+      return;
+    }
+  }
   const body: CreateInvoiceBody = {
     roomId: common.roomId,
     billingPeriod: common.billingPeriod,
@@ -135,7 +151,7 @@ async function submitCreateInvoice(): Promise<void> {
     // Bỏ trống -> gửi null, KHÔNG BAO GIỜ gửi chuỗi rỗng "" (xem
     // docs/API.md mục "Sửa lỗi scale `actualChargedAmount`" — "" không
     // phải một chuỗi thập phân hợp lệ).
-    actualChargedAmount: actualRaw.length === 0 ? null : actualRaw,
+    actualChargedAmount,
   };
 
   const regionEl = document.querySelector<HTMLElement>("#invoice-result-region");

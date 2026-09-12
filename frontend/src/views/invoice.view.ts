@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 
-import { escapeHtml, formatDateDisplay, formatVndDisplay, classifyBillingDifference } from "../utils/format";
-import { electricityMethodDisplayLabel, invoiceItemCategoryDisplayLabel, waterMethodDisplayLabel } from "../utils/labels";
+import { escapeHtml, isoDateToDisplayDate, formatVndDisplay, classifyBillingDifference } from "../utils/format";
+import { electricityMethodDisplayLabel, invoiceItemCategoryDisplayLabel, unitNameDisplaySuffix, waterMethodDisplayLabel } from "../utils/labels";
 import type { Invoice, InvoiceItem } from "../types/invoice.types";
 
 /**
@@ -36,7 +36,7 @@ export function renderInvoicePage(container: HTMLElement): void {
             </div>
             <div class="col-md-4">
               <label for="invoice-month" class="form-label">Kỳ hóa đơn (tháng)</label>
-              <input type="month" class="form-control" id="invoice-month" required />
+              <input type="text" inputmode="numeric" class="form-control" id="invoice-month" placeholder="mm/yyyy" required />
             </div>
           </div>
           <div class="row g-3 mt-1">
@@ -57,8 +57,12 @@ export function renderInvoicePage(container: HTMLElement): void {
           </div>
           <div class="row g-3 mt-1">
             <div class="col-md-6">
-              <label for="invoice-actual-charged" class="form-label">Số tiền thực thu (không bắt buộc)</label>
-              <input type="text" inputmode="decimal" class="form-control" id="invoice-actual-charged" placeholder="Để trống nếu chưa thu" />
+              <label for="invoice-actual-charged" class="form-label">Số tiền thực thu</label>
+              <div class="input-group">
+                <input type="text" inputmode="decimal" class="form-control" id="invoice-actual-charged" aria-describedby="invoice-actual-charged-help" />
+                <span class="input-group-text">đ</span>
+              </div>
+              <div class="form-text" id="invoice-actual-charged-help">Để trống nếu chưa có số tiền thực thu.</div>
             </div>
           </div>
           <div class="d-flex flex-wrap gap-2 mt-3">
@@ -88,12 +92,14 @@ function itemDescriptionLabel(item: InvoiceItem): string {
 }
 
 function itemRowHtml(item: InvoiceItem): string {
+  const unitSuffix = unitNameDisplaySuffix(item.unitName);
+  const unitPriceDisplay = item.unitPrice !== null ? `${formatVndDisplay(item.unitPrice)}${unitSuffix ? `/${unitSuffix}` : ""}` : "—";
   return `
     <tr>
       <td>${escapeHtml(itemDescriptionLabel(item))}</td>
       <td>${item.quantity !== null ? escapeHtml(item.quantity) : "—"}</td>
-      <td>${item.unitName !== null ? escapeHtml(item.unitName) : "—"}</td>
-      <td>${item.unitPrice !== null ? escapeHtml(item.unitPrice) : "—"}</td>
+      <td>${unitSuffix !== null ? escapeHtml(unitSuffix) : "—"}</td>
+      <td>${escapeHtml(unitPriceDisplay)}</td>
       <td class="text-end">${escapeHtml(formatVndDisplay(item.amount))}</td>
     </tr>
   `;
@@ -136,7 +142,7 @@ export function renderInvoiceResult(
       <div class="card-header">Hóa đơn — ${escapeHtml(roomLabel)}</div>
       <div class="card-body">
         <dl class="row mb-0">
-          <dt class="col-sm-4">Kỳ hóa đơn</dt><dd class="col-sm-8">${escapeHtml(billingPeriodToMonthLabel(invoice.billingPeriod))} (${escapeHtml(formatDateDisplay(invoice.billingPeriod))})</dd>
+          <dt class="col-sm-4">Kỳ hóa đơn</dt><dd class="col-sm-8">${escapeHtml(billingPeriodToMonthLabel(invoice.billingPeriod))} (${escapeHtml(isoDateToDisplayDate(invoice.billingPeriod))})</dd>
           <dt class="col-sm-4">Số người dùng để tính</dt><dd class="col-sm-8">${invoice.tenantCountUsed}</dd>
           <dt class="col-sm-4">Phương pháp tính điện</dt><dd class="col-sm-8">${escapeHtml(electricityMethodDisplayLabel(invoice.electricityBillingMethod))}</dd>
           <dt class="col-sm-4">Phương pháp tính nước</dt><dd class="col-sm-8">${escapeHtml(waterMethodDisplayLabel(invoice.waterBillingMethod))}</dd>

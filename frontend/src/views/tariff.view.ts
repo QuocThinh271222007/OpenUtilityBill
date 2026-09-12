@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
-import { escapeHtml, formatDateDisplay } from "../utils/format";
+import { escapeHtml, formatMoneyInputDisplay, formatVndDisplay, isoDateToDisplayDate, rateCanonicalToPercentDisplay } from "../utils/format";
+import { setMoneyInputFromCanonical } from "../utils/money-input";
 import { renderEmptyState } from "./shared.view";
 import type { ElectricityTariffTier, ElectricityTariffWithTiers, WaterTariff } from "../types/tariff.types";
 
@@ -40,17 +41,21 @@ export function renderTariffPage(container: HTMLElement): void {
               </div>
               <div class="col-md-3">
                 <label for="electricity-tariff-effective-from" class="form-label">Hiệu lực từ</label>
-                <input type="date" class="form-control" id="electricity-tariff-effective-from" required />
+                <input type="text" inputmode="numeric" class="form-control" id="electricity-tariff-effective-from" placeholder="dd/mm/yyyy" required />
               </div>
               <div class="col-md-3">
-                <label for="electricity-tariff-effective-to" class="form-label">Hiệu lực đến (bỏ trống = không giới hạn)</label>
-                <input type="date" class="form-control" id="electricity-tariff-effective-to" />
+                <label for="electricity-tariff-effective-to" class="form-label">Hiệu lực đến</label>
+                <input type="text" inputmode="numeric" class="form-control" id="electricity-tariff-effective-to" placeholder="dd/mm/yyyy" aria-describedby="electricity-tariff-effective-to-help" />
+                <div class="form-text" id="electricity-tariff-effective-to-help">Để trống nếu biểu giá không có ngày kết thúc.</div>
               </div>
             </div>
             <div class="row g-3 mt-1">
               <div class="col-md-4">
-                <label for="electricity-tariff-vat" class="form-label">VAT điện (0 – 1)</label>
-                <input type="text" inputmode="decimal" class="form-control" id="electricity-tariff-vat" placeholder="0.08" required />
+                <label for="electricity-tariff-vat" class="form-label">VAT điện</label>
+                <div class="input-group">
+                  <input type="text" inputmode="decimal" class="form-control" id="electricity-tariff-vat" placeholder="8" required />
+                  <span class="input-group-text">%</span>
+                </div>
               </div>
               <div class="col-md-4">
                 <label for="electricity-tariff-people-per-quota" class="form-label">Số người / định mức</label>
@@ -96,29 +101,42 @@ export function renderTariffPage(container: HTMLElement): void {
               </div>
               <div class="col-md-3">
                 <label for="water-tariff-effective-from" class="form-label">Hiệu lực từ</label>
-                <input type="date" class="form-control" id="water-tariff-effective-from" required />
+                <input type="text" inputmode="numeric" class="form-control" id="water-tariff-effective-from" placeholder="dd/mm/yyyy" required />
               </div>
               <div class="col-md-3">
-                <label for="water-tariff-effective-to" class="form-label">Hiệu lực đến (bỏ trống = không giới hạn)</label>
-                <input type="date" class="form-control" id="water-tariff-effective-to" />
+                <label for="water-tariff-effective-to" class="form-label">Hiệu lực đến</label>
+                <input type="text" inputmode="numeric" class="form-control" id="water-tariff-effective-to" placeholder="dd/mm/yyyy" aria-describedby="water-tariff-effective-to-help" />
+                <div class="form-text" id="water-tariff-effective-to-help">Để trống nếu biểu giá không có ngày kết thúc.</div>
               </div>
             </div>
             <div class="row g-3 mt-1">
               <div class="col-md-3">
                 <label for="water-tariff-price-cubic-meter" class="form-label">Giá / m³</label>
-                <input type="text" inputmode="decimal" class="form-control" id="water-tariff-price-cubic-meter" required />
+                <div class="input-group">
+                  <input type="text" inputmode="decimal" class="form-control" id="water-tariff-price-cubic-meter" required />
+                  <span class="input-group-text">đ/m³</span>
+                </div>
               </div>
               <div class="col-md-3">
                 <label for="water-tariff-price-person" class="form-label">Giá / người</label>
-                <input type="text" inputmode="decimal" class="form-control" id="water-tariff-price-person" required />
+                <div class="input-group">
+                  <input type="text" inputmode="decimal" class="form-control" id="water-tariff-price-person" required />
+                  <span class="input-group-text">đ/người/tháng</span>
+                </div>
               </div>
               <div class="col-md-3">
-                <label for="water-tariff-vat" class="form-label">VAT nước (0 – 1)</label>
-                <input type="text" inputmode="decimal" class="form-control" id="water-tariff-vat" placeholder="0.05" required />
+                <label for="water-tariff-vat" class="form-label">VAT nước</label>
+                <div class="input-group">
+                  <input type="text" inputmode="decimal" class="form-control" id="water-tariff-vat" placeholder="5" required />
+                  <span class="input-group-text">%</span>
+                </div>
               </div>
               <div class="col-md-3">
-                <label for="water-tariff-environmental-fee" class="form-label">Phí môi trường (0 – 1)</label>
-                <input type="text" inputmode="decimal" class="form-control" id="water-tariff-environmental-fee" placeholder="0.10" required />
+                <label for="water-tariff-environmental-fee" class="form-label">Phí môi trường</label>
+                <div class="input-group">
+                  <input type="text" inputmode="decimal" class="form-control" id="water-tariff-environmental-fee" placeholder="10" required />
+                  <span class="input-group-text">%</span>
+                </div>
               </div>
             </div>
             <div class="d-flex gap-2 mt-4">
@@ -174,15 +192,15 @@ function electricityTierRowHtml(tier: ElectricityTariffTier): string {
   return `
     <tr>
       <td>${tier.tierNumber}</td>
-      <td>${tier.thresholdKwh !== null ? escapeHtml(tier.thresholdKwh) : "Không giới hạn"}</td>
-      <td>${escapeHtml(tier.unitPrice)}</td>
+      <td>${tier.thresholdKwh !== null ? `${escapeHtml(tier.thresholdKwh)} kWh` : "Không giới hạn"}</td>
+      <td>${escapeHtml(formatVndDisplay(tier.unitPrice))}/kWh</td>
     </tr>
   `;
 }
 
 function electricityTariffCardHtml(data: ElectricityTariffWithTiers): string {
   const { tariff, tiers } = data;
-  const effectiveRange = `${formatDateDisplay(tariff.effectiveFrom)} — ${tariff.effectiveTo !== null ? formatDateDisplay(tariff.effectiveTo) : "Không giới hạn"}`;
+  const effectiveRange = `${isoDateToDisplayDate(tariff.effectiveFrom)} — ${tariff.effectiveTo !== null ? isoDateToDisplayDate(tariff.effectiveTo) : "Không giới hạn"}`;
   const tierRows = tiers.map(electricityTierRowHtml).join("");
 
   return `
@@ -196,13 +214,13 @@ function electricityTariffCardHtml(data: ElectricityTariffWithTiers): string {
       <div class="card-body">
         <dl class="row mb-3">
           <dt class="col-sm-3">Hiệu lực</dt><dd class="col-sm-9">${escapeHtml(effectiveRange)}</dd>
-          <dt class="col-sm-3">VAT điện</dt><dd class="col-sm-9">${escapeHtml(tariff.electricityVatRate)}</dd>
+          <dt class="col-sm-3">VAT điện</dt><dd class="col-sm-9">${escapeHtml(rateCanonicalToPercentDisplay(tariff.electricityVatRate))}%</dd>
           <dt class="col-sm-3">Người / định mức</dt><dd class="col-sm-9">${tariff.peoplePerQuotaUnit}</dd>
           <dt class="col-sm-3">Bậc fallback</dt><dd class="col-sm-9">Bậc ${tariff.fallbackTierNumber}</dd>
         </dl>
         <div class="table-responsive">
           <table class="table table-sm table-bordered mb-0">
-            <thead><tr><th>Bậc</th><th>Ngưỡng (kWh)</th><th>Đơn giá</th></tr></thead>
+            <thead><tr><th>Bậc</th><th>Ngưỡng</th><th>Đơn giá</th></tr></thead>
             <tbody>${tierRows}</tbody>
           </table>
         </div>
@@ -228,9 +246,9 @@ export function setElectricityTariffFormMode(mode: "create" | "edit", tariff?: E
     title.textContent = `Sửa biểu giá điện: ${tariff.name}`;
     idInput.value = tariff.id;
     nameInput.value = tariff.name;
-    fromInput.value = tariff.effectiveFrom;
-    toInput.value = tariff.effectiveTo ?? "";
-    vatInput.value = tariff.electricityVatRate;
+    fromInput.value = isoDateToDisplayDate(tariff.effectiveFrom);
+    toInput.value = tariff.effectiveTo !== null ? isoDateToDisplayDate(tariff.effectiveTo) : "";
+    vatInput.value = rateCanonicalToPercentDisplay(tariff.electricityVatRate);
     peopleInput.value = String(tariff.peoplePerQuotaUnit);
     cancelBtn.classList.remove("d-none");
   } else {
@@ -264,7 +282,7 @@ export function renderWaterTariffList(regionEl: HTMLElement, tariffs: WaterTarif
 }
 
 function waterTariffCardHtml(tariff: WaterTariff): string {
-  const effectiveRange = `${formatDateDisplay(tariff.effectiveFrom)} — ${tariff.effectiveTo !== null ? formatDateDisplay(tariff.effectiveTo) : "Không giới hạn"}`;
+  const effectiveRange = `${isoDateToDisplayDate(tariff.effectiveFrom)} — ${tariff.effectiveTo !== null ? isoDateToDisplayDate(tariff.effectiveTo) : "Không giới hạn"}`;
   return `
     <div class="card mb-3">
       <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
@@ -276,10 +294,10 @@ function waterTariffCardHtml(tariff: WaterTariff): string {
       <div class="card-body">
         <dl class="row mb-0">
           <dt class="col-sm-3">Hiệu lực</dt><dd class="col-sm-9">${escapeHtml(effectiveRange)}</dd>
-          <dt class="col-sm-3">Giá / m³</dt><dd class="col-sm-9">${escapeHtml(tariff.pricePerCubicMeter)}</dd>
-          <dt class="col-sm-3">Giá / người</dt><dd class="col-sm-9">${escapeHtml(tariff.pricePerPerson)}</dd>
-          <dt class="col-sm-3">VAT nước</dt><dd class="col-sm-9">${escapeHtml(tariff.vatRate)}</dd>
-          <dt class="col-sm-3">Phí môi trường</dt><dd class="col-sm-9">${escapeHtml(tariff.environmentalFeeRate)}</dd>
+          <dt class="col-sm-3">Giá / m³</dt><dd class="col-sm-9">${escapeHtml(formatVndDisplay(tariff.pricePerCubicMeter))}/m³</dd>
+          <dt class="col-sm-3">Giá / người</dt><dd class="col-sm-9">${escapeHtml(formatVndDisplay(tariff.pricePerPerson))}/người/tháng</dd>
+          <dt class="col-sm-3">VAT nước</dt><dd class="col-sm-9">${escapeHtml(rateCanonicalToPercentDisplay(tariff.vatRate))}%</dd>
+          <dt class="col-sm-3">Phí môi trường</dt><dd class="col-sm-9">${escapeHtml(rateCanonicalToPercentDisplay(tariff.environmentalFeeRate))}%</dd>
         </dl>
       </div>
     </div>
@@ -305,12 +323,12 @@ export function setWaterTariffFormMode(mode: "create" | "edit", tariff?: WaterTa
     title.textContent = `Sửa biểu giá nước: ${tariff.name}`;
     idInput.value = tariff.id;
     nameInput.value = tariff.name;
-    fromInput.value = tariff.effectiveFrom;
-    toInput.value = tariff.effectiveTo ?? "";
-    cubicInput.value = tariff.pricePerCubicMeter;
-    personInput.value = tariff.pricePerPerson;
-    vatInput.value = tariff.vatRate;
-    feeInput.value = tariff.environmentalFeeRate;
+    fromInput.value = isoDateToDisplayDate(tariff.effectiveFrom);
+    toInput.value = tariff.effectiveTo !== null ? isoDateToDisplayDate(tariff.effectiveTo) : "";
+    setMoneyInputFromCanonical(cubicInput, tariff.pricePerCubicMeter);
+    setMoneyInputFromCanonical(personInput, tariff.pricePerPerson);
+    vatInput.value = rateCanonicalToPercentDisplay(tariff.vatRate);
+    feeInput.value = rateCanonicalToPercentDisplay(tariff.environmentalFeeRate);
     cancelBtn.classList.remove("d-none");
   } else {
     title.textContent = "Thêm biểu giá nước";
@@ -350,18 +368,24 @@ export function tierRowHtml(rowId: number, tierNumber: number, isUnlimited: bool
         <input type="text" class="form-control app-tier-number" value="${tierNumber}" disabled />
       </div>
       <div class="col">
-        <label class="form-label">Ngưỡng (kWh)</label>
-        <input
-          type="text"
-          inputmode="decimal"
-          class="form-control app-tier-threshold"
-          value="${escapeHtml(thresholdKwh)}"
-          ${isUnlimited ? "disabled" : ""}
-        />
+        <label class="form-label">Ngưỡng</label>
+        <div class="input-group">
+          <input
+            type="text"
+            inputmode="decimal"
+            class="form-control app-tier-threshold"
+            value="${escapeHtml(thresholdKwh)}"
+            ${isUnlimited ? "disabled" : ""}
+          />
+          <span class="input-group-text">kWh</span>
+        </div>
       </div>
       <div class="col">
         <label class="form-label">Đơn giá</label>
-        <input type="text" inputmode="decimal" class="form-control app-tier-price" value="${escapeHtml(unitPrice)}" required />
+        <div class="input-group">
+          <input type="text" inputmode="decimal" class="form-control app-tier-price" value="${escapeHtml(formatMoneyInputDisplay(unitPrice))}" required />
+          <span class="input-group-text">đ/kWh</span>
+        </div>
       </div>
       <div class="col-auto form-check">
         <input type="checkbox" class="form-check-input app-tier-unlimited" id="tier-unlimited-${rowId}" ${isUnlimited ? "checked" : ""} />
