@@ -56,7 +56,7 @@ fail(code, message)         // → { success: false, error: { code, message } }
   "success": false,
   "error": {
     "code": "ROOM_NOT_FOUND",
-    "message": "Room could not be found."
+    "message": "Không tìm thấy phòng."
   }
 }
 ```
@@ -69,8 +69,8 @@ hay stack trace vào mã lỗi). REST API (`docs/API.md`,
 `docs/MANAGEMENT_API.md`) nay đã nối toàn bộ các mã này với logic thật
 — mỗi endpoint ánh xạ lỗi `Result` của nó thành một HTTP status qua một
 bảng dùng chung (`backend/src/shared/http/result-error-status.ts`,
-`mapResultErrorCodeToHttpStatus` — xem `docs/API.md` mục "HTTP status
-mapping" để có bảng đầy đủ, bao gồm cả các mã `INVALID_*`/cấu trúc tier
+`mapResultErrorCodeToHttpStatus` — xem `docs/API.md` mục "Ánh xạ HTTP
+status" để có bảng đầy đủ, bao gồm cả các mã `INVALID_*`/cấu trúc tier
 riêng của Calculation Core không lặp lại ở đây):
 
 - `VALIDATION_ERROR` — validate hình dạng input ở tầng Service (ví dụ

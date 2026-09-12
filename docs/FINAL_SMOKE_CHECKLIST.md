@@ -77,10 +77,14 @@ Xác nhận `GET http://localhost:3000/api/v1/health` trả về
 có dotenv trong dependency của backend, và sẽ không thêm chỉ để tránh
 bước này — xem `docs/DATABASE_ACCESS.md`). Nếu lưu `DATABASE_URL`
 trong `backend/.env`, vẫn phải tự nạp giá trị đó vào biến môi trường
-của session PowerShell trước khi chạy Node, ví dụ:
+của session PowerShell trước khi chạy Node.
+
+**Thư mục làm việc bắt buộc cho lệnh dưới đây: `backend/`** (tức là đã
+`cd backend` như bước 2 — đường dẫn tới file là `.env`, KHÔNG phải
+`backend\.env`, vì đã đứng trong `backend/` rồi):
 
 ```powershell
-Get-Content backend\.env | ForEach-Object {
+Get-Content .env | ForEach-Object {
     if ($_ -match '^\s*DATABASE_URL\s*=\s*(.+)$') {
         $env:DATABASE_URL = $Matches[1].Trim()
     }
@@ -104,6 +108,19 @@ Mở terminal thứ hai: `cd frontend && npm install && npm run dev` —
 ghi lại URL local mà Vite in ra (`http://localhost:5173` hoặc cổng
 trống kế tiếp).
 
+## Kỳ billing cố định dùng cho checklist này
+
+Toàn bộ checklist dùng đúng MỘT kỳ billing: **tháng 2026-10** (UI nhập
+`2026-10`, wire `billingPeriod = "2026-10-01"`). Kỳ này được chọn có
+chủ đích, không tuỳ ý: biểu giá điện seed mặc định có hiệu lực
+`2025-05-10` → `2026-12-31`, và biểu giá nước seed mặc định có hiệu
+lực từ `2026-09-06` (không có ngày hết hiệu lực) — `2026-10-01` thoả cả
+hai điều kiện hiệu lực đó cùng lúc. Một kỳ khác (ví dụ `2026-09`) có
+thể không thoả điều kiện hiệu lực của biểu giá nước và khiến bước tạo
+hoá đơn thất bại với `TARIFF_NOT_FOUND`. Dùng **cùng** `2026-10` cho cả
+chỉ số công tơ điện, chỉ số công tơ nước, tạo hoá đơn, và đọc lại hoá
+đơn ở dưới.
+
 ## Checklist
 
 1. [ ] Mở URL frontend trên trình duyệt. Khung ứng dụng và thanh điều
@@ -112,40 +129,55 @@ trống kế tiếp).
        địa chỉ; nó xuất hiện ngay trong danh sách sau khi tạo.
 3. [ ] Chọn bất động sản đó, tạo một phòng mới với `tenantCount = 4`;
        phòng xuất hiện dưới bất động sản tương ứng.
-4. [ ] Chọn phòng đó. Nhập chỉ số công tơ điện cho một tháng test sạch:
+4. [ ] Chọn phòng đó. Nhập chỉ số công tơ điện cho tháng `2026-10`:
        chỉ số cũ `0`, chỉ số mới `120`.
-5. [ ] Nhập chỉ số công tơ nước cho cùng tháng đó: chỉ số cũ `0`, chỉ
-       số mới `12`.
+5. [ ] Nhập chỉ số công tơ nước cho cùng tháng `2026-10`: chỉ số cũ
+       `0`, chỉ số mới `12`.
 6. [ ] Mở màn hình cấu hình biểu giá điện — xác nhận biểu giá seed mặc
        định "Biểu giá điện mặc định" (6 bậc) hiển thị đúng (VAT `0.0800`,
        số người/định mức `4`, bậc dự phòng `3`).
 7. [ ] Mở màn hình cấu hình biểu giá nước — xác nhận biểu giá seed mặc
        định "Biểu giá nước mặc định" hiển thị đúng giá/VAT/phí môi
        trường.
-8. [ ] Vào màn hình Hóa đơn, tạo hoá đơn cho phòng/tháng đó với phương
-       pháp `QUOTA_TIERED` (điện) + `PER_CUBIC_METER` (nước).
-9. [ ] Xác nhận phần breakdown của hoá đơn hiển thị đủ dòng cho từng
-       bậc điện đã dùng cộng các dòng VAT/phí, không chỉ một tổng duy
-       nhất.
-10. [ ] Xác nhận tổng hợp pháp hiển thị khớp với tổng cộng của các dòng
-        breakdown (không có sai lệch/làm tròn âm thầm).
-11. [ ] Nhập một số tiền thực thu khác với tổng hợp pháp (ví dụ cao/
-        thấp hơn vài trăm đồng) và xác nhận ứng dụng hiển thị phần
-        chênh lệch cùng bên nào cao hơn.
-12. [ ] **Đọc lại hoá đơn vừa tạo (đúng luồng thật, KHÔNG có danh sách/
+8. [ ] Vào màn hình Hóa đơn, chọn đúng bất động sản và phòng đã dùng ở
+       trên.
+9. [ ] Chọn tháng `2026-10` (kỳ billing cố định của checklist này).
+10. [ ] Chọn phương pháp tính điện `QUOTA_TIERED`.
+11. [ ] Chọn phương pháp tính nước `PER_CUBIC_METER`.
+12. [ ] **Trước khi bấm "Tạo hóa đơn":** nhập một số tiền thực thu khác
+        với tổng hợp pháp dự kiến — dùng giá trị cố định
+        `actualChargedAmount = 400000` (bốn trăm nghìn đồng) để kết quả
+        có thể dự đoán trước. Đây LÀ bắt buộc phải nhập trước khi tạo:
+        `actualChargedAmount` chỉ được gửi cùng
+        `POST /api/v1/invoices` lúc tạo — không có endpoint nào để sửa
+        giá trị này sau khi hoá đơn đã được tạo, nên KHÔNG được tạo hoá
+        đơn trước rồi mới quay lại nhập số tiền thực thu.
+13. [ ] Bấm "Tạo hóa đơn" — chỉ MỘT LẦN cho phòng/tháng này (tạo lần
+        thứ hai cho cùng phòng/tháng sẽ trả về `INVOICE_ALREADY_EXISTS`
+        theo đúng thiết kế, không phải lỗi).
+14. [ ] Xác nhận phần breakdown của hoá đơn hiển thị đủ dòng cho từng
+        bậc điện đã dùng cộng các dòng VAT/phí, không chỉ một tổng duy
+        nhất.
+15. [ ] Xác nhận tổng hợp pháp (`calculatedTotal`) hiển thị khớp với
+        tổng cộng của các dòng breakdown (không có sai lệch/làm tròn
+        âm thầm), số tiền thực thu hiển thị đúng `400000`, và
+        `billingDifference` hiển thị đúng chiều (thực thu cao hơn hay
+        thấp hơn tổng hợp pháp).
+16. [ ] **Đọc lại hoá đơn vừa tạo (đúng luồng thật, KHÔNG có danh sách/
         lịch sử hoá đơn riêng):** trên cùng màn hình Hóa đơn, chọn lại
-        đúng bất động sản, đúng phòng, và đúng tháng billing vừa dùng
-        ở bước 8, sau đó bấm nút **"Xem hóa đơn đã lưu"**. Xác nhận
-        breakdown hiển thị lại giống hệt (không có dấu hiệu tính toán
-        lại — dữ liệu này được đọc thẳng từ database qua
+        đúng bất động sản, đúng phòng, và đúng tháng `2026-10` vừa
+        dùng ở trên, sau đó bấm nút **"Xem hóa đơn đã lưu"**. Xác nhận
+        breakdown, tổng hợp pháp, số tiền thực thu `400000`, và
+        `billingDifference` hiển thị lại giống hệt (không có dấu hiệu
+        tính toán lại — dữ liệu này được đọc thẳng từ database qua
         `GET /api/v1/invoices?roomId=...&billingPeriod=...`, không đi
         qua Calculation Core lần thứ hai).
-13. [ ] Thu nhỏ trình duyệt về khung nhìn di động/hẹp (~375px) — xác
+17. [ ] Thu nhỏ trình duyệt về khung nhìn di động/hẹp (~375px) — xác
         nhận menu điều hướng responsive mở/đóng đúng và không vỡ layout.
-14. [ ] Trong suốt bước 1–13, mở DevTools console của trình duyệt và
+18. [ ] Trong suốt bước 1–17, mở DevTools console của trình duyệt và
         xác nhận không có lỗi JS chưa bắt (uncaught) hay promise bị từ
         chối không xử lý (unhandled rejection) nào được ghi log.
-15. [ ] Xác nhận mọi giá trị tài chính/đo lường hiển thị (chỉ số công
+19. [ ] Xác nhận mọi giá trị tài chính/đo lường hiển thị (chỉ số công
         tơ, giá biểu giá, số tiền hoá đơn) hiển thị dưới dạng chuỗi
         thập phân chính xác, không có dấu hiệu sai số dấu phẩy động
         (ví dụ không hiển thị kiểu `120.00000001`).

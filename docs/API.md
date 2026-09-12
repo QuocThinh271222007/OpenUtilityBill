@@ -249,8 +249,8 @@ server (`console.error`), không bao giờ serialize vào response.
   nào khác được thêm vào.
 - Mọi giá trị chạm tới SQL đều được Postgres.js tham số hoá (`${value}`
   trong một tagged template) — tầng Controller/Service không bao giờ
-  thấy hay tự dựng SQL (`SQL_IN_CONTROLLER=0`, `SQL_IN_SERVICE=0` — xem
-  kiểm chứng của task đã đưa tầng này vào).
+  thấy hay tự dựng SQL (`SQL_IN_CONTROLLER=0`, `SQL_IN_SERVICE=0` — đã
+  kiểm chứng bằng grep trên toàn bộ Controller/Service).
 - Cả `invoice.controller.ts` lẫn `create-invoice.service.ts`/
   `get-invoice.service.ts` đều không import Postgres.js hay
   `DatabaseExecutor` — chỉ

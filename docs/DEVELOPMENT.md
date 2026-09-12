@@ -79,9 +79,9 @@ npm install
 | `npm run build` | Type-check, rồi build production vào `frontend/dist/`. |
 
 Frontend không có script `npm test` — không có framework test nào được
-đưa vào theo chủ đích (xem `docs/FRONTEND.md` mục "Những gì thực sự
-được test runtime"). `npm run typecheck`/`npm run build` là bước kiểm
-tra đúng đắn tại compile-time của frontend.
+đưa vào theo chủ đích (xem `docs/FRONTEND.md` mục "Trạng thái kiểm
+chứng hiện tại"). `npm run typecheck`/`npm run build` là bước kiểm tra
+đúng đắn tại compile-time của frontend.
 
 Mở `http://localhost:5173` (hoặc cổng trống kế tiếp mà Vite báo) sau
 khi chạy `npm run dev`. Để badge trạng thái backend trong sidebar hiển
@@ -138,5 +138,5 @@ OpenUtilityBill/
   database/    Schema PostgreSQL (migrations/), dữ liệu seed (seeds/),
                và SQL kiểm chứng runtime (validation/)
   docs/        Tài liệu kiến trúc, truy cập database, tính toán, API/
-               API quản lý, frontend, và tài liệu học tập
+               API quản lý, frontend, và cơ sở lựa chọn kỹ thuật
 ```

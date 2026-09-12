@@ -18,7 +18,8 @@ Vite + TypeScript + HTML5 + Bootstrap (chỉ CSS) + CSS tự viết. Không
 framework (React/Vue/Angular/Svelte), không thư viện router, không thư
 viện quản lý state, không thư viện chart/form.
 `frontend/package.json` có đúng hai dependency runtime/dev: `bootstrap`
-và `typescript`/`vite` — không đổi qua công việc này.
+và `typescript`/`vite`. Frontend hiện không sử dụng thêm dependency nào
+ngoài các package được liệt kê.
 
 ## Kiến trúc
 
@@ -85,7 +86,7 @@ không dùng History API ngoài những gì `location.hash` đã cung cấp sẵ
 | `#/properties` | Cơ sở |
 | `#/rooms` | Phòng |
 | `#/readings` | Ghi chỉ số |
-| `#/invoices` | Hóa đơn (cũng chứa "Đối chiếu" — so sánh thực thu-hợp pháp — trong cùng màn hình, theo phương án đơn giản hơn trong hai lựa chọn được phép) |
+| `#/invoices` | Hóa đơn — cũng tích hợp phần Đối chiếu thực thu – hợp pháp trong cùng màn hình |
 | `#/tariffs` | Biểu giá (hai tab: Điện / Nước) |
 
 Ghé thăm một hash không xác định hoặc rỗng quay về `#/dashboard`. Mỗi
