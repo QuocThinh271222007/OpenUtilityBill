@@ -157,7 +157,7 @@ async function loadReadingList(): Promise<void> {
   }
 
   cachedReadings = result.data;
-  renderReadingList(region, cachedReadings);
+  renderReadingList(region, cachedReadings, billingPeriodFilter !== undefined);
   wireEditButtons();
 }
 

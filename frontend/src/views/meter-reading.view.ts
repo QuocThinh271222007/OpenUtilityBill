@@ -2,7 +2,7 @@
 
 import { billingPeriodToMonthDisplay, escapeHtml } from "../utils/format";
 import { utilityTypeDisplayLabel } from "../utils/labels";
-import { renderEmptyState } from "./shared.view";
+import { pageIntroHtml, renderEmptyState, setButtonBusyState } from "./shared.view";
 import type { MeterReading, UtilityType } from "../types/meter-reading.types";
 
 /** "ELECTRICITY" -> "kWh", "WATER" -> "m³" — đơn vị hiển thị cho chỉ số trước/hiện tại/giá trị tối đa. */
@@ -22,6 +22,7 @@ function meterUnitSuffix(utilityType: UtilityType): string {
  */
 export function renderMeterReadingPage(container: HTMLElement): void {
   container.innerHTML = `
+    ${pageIntroHtml("Nhập và xem lại chỉ số công tơ điện, nước theo từng kỳ.")}
     <div class="card mb-4">
       <div class="card-header">Chọn phòng và kỳ</div>
       <div class="card-body row g-3">
@@ -41,7 +42,7 @@ export function renderMeterReadingPage(container: HTMLElement): void {
       </div>
     </div>
 
-    <div class="card mb-4 d-none" id="reading-form-card">
+    <div class="card mb-4 d-none app-form-card" id="reading-form-card">
       <div class="card-header" id="reading-form-title">Thêm chỉ số</div>
       <div class="card-body">
         <form id="reading-form" novalidate>
@@ -103,9 +104,9 @@ export function renderMeterReadingPage(container: HTMLElement): void {
   `;
 }
 
-export function renderReadingList(regionEl: HTMLElement, readings: MeterReading[]): void {
+export function renderReadingList(regionEl: HTMLElement, readings: MeterReading[], isFilteredByMonth: boolean): void {
   if (readings.length === 0) {
-    renderEmptyState(regionEl, "Chưa có chỉ số nào cho phòng này.");
+    renderEmptyState(regionEl, isFilteredByMonth ? "Chưa có chỉ số cho kỳ đã chọn." : "Chưa có chỉ số nào cho phòng này.");
     return;
   }
 
@@ -116,9 +117,9 @@ export function renderReadingList(regionEl: HTMLElement, readings: MeterReading[
         <tr>
           <td>${escapeHtml(billingPeriodToMonthDisplay(reading.billingPeriod))}</td>
           <td>${escapeHtml(utilityTypeDisplayLabel(reading.utilityType))}</td>
-          <td>${escapeHtml(reading.previousReading)} ${unit}</td>
-          <td>${escapeHtml(reading.currentReading)} ${unit}</td>
-          <td>${reading.meterMaximumValue !== null ? `${escapeHtml(reading.meterMaximumValue)} ${unit}` : "—"}</td>
+          <td class="app-numeric">${escapeHtml(reading.previousReading)} ${unit}</td>
+          <td class="app-numeric">${escapeHtml(reading.currentReading)} ${unit}</td>
+          <td class="app-numeric">${reading.meterMaximumValue !== null ? `${escapeHtml(reading.meterMaximumValue)} ${unit}` : "—"}</td>
           <td>
             <button type="button" class="btn btn-sm btn-outline-primary app-edit-reading-btn" data-id="${escapeHtml(reading.id)}">
               Sửa
@@ -131,8 +132,8 @@ export function renderReadingList(regionEl: HTMLElement, readings: MeterReading[
 
   regionEl.innerHTML = `
     <div class="table-responsive">
-      <table class="table table-hover align-middle">
-        <thead><tr><th>Kỳ</th><th>Loại</th><th>Chỉ số trước</th><th>Chỉ số hiện tại</th><th>Giá trị tối đa</th><th>Thao tác</th></tr></thead>
+      <table class="table table-hover align-middle app-table">
+        <thead><tr><th>Kỳ</th><th>Loại</th><th class="app-numeric">Chỉ số trước</th><th class="app-numeric">Chỉ số hiện tại</th><th class="app-numeric">Giá trị tối đa</th><th>Thao tác</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>
@@ -191,5 +192,5 @@ export function setReadingUnitSuffix(utilityType: UtilityType): void {
 
 export function setReadingSubmitDisabled(disabled: boolean): void {
   const btn = document.querySelector<HTMLButtonElement>("#reading-submit-btn");
-  if (btn) btn.disabled = disabled;
+  if (btn) setButtonBusyState(btn, disabled, "Đang lưu…");
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 import { escapeHtml } from "../utils/format";
-import { renderEmptyState } from "./shared.view";
+import { pageIntroHtml, renderEmptyState, setButtonBusyState } from "./shared.view";
 import type { RentalProperty } from "../types/property.types";
 
 /**
@@ -13,7 +13,8 @@ import type { RentalProperty } from "../types/property.types";
  */
 export function renderPropertyPage(container: HTMLElement): void {
   container.innerHTML = `
-    <div class="card mb-4">
+    ${pageIntroHtml("Quản lý danh sách cơ sở cho thuê.")}
+    <div class="card mb-4 app-form-card">
       <div class="card-header" id="property-form-title">Thêm cơ sở</div>
       <div class="card-body">
         <form id="property-form" novalidate>
@@ -44,7 +45,7 @@ export function renderPropertyPage(container: HTMLElement): void {
 
 export function renderPropertyList(regionEl: HTMLElement, properties: RentalProperty[]): void {
   if (properties.length === 0) {
-    renderEmptyState(regionEl, "Chưa có cơ sở nào.");
+    renderEmptyState(regionEl, "Chưa có cơ sở cho thuê.");
     return;
   }
 
@@ -67,7 +68,7 @@ export function renderPropertyList(regionEl: HTMLElement, properties: RentalProp
 
   regionEl.innerHTML = `
     <div class="table-responsive">
-      <table class="table table-hover align-middle">
+      <table class="table table-hover align-middle app-table">
         <thead><tr><th>ID</th><th>Tên cơ sở</th><th>Địa chỉ</th><th>Thao tác</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
@@ -100,5 +101,5 @@ export function setPropertyFormMode(mode: "create" | "edit", property?: RentalPr
 
 export function setPropertySubmitDisabled(disabled: boolean): void {
   const btn = document.querySelector<HTMLButtonElement>("#property-submit-btn");
-  if (btn) btn.disabled = disabled;
+  if (btn) setButtonBusyState(btn, disabled, "Đang lưu…");
 }

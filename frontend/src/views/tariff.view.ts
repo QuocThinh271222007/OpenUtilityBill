@@ -2,7 +2,7 @@
 
 import { escapeHtml, formatMoneyInputDisplay, formatVndDisplay, isoDateToDisplayDate, rateCanonicalToPercentDisplay } from "../utils/format";
 import { setMoneyInputFromCanonical } from "../utils/money-input";
-import { renderEmptyState } from "./shared.view";
+import { pageIntroHtml, renderEmptyState, setButtonBusyState } from "./shared.view";
 import type { ElectricityTariffTier, ElectricityTariffWithTiers, WaterTariff } from "../types/tariff.types";
 
 /**
@@ -23,13 +23,14 @@ import type { ElectricityTariffTier, ElectricityTariffWithTiers, WaterTariff } f
  */
 export function renderTariffPage(container: HTMLElement): void {
   container.innerHTML = `
+    ${pageIntroHtml("Cấu hình biểu giá điện và nước áp dụng cho việc tính hoá đơn.")}
     <div class="btn-group mb-3" role="group" aria-label="Chọn loại biểu giá">
       <button type="button" class="btn btn-outline-primary active" id="tariff-tab-electricity" data-tariff-tab="electricity">Điện</button>
       <button type="button" class="btn btn-outline-primary" id="tariff-tab-water" data-tariff-tab="water">Nước</button>
     </div>
 
     <div id="tariff-panel-electricity">
-      <div class="card mb-4">
+      <div class="card mb-4 app-form-card">
         <div class="card-header" id="electricity-tariff-form-title">Thêm biểu giá điện</div>
         <div class="card-body">
           <form id="electricity-tariff-form" novalidate>
@@ -89,7 +90,7 @@ export function renderTariffPage(container: HTMLElement): void {
     </div>
 
     <div id="tariff-panel-water" class="d-none">
-      <div class="card mb-4">
+      <div class="card mb-4 app-form-card">
         <div class="card-header" id="water-tariff-form-title">Thêm biểu giá nước</div>
         <div class="card-body">
           <form id="water-tariff-form" novalidate>
@@ -192,8 +193,8 @@ function electricityTierRowHtml(tier: ElectricityTariffTier): string {
   return `
     <tr>
       <td>${tier.tierNumber}</td>
-      <td>${tier.thresholdKwh !== null ? `${escapeHtml(tier.thresholdKwh)} kWh` : "Không giới hạn"}</td>
-      <td>${escapeHtml(formatVndDisplay(tier.unitPrice))}/kWh</td>
+      <td class="app-numeric">${tier.thresholdKwh !== null ? `${escapeHtml(tier.thresholdKwh)} kWh` : "Không giới hạn"}</td>
+      <td class="app-numeric">${escapeHtml(formatVndDisplay(tier.unitPrice))}/kWh</td>
     </tr>
   `;
 }
@@ -219,8 +220,8 @@ function electricityTariffCardHtml(data: ElectricityTariffWithTiers): string {
           <dt class="col-sm-3">Bậc fallback</dt><dd class="col-sm-9">Bậc ${tariff.fallbackTierNumber}</dd>
         </dl>
         <div class="table-responsive">
-          <table class="table table-sm table-bordered mb-0">
-            <thead><tr><th>Bậc</th><th>Ngưỡng</th><th>Đơn giá</th></tr></thead>
+          <table class="table table-sm table-bordered mb-0 app-table">
+            <thead><tr><th>Bậc</th><th class="app-numeric">Ngưỡng</th><th class="app-numeric">Đơn giá</th></tr></thead>
             <tbody>${tierRows}</tbody>
           </table>
         </div>
@@ -265,7 +266,7 @@ export function setElectricityTariffFormMode(mode: "create" | "edit", tariff?: E
 
 export function setElectricityTariffSubmitDisabled(disabled: boolean): void {
   const btn = document.querySelector<HTMLButtonElement>("#electricity-tariff-submit-btn");
-  if (btn) btn.disabled = disabled;
+  if (btn) setButtonBusyState(btn, disabled, "Đang lưu…");
 }
 
 // ---- Dynamic tier editor ----
@@ -346,7 +347,7 @@ export function setWaterTariffFormMode(mode: "create" | "edit", tariff?: WaterTa
 
 export function setWaterTariffSubmitDisabled(disabled: boolean): void {
   const btn = document.querySelector<HTMLButtonElement>("#water-tariff-submit-btn");
-  if (btn) btn.disabled = disabled;
+  if (btn) setButtonBusyState(btn, disabled, "Đang lưu…");
 }
 
 // ---- Dynamic tier editor ----

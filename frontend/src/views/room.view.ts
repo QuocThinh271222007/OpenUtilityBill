@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 import { escapeHtml } from "../utils/format";
-import { renderEmptyState } from "./shared.view";
+import { pageIntroHtml, renderEmptyState, setButtonBusyState } from "./shared.view";
 import type { Room } from "../types/room.types";
 
 /**
@@ -14,7 +14,8 @@ import type { Room } from "../types/room.types";
  */
 export function renderRoomPage(container: HTMLElement): void {
   container.innerHTML = `
-    <div class="card mb-4">
+    ${pageIntroHtml("Quản lý phòng và số người ở theo từng cơ sở.")}
+    <div class="card mb-4 app-form-card">
       <div class="card-header" id="room-form-title">Thêm phòng</div>
       <div class="card-body">
         <form id="room-form" novalidate>
@@ -56,9 +57,14 @@ export function renderRoomPage(container: HTMLElement): void {
   `;
 }
 
-export function renderRoomList(regionEl: HTMLElement, rooms: Room[], propertyNameById: Map<string, string>): void {
+export function renderRoomList(
+  regionEl: HTMLElement,
+  rooms: Room[],
+  propertyNameById: Map<string, string>,
+  isFilteredByProperty: boolean
+): void {
   if (rooms.length === 0) {
-    renderEmptyState(regionEl, "Chưa có phòng nào.");
+    renderEmptyState(regionEl, isFilteredByProperty ? "Chưa có phòng trong cơ sở này." : "Chưa có phòng nào.");
     return;
   }
 
@@ -68,7 +74,7 @@ export function renderRoomList(regionEl: HTMLElement, rooms: Room[], propertyNam
         <tr>
           <td>${escapeHtml(room.name)}</td>
           <td>${escapeHtml(propertyNameById.get(room.propertyId) ?? room.propertyId)}</td>
-          <td>${room.tenantCount}</td>
+          <td class="app-numeric">${room.tenantCount}</td>
           <td>
             <button type="button" class="btn btn-sm btn-outline-primary app-edit-room-btn" data-id="${escapeHtml(room.id)}">
               Sửa
@@ -81,8 +87,8 @@ export function renderRoomList(regionEl: HTMLElement, rooms: Room[], propertyNam
 
   regionEl.innerHTML = `
     <div class="table-responsive">
-      <table class="table table-hover align-middle">
-        <thead><tr><th>Phòng</th><th>Cơ sở</th><th>Số người hiện tại</th><th>Thao tác</th></tr></thead>
+      <table class="table table-hover align-middle app-table">
+        <thead><tr><th>Phòng</th><th>Cơ sở</th><th class="app-numeric">Số người hiện tại</th><th>Thao tác</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>
@@ -119,5 +125,5 @@ export function setRoomFormMode(mode: "create" | "edit", room?: Room): void {
 
 export function setRoomSubmitDisabled(disabled: boolean): void {
   const btn = document.querySelector<HTMLButtonElement>("#room-submit-btn");
-  if (btn) btn.disabled = disabled;
+  if (btn) setButtonBusyState(btn, disabled, "Đang lưu…");
 }

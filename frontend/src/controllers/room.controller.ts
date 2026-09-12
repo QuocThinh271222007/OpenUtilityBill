@@ -67,7 +67,7 @@ async function loadRoomList(propertyIdFilter: string | undefined): Promise<void>
   }
 
   cachedRooms = result.data;
-  renderRoomList(region, cachedRooms, propertyNameById);
+  renderRoomList(region, cachedRooms, propertyNameById, propertyIdFilter !== undefined);
   wireRoomEditButtons();
 }
 
