@@ -6,8 +6,8 @@ Mọi thay đổi đáng chú ý của dự án này được ghi lại trong fi
 
 ### Added
 
-- Giao diện trình duyệt bắt buộc: một single-page app Vite + TypeScript
-  + Bootstrap (`frontend/src/`) bao phủ toàn bộ workflow bắt buộc —
+- Giao diện trình duyệt: một single-page app Vite + TypeScript
+  + Bootstrap (`frontend/src/`) bao phủ toàn bộ workflow cốt lõi —
   tạo/sửa rental property và room, đặt số người ở, nhập và xem chỉ số
   công tơ điện/nước hàng tháng, cấu hình biểu giá điện (số tier động,
   không giả định 6) và biểu giá nước, tạo một hoá đơn kèm hiển thị
@@ -49,8 +49,8 @@ Mọi thay đổi đáng chú ý của dự án này được ghi lại trong fi
     tier. Số tier hiển thị của mỗi dòng (tính lại tuần tự sau mỗi lần
     thêm/xoá) được cố ý giữ tách biệt với một id dòng tăng dần, không
     bao giờ dùng lại, dùng cho cặp `id`/`for` của checkbox "không giới
-    hạn", sửa một bug DOM-id trùng lặp thật phát hiện được khi tự audit
-    thủ công một chuỗi thêm-sau-khi-xoá trong task này.
+    hạn", sửa một bug DOM-id trùng lặp thật phát hiện được khi audit
+    thủ công một chuỗi thêm-sau-khi-xoá.
   - `TARIFF_IN_USE` trên một `PUT` tariff hiển thị một message cụ thể,
     hành động rõ ràng ("Biểu giá này đã được dùng trong hóa đơn lịch
     sử. Hãy tạo phiên bản biểu giá mới.") thay cho văn bản gốc của
@@ -65,17 +65,15 @@ Mọi thay đổi đáng chú ý của dự án này được ghi lại trong fi
     load — nút bật/tắt sidebar di động và đóng alert được nối bằng
     `addEventListener` thuần.
   - Xem `docs/FRONTEND.md` để có kiến trúc đầy đủ, sơ đồ màn hình, và
-    một ghi nhận trung thực về những gì đã được test runtime (không có
-    công cụ trình duyệt nào khả dụng ở phiên đó — xem mục "Những gì
-    thực sự đã được test runtime") so với những gì chỉ được kiểm tra
-    tĩnh/kiểu.
+    mục "Trạng thái kiểm chứng hiện tại" phân biệt rõ những gì đã được
+    test runtime so với những gì chỉ được kiểm tra tĩnh/kiểu.
 
 Không có triển khai production, xác thực, hay khu vực quản trị nào
 được đưa vào trong thay đổi này.
 
 ### Added
 
-- Management REST API bắt buộc: property, room, meter reading, và cấu
+- Management REST API: property, room, meter reading, và cấu
   hình biểu giá điện/nước —
   `GET`/`POST /api/v1/properties`, `PATCH /api/v1/properties/:propertyId`;
   `GET`/`POST /api/v1/rooms` (tuỳ chọn `?propertyId=`),
@@ -89,7 +87,7 @@ Không có triển khai production, xác thực, hay khu vực quản trị nào
   không chỉ Invoice. Xem `docs/MANAGEMENT_API.md` để có hợp đồng đầy
   đủ. DELETE cố ý chưa được cài đặt cho bất kỳ tài nguyên nào — khoá
   ngoại `RESTRICT` lịch sử khiến ngữ nghĩa xoá trở thành một quyết định
-  sản phẩm nằm ngoài phạm vi bắt buộc hiện tại
+  sản phẩm nằm ngoài phạm vi hiện tại
   (`DELETE_NOT_IMPLEMENTED_BY_DESIGN=true`).
 - Cài đặt `PropertyRepository` (`listAll`/`findById`/`create`/
   `update`) — trước đây bị hoãn ở giai đoạn nền tảng domain-database vì
@@ -437,7 +435,7 @@ này.
   domain kèm khoá ngoại, ràng buộc `UNIQUE`/`CHECK`, kiểu tài chính
   `NUMERIC`, và chính sách `ON DELETE` có chủ đích cho từng quan hệ.
 - Cấu hình biểu giá mặc định chính thức làm dữ liệu seed
-  (`database/seeds/001_competition_defaults.sql`): VAT điện, số người/
+  (`database/seeds/001_default_tariffs.sql`): VAT điện, số người/
   định mức, tier fallback, 6 tier điện, và giá/VAT/phí môi trường
   nước — lưu dưới dạng dữ liệu, không hard-code.
 - `docs/DOMAIN_MODEL.md`, `docs/DATABASE_DESIGN.md`, và
@@ -450,7 +448,7 @@ Không có công thức tính toán, kết nối database thật, hay CRUD
 
 - Nền tảng dự án: tài liệu repository (`README.md`,
   `THIRD_PARTY_NOTICES.md`, `docs/ARCHITECTURE.md`,
-  `docs/LEARNING_NOTES.md`, `docs/ERROR_HANDLING.md`,
+  `docs/TECHNICAL_RATIONALE.md`, `docs/ERROR_HANDLING.md`,
   `docs/DEVELOPMENT.md`).
 - Nền tảng backend (`backend/`): Node.js + TypeScript + Express, với
   `app.ts`/`server.ts` tách riêng, hợp đồng `Result<T>` dùng chung

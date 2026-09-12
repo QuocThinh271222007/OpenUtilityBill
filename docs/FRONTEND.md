@@ -134,8 +134,8 @@ so sánh (`billingDifference`) backend đã suy ra sẵn. Mọi type trong
 `actualChargedAmount`, `billingDifference`, ...) dưới dạng `string` —
 không bao giờ `number`. `Number(...)`/`parseFloat(...)`/
 `Math.round(...)` không bao giờ được áp dụng cho bất kỳ field nào
-trong số này ở bất kỳ đâu trong codebase (đã kiểm chứng bằng grep — xem
-báo cáo cuối).
+trong số này ở bất kỳ đâu trong codebase (đã kiểm chứng bằng grep trên
+toàn bộ `frontend/src/`).
 
 ### Field số nguyên và field thập phân tài chính
 
@@ -171,7 +171,7 @@ Chuỗi API gốc không bao giờ bị thay đổi — chỉ một chuỗi hi�
 — `value.startsWith("-")` cho âm, một regex (`/^0+(\.0+)?$/`) cho đúng
 bằng 0, mọi trường hợp khác là dương. Nó không bao giờ parse giá trị để
 so sánh số học với `0`. Màn hình hoá đơn ánh xạ điều này thành các nhãn
-bắt buộc: over → "Thu cao hơn mức tính hợp pháp", under → "Thu thấp
+cụ thể: over → "Thu cao hơn mức tính hợp pháp", under → "Thu thấp
 hơn mức tính hợp pháp", exact → "Khớp".
 
 ### Chuyển đổi Month ↔ `billingPeriod`
@@ -188,7 +188,8 @@ Tariff `effectiveFrom`/`effectiveTo` dùng `<input type="date">` thuần
 thay vào đó (một ngày lịch thật được kỳ vọng, không phải một tháng
 billing, và ngày **không** bị ép về `01` — `effectiveFrom` thật của
 tariff điện seed mặc định là `2025-05-10`, xem
-`docs/MANAGEMENT_API.md` mục "Ngày hiệu lực tariff"). Giá trị `<input
+`docs/MANAGEMENT_API.md` mục "Ngày hiệu lực tariff — quy tắc ngày khác
+với billingPeriod"). Giá trị `<input
 type="date">` (đã là `"YYYY-MM-DD"`) được gửi tới API nguyên vẹn.
 
 ## Escape HTML
@@ -197,9 +198,9 @@ type="date">` (đã là `"YYYY-MM-DD"`) được gửi tới API nguyên vẹn.
 `& < > " '`. Mọi hàm `views/*.view.ts` dựng một chuỗi HTML qua template
 literal đều bọc **mọi** field text nội suy có nguồn gốc từ người dùng/
 API (tên property/room/tariff, địa chỉ, mô tả invoice item, ...) trong
-`escapeHtml(...)` trước khi nội suy nó — đã kiểm chứng như một phần của
-audit task này (grep tìm nội suy `${...}` chưa escape trong mọi file
-view, đối chiếu chéo với nguồn gốc của từng field). Số thuần
+`escapeHtml(...)` trước khi nội suy nó — đã kiểm chứng bằng grep tìm
+nội suy `${...}` chưa escape trong mọi file view, đối chiếu chéo với
+nguồn gốc của từng field. Số thuần
 (`tenantCount`, `tierNumber`, ...) được chèn không escape vì một
 `number` JS không thể chứa ký tự đặc biệt HTML. `showGlobalAlert` (nơi
 DUY NHẤT mọi message lỗi backend tới DOM) đi xa hơn một bước và dùng
@@ -207,10 +208,10 @@ DUY NHẤT mọi message lỗi backend tới DOM) đi xa hơn một bước và 
 dùng ở bất cứ đâu nội dung là một message tự do đơn lẻ thay vì một đoạn
 có cấu trúc lớn hơn.
 
-## Màn hình hoá đơn — màn hình demo chính
+## Màn hình hoá đơn
 
-`#/invoices` là một màn hình bao phủ toàn bộ trung tâm của workflow bắt
-buộc:
+`#/invoices` là một màn hình bao phủ toàn bộ trung tâm của workflow
+tạo và đọc lại hoá đơn:
 
 1. **Tạo**: chọn property → room (tải qua `GET /api/v1/rooms?propertyId=`)
    → tháng billing → phương pháp điện (nhãn `"Theo định mức số người /
@@ -260,8 +261,8 @@ Hai định danh cố ý được giữ **tách biệt** cho mỗi dòng:
   dùng lại kể cả sau khi một dòng bị xoá) — chỉ dùng cho cặp
   `id`/`for` của checkbox "không giới hạn", để hai dòng không bao giờ
   bị trùng `id` DOM sau một chuỗi thêm-sau-khi-xoá (một bug thật đã
-  được phát hiện và sửa trong quá trình tự audit thủ công của task này
-  — xem "Những gì thực sự đã được test runtime" bên dưới).
+  được phát hiện và sửa trong quá trình audit thủ công — xem "Trạng
+  thái kiểm chứng hiện tại" bên dưới).
 
 Chỉ dòng cuối cùng được kỳ vọng là tier không giới hạn
 (`thresholdKwh = null`), biểu diễn bằng một checkbox "Bậc cuối / không
@@ -316,28 +317,22 @@ cập nhật đúng badge đó — nó không bao giờ chặn khung ứng dụn
 hay router hoạt động, theo đúng quy tắc sẵn có của dự án rằng health
 check chỉ mang tính thông tin, không phải một cổng khởi động.
 
-## Những gì thực sự đã được test runtime
+## Trạng thái kiểm chứng hiện tại
 
-**Không có công cụ trình duyệt nào khả dụng khi frontend này được xây
-dựng ban đầu** — không có click-through, kiểm tra DOM, hay xác minh
-console-log nào xảy ra trong một trình duyệt thật tại thời điểm đó.
-Những gì *đã* được kiểm chứng lúc đó:
+Đã kiểm chứng:
 
 - `npm run typecheck` và `npm run build` (cả `tsc --noEmit` lẫn build
   production đầy đủ của Vite) — sạch, không lỗi.
-- Backend được khởi động tại local không có `DATABASE_URL`, và proxy
-  `/api` của Vite dev server được thử với request HTTP thật (`curl`) —
-  xác nhận `GET /api/v1/health` thành công và các endpoint quản lý trả
-  đúng `500 INTERNAL_ERROR` an toàn (chưa cấu hình database) thay vì
-  crash, đúng như thiết kế. Mỗi module controller/view/util cũng được
-  request riêng lẻ từ dev server, xác nhận mỗi module transpile không
-  lỗi cú pháp (dev server của Vite trả về một overlay lỗi compile thay
-  vì module khi thất bại thật — không có module nào như vậy).
-- Một lượt trace thủ công/tĩnh cẩn thận qua logic controller của mỗi
-  màn hình, đối chiếu với đúng các kịch bản trong "Manual/static smoke
-  audit" (hướng dẫn của task đó) — đây là cách bug `id` trùng lặp trong
-  trình soạn tier (xem ở trên) thực sự được phát hiện và sửa, *trước
-  khi* có bất kỳ tuyên bố đúng đắn nào được đưa ra.
+- Backend chạy thật với `DATABASE_URL` trỏ tới PostgreSQL thật;
+  `GET /api/v1/health` trả `200` qua chính origin của frontend; proxy
+  `/api` của Vite dev server chuyển tiếp request HTTP thật tới backend
+  thật (xác nhận qua `curl`).
+- Toàn bộ REST API mà UI này tiêu thụ (`docs/API.md`,
+  `docs/MANAGEMENT_API.md`) đã được kiểm chứng bằng 320/320 test PASS
+  chạy trên PostgreSQL thật, 0 SKIP.
+- Trace thủ công/tĩnh qua logic controller của mỗi màn hình — đây là
+  cách bug `id` trùng lặp trong trình soạn tier (xem ở trên) được phát
+  hiện và sửa.
 - Kiểm chứng bằng grep: zero API origin hard-code, zero
   `parseFloat`/ép kiểu `Number()` tài chính (các lời gọi `Number()`/
   `valueAsNumber` duy nhất là trên field `INTEGER`), zero secret, zero
@@ -345,20 +340,15 @@ Những gì *đã* được kiểm chứng lúc đó:
   trong mọi file view đều truy vết được về hoặc một nguồn số/hằng số an
   toàn hoặc một wrapper `escapeHtml(...)`.
 
-**Kể từ đó, một lần chạy "runtime closure" riêng đã kiểm chứng bằng
-thực thi thật (không phải trình duyệt, nhưng thật):** backend khởi động
-với `DATABASE_URL` thật trỏ tới PostgreSQL thật, `GET /api/v1/health`
-trả 200 qua chính origin của frontend; frontend dev server khởi động
-thật và proxy `/api` của Vite thật sự chuyển tiếp request HTTP tới
-backend thật (xác nhận qua `curl`, không phải trình duyệt); và toàn bộ
-REST API bắt buộc mà UI này tiêu thụ (`docs/API.md`,
-`docs/MANAGEMENT_API.md`) đã được kiểm chứng bằng 320/320 test PASS
-chạy thật trên PostgreSQL thật, 0 SKIP. **Việc thực sự click-through
-qua trình duyệt (mở app, điền form, xem kết quả bằng mắt, kiểm tra
-console) vẫn còn đang CHỜ thực hiện thủ công** — xem
-`docs/FINAL_SMOKE_CHECKLIST.md` cho checklist 15 bước cụ thể, và không
-tài liệu nào trong dự án này được phép tuyên bố bước đó đã hoàn thành
-cho tới khi việc đó được xác nhận.
+Đang chờ:
+
+- Click-through thủ công qua trình duyệt (mở app, điền form, xem kết
+  quả bằng mắt) — xem `docs/FINAL_SMOKE_CHECKLIST.md` cho checklist cụ
+  thể. Không tài liệu nào trong dự án này được phép tuyên bố bước đó
+  đã hoàn thành cho tới khi việc đó được xác nhận.
+- Kiểm tra console trình duyệt (lỗi JS chưa bắt, promise bị từ chối
+  không xử lý) — chỉ quan sát được trong một trình duyệt thật, là một
+  phần của checklist smoke test thủ công.
 
 ## Chạy tại local
 

@@ -14,7 +14,7 @@
 --   procedure nào tính hoá đơn ở đây — xem docs/DATABASE_DESIGN.md mục
 --   "Why no triggers/stored procedures yet".
 -- - tạo dữ liệu cấu hình mặc định — xem
---   database/seeds/001_competition_defaults.sql (chạy SAU file này).
+--   database/seeds/001_default_tariffs.sql (chạy SAU file này).
 -- - enforce mọi ràng buộc nghiệp vụ chéo bảng (ví dụ: một meter_reading
 --   được invoice tham chiếu phải thuộc đúng room/billing_period/
 --   utility_type của invoice đó). Những ràng buộc như vậy đòi hỏi
@@ -107,8 +107,8 @@ CREATE TABLE rooms (
 -- current_reading hợp lệ có thể NHỎ HƠN previous_reading (ví dụ công
 -- tơ quay lại 0). Việc phân biệt "giảm hợp lệ do rollover" và "giảm do
 -- lỗi nhập liệu" cần logic nghiệp vụ (so sánh với meter_maximum_value),
--- không phải một CHECK constraint đơn giản — xem Calculation Core
--- (task sau).
+-- không phải một CHECK constraint đơn giản — xem
+-- backend/src/calculation/meter/calculate-meter-usage.ts.
 --
 -- Tuy nhiên, khi đã khai báo meter_maximum_value, MỘT chỉ số (previous
 -- hay current) không bao giờ hợp lệ nếu VƯỢT QUÁ giá trị tối đa của
@@ -143,11 +143,11 @@ CREATE TABLE meter_readings (
 --
 -- people_per_quota_unit và fallback_tier_number là tham số cấu hình
 -- HIỆN TẠI ("số người / 4 = định mức", "fallback dùng giá bậc 3") —
--- lưu như dữ liệu để Calculation Core (task sau) đọc, thay vì hard-code
--- hằng số 4 hay 3 trong TypeScript.
+-- lưu như dữ liệu để Calculation Core đọc, thay vì hard-code hằng số 4
+-- hay 3 trong TypeScript.
 --
 -- UNIQUE (name, effective_from) hỗ trợ seed idempotent bằng
--- ON CONFLICT (xem database/seeds/001_competition_defaults.sql) và
+-- ON CONFLICT (xem database/seeds/001_default_tariffs.sql) và
 -- ngăn hai bản ghi cấu hình trùng tên + trùng ngày hiệu lực.
 --
 -- electricity_vat_rate được lưu dưới dạng PHÂN SỐ THẬP PHÂN trong đoạn
@@ -233,12 +233,12 @@ CREATE TABLE water_tariffs (
 -- tariff/reading đang được một invoice tham chiếu phải bị chặn tường
 -- minh, không được âm thầm mất dữ liệu hay để lại invoice "mồ côi".
 --
--- UNIQUE (room_id, billing_period): ở phạm vi bắt buộc ban đầu, mỗi
+-- UNIQUE (room_id, billing_period): ở phạm vi hiện tại, mỗi
 -- phòng chỉ có một invoice cho mỗi tháng. Nếu sau này cần sửa/tạo lại
 -- hoá đơn cho cùng kỳ (revision/versioning), ràng buộc này sẽ cần một
 -- migration mới (ví dụ thêm revision_number vào khoá UNIQUE) — việc đó
--- KHÔNG được thiết kế ở task này để tránh overengineering một tính
--- năng chưa có yêu cầu cụ thể.
+-- CHƯA được thiết kế ở đây để tránh overengineering một tính năng
+-- chưa có yêu cầu cụ thể.
 CREATE TABLE invoices (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     room_id BIGINT NOT NULL
@@ -271,10 +271,11 @@ CREATE TABLE invoices (
     -- Ràng buộc nghiệp vụ chéo bảng liên quan tới hai cột trên, CỐ Ý
     -- KHÔNG được enforce bằng FK/CHECK ở đây (sẽ cần composite foreign
     -- key hoặc trigger — cả hai đều bị tránh ở giai đoạn này, xem
-    -- docs/DATABASE_DESIGN.md "Why no triggers/stored procedures yet").
-    -- Đây là ranh giới CÓ CHỦ ĐÍCH, không phải thiếu sót — Service layer
-    -- (CreateInvoice, task sau) chịu trách nhiệm xác thực fail-fast
-    -- TRƯỚC KHI transaction ghi invoice (xem docs/TRANSACTIONS.md):
+    -- docs/DATABASE_DESIGN.md "Vì sao chưa dùng trigger hay stored
+    -- procedure"). Đây là ranh giới CÓ CHỦ ĐÍCH, không phải thiếu sót —
+    -- Service layer (`CreateInvoiceService`) chịu trách nhiệm xác thực
+    -- fail-fast TRƯỚC KHI transaction ghi invoice (xem
+    -- docs/TRANSACTIONS.md):
     --   - electricity_reading_id phải thuộc đúng room_id của invoice;
     --   - electricity_reading billing_period phải khớp với
     --     invoices.billing_period;
@@ -293,7 +294,7 @@ CREATE TABLE invoices (
     -- rủi ro mất đồng bộ (actual_charged_amount có thể được sửa sau mà
     -- quên cập nhật difference_amount theo). Nguồn sự thật duy nhất
     -- (single source of truth) là calculated_total và
-    -- actual_charged_amount; Service/Calculation module (task sau) sẽ
+    -- actual_charged_amount; `CreateInvoiceService`/`GetInvoiceService`
     -- tính chênh lệch on-demand khi cần hiển thị, không lưu lại. Xem
     -- docs/DATABASE_DESIGN.md.
     actual_charged_amount NUMERIC(14, 2) CHECK (actual_charged_amount >= 0),

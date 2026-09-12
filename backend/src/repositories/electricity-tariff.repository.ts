@@ -7,8 +7,8 @@ import { TariffEffectivePeriod } from "./tariff-shared.types";
 /**
  * Một ElectricityTariff cùng các bậc giá của nó, đã sắp xếp theo
  * `tierNumber` tăng dần (ORDER BY tier_number ASC — xem
- * docs/DATABASE_ACCESS.md mục "Electricity tier ordering"). Không dựa
- * vào thứ tự hàng tự nhiên của PostgreSQL.
+ * docs/MANAGEMENT_API.md mục "Các endpoint"). Không dựa vào thứ tự
+ * hàng tự nhiên của PostgreSQL.
  */
 export interface ElectricityTariffWithTiers {
   tariff: ElectricityTariff;
@@ -53,7 +53,7 @@ export type { TariffEffectivePeriod };
  *   tariff nào khớp điều kiện hiệu lực;
  *   `AMBIGUOUS_TARIFF_CONFIGURATION` khi CÓ NHIỀU HƠN MỘT tariff cùng
  *   khớp — implementation KHÔNG được tự ý chọn đại một hàng (xem
- *   docs/DATABASE_DESIGN.md mục "Tariff versions and effective dates").
+ *   docs/DATABASE_DESIGN.md mục "Phiên bản tariff và ngày hiệu lực").
  *   Đây là PHÒNG TUYẾN THỨ HAI độc lập với kiểm tra chồng lấn ở tầng
  *   Service quản trị (`TARIFF_PERIOD_OVERLAP`, xem
  *   docs/MANAGEMENT_API.md) — CreateInvoice vẫn từ chối fail-closed nếu

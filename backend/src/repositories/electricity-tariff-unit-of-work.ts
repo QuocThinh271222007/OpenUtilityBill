@@ -15,7 +15,7 @@ import { ElectricityTariffRepository } from "./electricity-tariff.repository";
  * `electricity_tariffs` (cha) và `electricity_tariff_tiers` (con) PHẢI
  * được tạo/thay thế NGUYÊN TỬ — một tariff có cha đã ghi nhưng tier chỉ
  * ghi được một nửa không phải một cấu hình hợp lệ (xem
- * docs/MANAGEMENT_API.md mục "Electricity tariff aggregate transaction").
+ * docs/MANAGEMENT_API.md mục "Transaction aggregate của tariff điện").
  *
  * Không chịu trách nhiệm:
  * - biết gì về Postgres.js/SQL — implementation cụ thể nằm ở

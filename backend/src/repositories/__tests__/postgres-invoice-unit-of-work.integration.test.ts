@@ -58,8 +58,8 @@ async function createFixtures(sql: Sql, suffix: string, billingPeriod: Date): Pr
   // test file khác chạy ĐỒNG THỜI (node:test chạy song song nhiều file)
   // có thể đọc thấy CẢ tariff seed LẪN tariff fixture này cùng có hiệu
   // lực tại cùng một billingPeriod -> AMBIGUOUS_TARIFF_CONFIGURATION giả —
-  // đây là nguyên nhân THẬT đã phát hiện được khi chạy runtime closure
-  // (fixture "vĩnh viễn" của file này từng khiến
+  // đây là nguyên nhân THẬT đã phát hiện được khi chạy các test này trên
+  // PostgreSQL thật (fixture "vĩnh viễn" của file này từng khiến
   // repository-reads.integration.test.ts và
   // invoice.api.integration.test.ts thất bại không ổn định).
   const [electricityTariff] = await sql`

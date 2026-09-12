@@ -12,7 +12,7 @@ import type { ElectricityBillingMethod, WaterBillingMethod } from "./tariff.type
  * `quantity`/`billingDifference`/mọi field trong `electricity`/`water`/
  * `invoiceTotal` LUÔN là `string` — KHÔNG BAO GIỜ ép về `number` để
  * tính toán (frontend chỉ hiển thị, backend là nguồn sự thật duy nhất
- * — xem docs/FRONTEND.md mục "Financial string rule").
+ * — xem docs/FRONTEND.md mục "Quy tắc chuỗi tài chính (quan trọng)").
  *
  * Không chịu trách nhiệm:
  * - định nghĩa lại toàn bộ hình dạng `TieredElectricityResult`/

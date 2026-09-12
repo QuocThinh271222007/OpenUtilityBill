@@ -98,17 +98,17 @@ kiểm tra.
 
 | Ràng buộc | Bảng | Vì sao |
 |---|---|---|
-| `(name, effective_from)` | `electricity_tariffs`, `water_tariffs` | Hỗ trợ seed idempotent qua `ON CONFLICT` (xem `database/seeds/001_competition_defaults.sql`) và ngăn hai dòng cấu hình cùng tên và cùng ngày hiệu lực. |
+| `(name, effective_from)` | `electricity_tariffs`, `water_tariffs` | Hỗ trợ seed idempotent qua `ON CONFLICT` (xem `database/seeds/001_default_tariffs.sql`) và ngăn hai dòng cấu hình cùng tên và cùng ngày hiệu lực. |
 | `(room_id, billing_period, utility_type)` | `meter_readings` | Đúng một reading cho mỗi room, mỗi tháng, mỗi loại tiện ích — đảm bảo ở mức schema đứng sau bất biến `MeterReading` của `docs/DOMAIN_MODEL.md`. |
 | `(tariff_id, tier_number)` | `electricity_tariff_tiers` | Một số tier không được lặp lại trong cùng một phiên bản tariff. |
 | `(property_id, name)` | `rooms` | Tên/số room phải không mơ hồ *trong phạm vi một property*. Đây **không** phải một quy tắc duy nhất toàn cục — "Property A / 101" và "Property B / 101" đều hợp lệ, vì chúng thuộc hai property khác nhau. |
-| `(room_id, billing_period)` | `invoices` | Một invoice cho mỗi room mỗi tháng, trong phạm vi bắt buộc ban đầu (xem "Sửa lại hoá đơn" bên dưới). |
+| `(room_id, billing_period)` | `invoices` | Một invoice cho mỗi room mỗi tháng, trong phạm vi hiện tại (xem "Sửa lại hoá đơn" bên dưới). |
 | `(invoice_id, display_order)` | `invoice_items` | Hai dòng breakdown trên cùng một invoice không được nhận cùng vị trí hiển thị. |
 
 ## Ràng buộc CHECK
 
 Mọi bất biến đơn giản, một mục đích, từ danh sách quy tắc số/nghiệp vụ
-của đề bài đều được ép buộc bằng một `CHECK`:
+đều được ép buộc bằng một `CHECK`:
 
 - `tenant_count >= 0`, `tenant_count_used >= 0`
 - `tier_number > 0`
@@ -301,14 +301,14 @@ tariff (ví dụ từ chối hai tariff đang hoạt động có khoảng ngày 
 lấn) **không** được ép buộc trong schema này — làm điều đó bằng một
 `CHECK` đơn giản là không thể (ràng buộc `CHECK` không thể so sánh giữa
 các dòng), và một giải pháp đúng đắn (một ràng buộc `EXCLUDE` trên một
-khoảng ngày) cần extension `btree_gist`, mà task này tránh đưa vào khi
+khoảng ngày) cần extension `btree_gist`, được cố ý chưa đưa vào khi
 chưa có nhu cầu cụ thể. Nếu các phiên bản tariff chồng lấn trở thành
 một vấn đề chất lượng dữ liệu thật sự, đó là ứng viên cho một migration
 tương lai, được biện minh tường minh.
 
 ### Các ngày seed mang ý nghĩa khác nhau cho điện và nước
 
-`database/seeds/001_competition_defaults.sql` đặt các giá trị
+`database/seeds/001_default_tariffs.sql` đặt các giá trị
 `effective_from`/`effective_to` khác nhau cho hai tariff, và chúng
 **không** thể hoán đổi ý nghĩa cho nhau:
 
@@ -348,19 +348,19 @@ database sẽ ép buộc điều gì, không có tầng gián tiếp nào cần 
 
 ## Vì sao không dùng ORM
 
-Xem `docs/LEARNING_NOTES.md` ("Vì sao dùng SQL trực tiếp, chưa dùng
-ORM") để biết lý do đầy đủ. Tóm gọn: giá trị chính của một ORM ở đây
-(ánh xạ dòng thành object, tự sinh query) không đáng chi phí của một
-tầng trừu tượng bổ sung phải học, giải thích, và debug, với một dự án
-mà chủ của nó cần tự giải thích được mọi query được sinh ra. SQL trực
-tiếp, cô lập sau các module Repository, đạt được mục tiêu cô lập
+Xem `docs/TECHNICAL_RATIONALE.md` ("Vì sao dùng SQL trực tiếp, chưa
+dùng ORM") để biết lý do đầy đủ. Tóm gọn: giá trị chính của một ORM ở
+đây (ánh xạ dòng thành object, tự sinh query) không đáng chi phí của
+một tầng trừu tượng bổ sung phải học, giải thích, và debug, khi mọi
+câu query cần đọc và đối chiếu trực tiếp với schema/migration. SQL
+trực tiếp, cô lập sau các module Repository, đạt được mục tiêu cô lập
 persistence mà không cần tầng bổ sung đó.
 
 ## Vì sao chưa dùng trigger hay stored procedure
 
-Đề bài cho schema này tường minh tránh cả hai, và lý do vẫn đúng ngoài
-việc "đề bài nói vậy": trigger và stored procedure đưa logic *vào
-trong* database, vô hình với bất kỳ ai đọc codebase TypeScript, và khó
+Quyết định thiết kế cho schema này tường minh tránh cả hai: trigger và
+stored procedure đưa logic *vào trong* database, vô hình với bất kỳ ai
+đọc codebase TypeScript, và khó
 unit-test hơn một hàm TypeScript thuần. Calculation Core của dự án này
 cố ý được giữ là TypeScript độc lập với database chính vì để logic
 tính toán luôn hiển thị, test được, và debug được ở một chỗ (xem

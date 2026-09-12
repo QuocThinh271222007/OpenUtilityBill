@@ -20,11 +20,11 @@ export type AlertType = "success" | "danger" | "warning";
  * Hiển thị một cảnh báo Bootstrap trong vùng toàn cục. Nội dung message
  * được gán qua `textContent` (KHÔNG qua `innerHTML`) — an toàn với mọi
  * message đến từ backend hay do người dùng tạo ra gián tiếp, không cần
- * escape thủ công (xem docs/FRONTEND.md mục "HTML escaping").
+ * escape thủ công (xem docs/FRONTEND.md mục "Escape HTML").
  *
  * Nút đóng được wire bằng `addEventListener` thuần DOM — KHÔNG dùng cơ
  * chế `data-bs-dismiss` của Bootstrap JS (dự án không nạp Bootstrap JS,
- * xem docs/FRONTEND.md mục "Bootstrap JavaScript").
+ * xem docs/FRONTEND.md mục "Công nghệ (đã khoá)").
  */
 export function showGlobalAlert(type: AlertType, message: string): void {
   const region = document.querySelector<HTMLElement>("#app-alert-region");

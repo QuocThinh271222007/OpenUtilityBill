@@ -16,13 +16,13 @@ import type {
  *
  * Invariants (enforce ở tầng database, xem migration):
  * - Duy nhất một invoice cho mỗi (roomId, billingPeriod) — xem
- *   "Why one invoice per room/month" bên dưới.
+ *   "Vì sao mỗi phòng/tháng chỉ có một hoá đơn" bên dưới.
  * - `calculatedTotal >= 0`.
  * - `actualChargedAmount >= 0` khi có giá trị.
  *
  * Biểu diễn ID:
  * `id` và mọi field kết thúc bằng `...Id` là `string` (BIGINT ở
- * database) — xem ../property/property.model.ts mục "ID representation"
+ * database) — xem ../property/property.model.ts mục "Biểu diễn ID"
  * và docs/DATABASE_ACCESS.md.
  *
  * Biểu diễn số:
@@ -41,18 +41,16 @@ import type {
  * thu), một `differenceAmount` đã lưu trước đó sẽ trở thành SAI mà
  * không ai biết trừ khi có thêm logic đồng bộ lại nó. Nguồn sự thật
  * duy nhất (single source of truth) là `calculatedTotal` và
- * `actualChargedAmount`; Service/Calculation module (task sau) sẽ tính
- * chênh lệch on-demand mỗi khi cần hiển thị, không lưu lại (xem
+ * `actualChargedAmount`; `CreateInvoiceService`/`GetInvoiceService`
+ * tính chênh lệch on-demand mỗi khi cần hiển thị, không lưu lại (xem
  * docs/DATABASE_DESIGN.md mục "Giá trị suy ra không được lưu trữ").
  *
  * Không chịu trách nhiệm:
  * - tính toán bất kỳ giá trị nào. File này chỉ mô tả hình dạng dữ liệu;
- *   công thức tính (Calculation Core) là một task riêng.
+ *   công thức tính thuộc về Calculation Core (`backend/src/calculation/`).
  * - hỗ trợ nhiều phiên bản (revision/versioning) cho cùng một
- *   room/billingPeriod ở giai đoạn này — xem "Sửa lại hoá đơn (tương lai)"
- *   bên dưới.
- * - có Repository/Service/Controller/route thực sự tạo invoice ở task
- *   này (không có CreateInvoice workflow).
+ *   room/billingPeriod ở giai đoạn hiện tại — xem "Sửa lại hoá đơn
+ *   (tương lai)" bên dưới.
  *
  * Vì sao Invoice lưu snapshot cấu hình thay vì tham chiếu dữ liệu "hiện tại":
  * `Room.tenantCount`, `ElectricityTariff`, `WaterTariff` đều có thể thay
@@ -65,19 +63,19 @@ import type {
  * `electricityTariffId`/`waterTariffId` (tham chiếu đúng PHIÊN BẢN
  * tariff đã dùng, không phải "tariff mới nhất"). Đây là trùng lặp dữ
  * liệu CÓ CHỦ ĐÍCH, không phải lỗi chuẩn hoá (xem
- * docs/DATABASE_DESIGN.md mục "Historical snapshot principle").
+ * docs/DATABASE_DESIGN.md mục "Snapshot lịch sử có chủ đích").
  *
  * Vì sao mỗi phòng/tháng chỉ có một hoá đơn:
- * Ở phạm vi bắt buộc ban đầu (basic scope), mỗi phòng chỉ cần một hoá
- * đơn cho mỗi tháng. Ràng buộc UNIQUE(room_id, billing_period) ngăn tạo
- * nhầm hai hoá đơn cho cùng kỳ.
+ * Ở phạm vi hiện tại, mỗi phòng chỉ cần một hoá đơn cho mỗi tháng.
+ * Ràng buộc UNIQUE(room_id, billing_period) ngăn tạo nhầm hai hoá đơn
+ * cho cùng kỳ.
  *
  * Sửa lại hoá đơn (tương lai):
  * Nếu sau này cần sửa/tạo lại hoá đơn cho cùng kỳ (ví dụ phát hiện sai
  * sót sau khi đã tạo), ràng buộc UNIQUE hiện tại sẽ CẦN một migration
  * mới (ví dụ thêm `revision_number` vào khoá UNIQUE, hoặc đánh dấu hoá
- * đơn cũ là "superseded"). Việc này KHÔNG được thiết kế trong task này
- * để tránh overengineering một tính năng chưa có yêu cầu cụ thể.
+ * đơn cũ là "superseded"). Việc này CHƯA được thiết kế ở đây để tránh
+ * overengineering một tính năng chưa có yêu cầu cụ thể.
  *
  * Lý do tồn tại riêng biệt với InvoiceItem:
  * Invoice là "kết quả tổng hợp" (`calculatedTotal`) của một kỳ hoá đơn;

@@ -9,8 +9,8 @@ Tài liệu này bao phủ các endpoint workflow hoá đơn
 meter-reading/tariff được ghi riêng trong `docs/MANAGEMENT_API.md` —
 hai tài liệu dùng chung các quy ước (ID, hợp đồng chuỗi thập phân, hợp
 đồng lỗi) mô tả bên dưới. API này chưa có xác thực — giao diện trình
-duyệt bắt buộc (`docs/FRONTEND.md`) tiêu thụ API này, nhưng không có
-kiểm soát truy cập nào.
+duyệt (`docs/FRONTEND.md`) tiêu thụ API này, nhưng không có kiểm soát
+truy cập nào.
 
 ## Base path
 
@@ -68,7 +68,8 @@ thành phần giờ).
 
 Đây chỉ là một quyết định ở **định dạng wire** — nó không thay đổi
 ranh giới `Date` của Repository/domain đã được review (và cố ý giữ
-nguyên) trong `docs/DATABASE_ACCESS.md` mục "Ranh giới `DATE`".
+nguyên) trong `docs/DATABASE_ACCESS.md` mục "Ranh giới `DATE` — đã
+review, chưa thay đổi (cân nhắc tương lai)".
 
 ## `POST /api/v1/invoices`
 
@@ -279,9 +280,10 @@ validate xong request — không bao giờ tại thời điểm import module.
 ## Những gì chưa được cài đặt
 
 DELETE cho bất kỳ tài nguyên nào (theo thiết kế — xem
-`docs/MANAGEMENT_API.md` mục "Không có endpoint DELETE"), xác thực,
-phân quyền theo vai trò, và một khu vực quản trị/người dùng riêng có
-kiểm soát quyền. Quản lý Property/Room/MeterReading/Tariff (list/
-create/update) **đã** được cài đặt — xem `docs/MANAGEMENT_API.md` —
-và một giao diện trình duyệt bắt buộc đầy đủ nay tiêu thụ API này từ
-đầu đến cuối, bao gồm cả cấu hình tariff — xem `docs/FRONTEND.md`.
+`docs/MANAGEMENT_API.md` mục "Không có endpoint DELETE (theo thiết
+kế)"), xác thực, phân quyền theo vai trò, và một khu vực quản trị/
+người dùng riêng có kiểm soát quyền. Quản lý Property/Room/
+MeterReading/Tariff (list/create/update) **đã** được cài đặt — xem
+`docs/MANAGEMENT_API.md` — và một giao diện trình duyệt đầy đủ nay
+tiêu thụ API này từ đầu đến cuối, bao gồm cả cấu hình tariff — xem
+`docs/FRONTEND.md`.

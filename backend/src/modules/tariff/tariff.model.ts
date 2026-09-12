@@ -24,7 +24,7 @@
  *
  * Biểu diễn ID:
  * `id`, `tariffId` là `string` (BIGINT ở database) — xem
- * ../property/property.model.ts mục "ID representation" và
+ * ../property/property.model.ts mục "Biểu diễn ID" và
  * docs/DATABASE_ACCESS.md.
  *
  * Biểu diễn số:
@@ -38,13 +38,12 @@
  *
  * Không chịu trách nhiệm:
  * - implement công thức phân bổ bậc thang (tier allocation) hay tính
- *   VAT/phí — đó là việc của Calculation Core (task sau). File này CHỈ
- *   mô tả hình dạng dữ liệu cấu hình.
+ *   VAT/phí — đó là việc của Calculation Core. File này CHỈ mô tả hình
+ *   dạng dữ liệu cấu hình.
  * - hard-code số lượng bậc. Số bậc là DATA-DRIVEN: một ElectricityTariff
  *   có thể có bất kỳ số ElectricityTariffTier nào (cấu hình mặc định
  *   hiện tại là 6, nhưng đây không phải giới hạn cố định trong code
  *   hay schema).
- * - có Repository/Service/Controller đi kèm ở task này.
  *
  * Vì sao ElectricityTariff và ElectricityTariffTier là hai model riêng biệt:
  * Nếu dùng các cột `tier1_price`, `tier2_price`, ..., số bậc sẽ bị cố

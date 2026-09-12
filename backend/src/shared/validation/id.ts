@@ -12,7 +12,7 @@
  * toàn toàn bộ khoảng giá trị BIGINT (giới hạn an toàn 2^53-1), nên ID
  * luôn được validate DƯỚI DẠNG CHUỖI bằng regex, KHÔNG BAO GIỜ
  * `Number(id)`/`parseInt(id)` (xem docs/DATABASE_ACCESS.md mục
- * "BIGINT / ID boundary").
+ * "Ranh giới `BIGINT` / ID").
  *
  * Không chịu trách nhiệm:
  * - kiểm tra ID đó có THỰC SỰ tồn tại trong database hay không — đó là

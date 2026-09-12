@@ -77,7 +77,7 @@ chống trùng lặp an toàn với race condition. `GetInvoiceService` đọc l
 một hoá đơn đã lưu (không tính lại). Xem
 [`docs/CREATE_INVOICE_WORKFLOW.md`](docs/CREATE_INVOICE_WORKFLOW.md).
 
-Toàn bộ REST API backend bắt buộc đã có đầy đủ: tạo/đọc lại hoá đơn
+Toàn bộ REST API backend cốt lõi đã có đầy đủ: tạo/đọc lại hoá đơn
 (`POST`/`GET /api/v1/invoices`) cùng các endpoint quản lý cho property,
 room, meter reading, và cấu hình biểu giá điện/nước
 (`docs/MANAGEMENT_API.md`) — đủ để một frontend quản lý toàn bộ dữ liệu
@@ -90,7 +90,7 @@ tài nguyên nào (xem `docs/MANAGEMENT_API.md` mục "Không có endpoint
 DELETE"). Xem [`docs/API.md`](docs/API.md) và
 [`docs/MANAGEMENT_API.md`](docs/MANAGEMENT_API.md).
 
-Giao diện trình duyệt bắt buộc đã có đầy đủ: một single-page app Vite +
+Giao diện trình duyệt đã có đầy đủ: một single-page app Vite +
 TypeScript + Bootstrap (`frontend/src/`) với router dựa trên hash tự
 viết (không dùng thư viện router), bao phủ toàn bộ luồng nghiệp vụ —
 tạo/sửa property và room, đặt số người ở, nhập và xem lại chỉ số công
@@ -104,11 +104,11 @@ dạng VND chỉ để hiển thị được thực hiện bằng thao tác chu�
 giờ ép kiểu qua `number` của JS. Xem
 [`docs/FRONTEND.md`](docs/FRONTEND.md).
 
-Giao diện quản lý bắt buộc, bao gồm cấu hình biểu giá điện/nước, đã
-được cài đặt (xem ở trên). Xác thực, phân quyền theo vai trò, một khu
-vực quản trị/người dùng riêng có kiểm soát quyền, và triển khai lên môi
-trường production chưa được cài đặt — đây là các task riêng, sẽ thực
-hiện sau, cần được review độc lập.
+Giao diện quản lý, bao gồm cấu hình biểu giá điện/nước, đã được cài
+đặt (xem ở trên). Xác thực, phân quyền theo vai trò, một khu vực quản
+trị/người dùng riêng có kiểm soát quyền, và triển khai lên môi trường
+production chưa được cài đặt — đây là các hạng mục riêng, sẽ thực
+hiện sau, cần được xem xét độc lập.
 
 **Bằng chứng runtime thật:** toàn bộ backend đã được chạy thật với kết
 nối PostgreSQL thật (Supabase) — hành vi `NUMERIC`/`BIGINT` của
@@ -138,7 +138,7 @@ OpenUtilityBill/
   database/    Schema PostgreSQL (migrations/), dữ liệu seed (seeds/),
                và SQL kiểm chứng runtime (validation/)
   docs/        Tài liệu kiến trúc, domain model, truy cập database,
-               tính toán, API/API quản lý, và tài liệu học tập
+               tính toán, API/API quản lý, và cơ sở lựa chọn kỹ thuật
 ```
 
 ## Bắt đầu nhanh
@@ -150,8 +150,8 @@ chạy, build, và typecheck cho cả `backend/` và `frontend/`.
 
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — kiến trúc, luồng
   request, hướng phụ thuộc, ranh giới module.
-- [`docs/LEARNING_NOTES.md`](docs/LEARNING_NOTES.md) — cơ sở lựa chọn
-  kỹ thuật và kiến trúc cho từng công nghệ trong dự án.
+- [`docs/TECHNICAL_RATIONALE.md`](docs/TECHNICAL_RATIONALE.md) — cơ sở
+  lựa chọn kỹ thuật và kiến trúc cho từng công nghệ trong dự án.
 - [`docs/ERROR_HANDLING.md`](docs/ERROR_HANDLING.md) — hợp đồng thành
   công/thất bại, mã lỗi, pipeline fail-fast.
 - [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) — cài đặt và các lệnh.
@@ -195,19 +195,3 @@ chạy, build, và typecheck cho cả `backend/` và `frontend/`.
 ## Giấy phép
 
 MIT — xem [`LICENSE`](LICENSE).
-
-Calculation Core cài đặt đúng quy tắc tính hoá đơn chính thức của kỳ
-thi (sản lượng công tơ, tiền điện theo bậc/fallback, tiền nước, tổng
-hoá đơn) và được bao phủ bởi test tự động đối chiếu với các case mẫu
-chính thức đã công bố (`cd backend && npm test`). Tầng Repository trên
-Postgres.js tồn tại với hỗ trợ đọc+ghi cho mọi domain (RentalProperty,
-Room, MeterReading, ElectricityTariff, WaterTariff, Invoice); cặp
-`CreateInvoiceService`/`GetInvoiceService` hoàn chỉnh nối việc tạo/đọc
-lại hoá đơn một cách transactional; toàn bộ REST API bắt buộc (luồng
-hoá đơn cộng quản lý property/room/meter-reading/tariff) phơi bày điều
-đó qua các endpoint thật (xem `docs/API.md`, `docs/MANAGEMENT_API.md`);
-và một giao diện trình duyệt Vite + TypeScript + Bootstrap
-(`docs/FRONTEND.md`) tiêu thụ API đó từ đầu đến cuối cho toàn bộ luồng
-bắt buộc, bao gồm giao diện quản lý cấu hình biểu giá bắt buộc. DELETE,
-xác thực, phân quyền theo vai trò, và triển khai production chưa được
-cài đặt.

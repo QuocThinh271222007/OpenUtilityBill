@@ -235,9 +235,9 @@ bằng PostgreSQL thật, không chỉ dựa trên test giả lập:
   (`backend/src/modules/invoice/__tests__/invoice.api.integration.test.ts`,
   một app Express thật trên một cổng ephemeral + `fetch` có sẵn, chạy
   `POST` rồi `GET` qua PostgreSQL thật) đã thực sự CHẠY THẬT trên
-  PostgreSQL thật (không chỉ tồn tại dưới dạng code chưa chạy) trong
-  lần chạy runtime closure gần nhất — commit và rollback đều PASS,
-  0 dòng invoice/invoice_items mồ côi sau rollback. Xem
+  PostgreSQL thật (không chỉ tồn tại dưới dạng code chưa chạy) — commit
+  và rollback đều PASS, 0 dòng invoice/invoice_items mồ côi sau
+  rollback. Xem
   `docs/DATABASE_ACCESS.md` mục "Transaction" cho cùng bằng chứng ở
   mức cơ chế `runInTransaction`.
 

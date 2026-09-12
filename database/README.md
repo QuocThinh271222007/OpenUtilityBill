@@ -6,10 +6,10 @@ OpenUtilityBill, host trên [Supabase](https://supabase.com).
 ## Trạng thái hiện tại
 
 Schema domain ban đầu, seed cấu hình mặc định, và một bộ
-script kiểm chứng runtime tồn tại dưới dạng file SQL (bên dưới). Cả hai
-migration, seed, và toàn bộ backend REST API/frontend đã được chạy
-thật đối với một database PostgreSQL thật (Supabase) trong lần chạy
-runtime closure gần nhất — 320/320 test PASS, 0 SKIP, bao gồm cả
+script kiểm chứng runtime tồn tại dưới dạng file SQL (bên dưới). Backend
+integration suite đã được thực thi trên PostgreSQL thật (Supabase) —
+cả migration, seed, và toàn bộ backend REST API/frontend đã được chạy
+thật đối với database đó, đạt 320/320 test PASS, 0 SKIP, bao gồm cả
 transaction commit/rollback thật, đọc/ghi Repository thật, và
 `POST`/`GET /api/v1/invoices` qua HTTP thật. Health endpoint
 (`GET /api/v1/health`) vẫn cố ý không chạm database — xem
@@ -27,7 +27,7 @@ database/
     001_initial_domain_schema.sql          Bảng, ràng buộc, quan hệ
     002_preserve_invoice_item_precision.sql  Nới invoice_items.quantity/amount thành NUMERIC không giới hạn
   seeds/
-    001_competition_defaults.sql           Biểu giá mặc định chính thức
+    001_default_tariffs.sql           Biểu giá mặc định chính thức
   validation/
     001_domain_success_validation.sql      Chạy một lần: kiểm tra schema/seed + chứng minh dữ liệu hợp lệ
     002_domain_constraint_validation.sql   Chạy từng khối một: chứng minh ràng buộc từ chối dữ liệu sai
@@ -40,11 +40,11 @@ database/
 ```bash
 psql "$DATABASE_URL" -f database/migrations/001_initial_domain_schema.sql
 psql "$DATABASE_URL" -f database/migrations/002_preserve_invoice_item_precision.sql
-psql "$DATABASE_URL" -f database/seeds/001_competition_defaults.sql
+psql "$DATABASE_URL" -f database/seeds/001_default_tariffs.sql
 ```
 
 Seed an toàn để chạy lại — xem ghi chú idempotency ở đầu
-`database/seeds/001_competition_defaults.sql`.
+`database/seeds/001_default_tariffs.sql`.
 
 ## Kiểm chứng runtime với Supabase SQL Editor
 
@@ -80,7 +80,7 @@ dùng chính SQL Editor của dự án Supabase:
    Kỳ vọng: **PASS** (thành công, không lỗi).
 4. Paste và chạy `database/migrations/002_preserve_invoice_item_precision.sql`.
    Kỳ vọng: **PASS**.
-5. Paste và chạy `database/seeds/001_competition_defaults.sql`.
+5. Paste và chạy `database/seeds/001_default_tariffs.sql`.
    Kỳ vọng: **PASS**.
 6. Paste và chạy `database/validation/001_domain_success_validation.sql`
    **toàn bộ, trong một lần thực thi**. Kỳ vọng: **PASS** ở mọi câu
@@ -105,11 +105,11 @@ dùng chính SQL Editor của dự án Supabase:
    một lưới an toàn — nó chỉ xoá các dòng có tên bắt đầu bằng
    `VALIDATION_SUCCESS_`, `VALIDATION_CONSTRAINT_`, hoặc
    `VALIDATION_PRECISION_`, và không bao giờ chạm vào các dòng
-   `Competition Default ...`. Trong điều kiện bình thường (bước 6–8
+   `Biểu giá ... mặc định`. Trong điều kiện bình thường (bước 6–8
    chạy đúng như ghi rõ) nó sẽ không tìm thấy gì để xoá, vì không file
    kiểm chứng nào từng gọi `COMMIT`.
 10. Để chứng minh seed idempotent: chạy
-    `database/seeds/001_competition_defaults.sql` lần thứ hai (kỳ
+    `database/seeds/001_default_tariffs.sql` lần thứ hai (kỳ
     vọng: **PASS**, không lỗi), rồi chạy lại các query "B. Kiểm chứng
     seed mặc định" trong `001_domain_success_validation.sql` — mọi số
     đếm phải không đổi (1 tariff điện, 6 tier, 1 tariff nước), chứng
@@ -153,7 +153,7 @@ thậm chí được gửi đi.
 
 ## Cách tiếp cận
 
-- Cách truy cập: SQL trực tiếp, không ORM (xem `docs/LEARNING_NOTES.md`).
+- Cách truy cập: SQL trực tiếp, không ORM (xem `docs/TECHNICAL_RATIONALE.md`).
 - Cô lập persistence: mọi SQL sống đằng sau các module Repository
   trong `backend/src/repositories/`, không bao giờ bên trong Controller
   hay Service (xem `docs/ARCHITECTURE.md`).

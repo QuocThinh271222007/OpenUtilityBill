@@ -25,7 +25,7 @@ import { NewRoom, RoomRepository, UpdateRoom } from "../room.repository";
  *   TƯỜNG MINH, dễ đọc, không dùng thư viện mapping tự động.
  * - dùng `sql.unsafe` hay ghép chuỗi SQL — `id` được tham số hoá qua
  *   `${id}` trong tagged template, Postgres.js tự escape/tham số hoá an
- *   toàn (xem docs/DATABASE_ACCESS.md mục "Parameterized queries").
+ *   toàn (xem docs/DATABASE_ACCESS.md mục "Query tham số hoá (chống SQL injection)").
  */
 interface RoomRow {
   id: string;

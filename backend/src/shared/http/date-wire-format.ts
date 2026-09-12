@@ -23,7 +23,8 @@ import { Result, ok, fail } from "../result";
  * Không chịu trách nhiệm:
  * - chấp nhận timestamp JS tuỳ ý (`Date.parse` nói chung) — CHỈ đúng
  *   hình dạng "YYYY-MM-DD", không giờ/múi giờ, để loại bỏ mơ hồ múi giờ
- *   ở ranh giới HTTP (xem docs/DATABASE_ACCESS.md mục "DATE boundary").
+ *   ở ranh giới HTTP (xem docs/DATABASE_ACCESS.md mục "Ranh giới `DATE` —
+ *   đã review, chưa thay đổi (cân nhắc tương lai)").
  * - dùng thư viện ngày tháng nào — chỉ `Date.UTC` có sẵn.
  */
 const WIRE_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;

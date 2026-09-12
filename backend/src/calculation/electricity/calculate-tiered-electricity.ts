@@ -32,7 +32,7 @@ import { validateElectricityConfig } from "./validate-electricity-config";
  * Không chịu trách nhiệm:
  * - hard-code số lượng bậc hay bất kỳ đơn giá/ngưỡng cụ thể nào của kỳ
  *   thi. Toàn bộ đến từ tham số `tiers` (xem
- *   backend/src/calculation/__tests__/fixtures/competition-defaults.ts
+ *   backend/src/calculation/__tests__/fixtures/default-tariffs.ts
  *   cho dữ liệu test).
  * - truy cập database/Express — nhận toàn bộ dữ liệu qua tham số hàm.
  *

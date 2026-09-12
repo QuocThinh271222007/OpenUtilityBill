@@ -6,10 +6,10 @@ import type { UtilityType } from "../types/meter-reading.types";
 
 /**
  * Trách nhiệm:
- * Ánh xạ giá trị enum API (tiếng Anh, cố định) sang nhãn hiển thị tiếng
- * Việt — TÁCH RIÊNG khỏi giá trị `option.value` thực sự gửi lên API
- * (xem docs/API.md mục "Electricity method labels" — giá trị enum thật
- * không bao giờ đổi, chỉ nhãn hiển thị là tiếng Việt).
+ * Ánh xạ giá trị enum API (tiếng Anh, cố định, xem docs/API.md) sang
+ * nhãn hiển thị tiếng Việt — TÁCH RIÊNG khỏi giá trị `option.value`
+ * thực sự gửi lên API; giá trị enum thật không bao giờ đổi, chỉ nhãn
+ * hiển thị là tiếng Việt.
  *
  * Không chịu trách nhiệm: tính toán gì — chỉ ánh xạ chuỗi hằng số sang chuỗi hằng số.
  */

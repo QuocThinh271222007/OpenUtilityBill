@@ -18,7 +18,7 @@ export interface UpdateRoomInput {
 
 /**
  * `propertyRepository` chỉ dùng để xác minh property tồn tại trước khi
- * tạo room (section "Room" của docs/MANAGEMENT_API.md) — RoomManagementService
+ * tạo room (mục "Rooms" của docs/MANAGEMENT_API.md) — RoomManagementService
  * không có thao tác ghi nào lên `rental_properties`.
  */
 export interface RoomManagementDependencies {

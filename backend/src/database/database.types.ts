@@ -23,6 +23,6 @@ import type { Sql, TransactionSql } from "postgres";
  * trong lẫn ngoài transaction mà không cần viết hai phiên bản, và để
  * không thể "vô tình" dùng client toàn cục cho một nửa các câu lệnh ghi
  * đáng lẽ phải nằm trong cùng một transaction (xem
- * docs/DATABASE_ACCESS.md mục "Transactions").
+ * docs/DATABASE_ACCESS.md mục "Transaction").
  */
 export type DatabaseExecutor = Sql | TransactionSql;

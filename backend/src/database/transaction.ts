@@ -6,10 +6,12 @@ import type { DatabaseExecutor } from "./database.types";
 
 /**
  * Trách nhiệm:
- * Cung cấp MỘT ranh giới transaction rõ ràng mà một Service/Orchestrator
- * tương lai có thể dùng — "chạy các thao tác ghi Repository này trong
- * MỘT transaction" — mà không cần biết cú pháp `sql.begin()` của
- * Postgres.js.
+ * Cung cấp MỘT ranh giới transaction rõ ràng mà tầng Service/Orchestrator
+ * dùng — "chạy các thao tác ghi Repository này trong MỘT transaction" —
+ * mà không cần biết cú pháp `sql.begin()` của Postgres.js. Được dùng
+ * qua `InvoiceUnitOfWork`/`ElectricityTariffUnitOfWork` (xem
+ * `backend/src/repositories/invoice-unit-of-work.ts`,
+ * `electricity-tariff-unit-of-work.ts`).
  *
  * Input: `work` — một hàm nhận `DatabaseExecutor` (chính là transaction
  * context) và trả về `Promise<Result<T>>`.
@@ -28,13 +30,14 @@ import type { DatabaseExecutor } from "./database.types";
  *
  * Không chịu trách nhiệm:
  * - chứa logic nghiệp vụ (ví dụ CreateInvoice). File này CHỈ là CƠ CHẾ
- *   transaction — WORKFLOW cụ thể dùng cơ chế này là việc của Service
- *   layer (task sau).
+ *   transaction — workflow cụ thể dùng cơ chế này thuộc về tầng
+ *   Service (xem `create-invoice.service.ts`,
+ *   `electricity-tariff-management.service.ts`).
  * - để mỗi Repository method tự mở transaction riêng của nó.
  * - giữ transaction mở trong lúc làm việc CPU/tính toán nặng. Theo
- *   thiết kế dự kiến (xem docs/DATABASE_ACCESS.md mục "Transaction
- *   scope"), Calculation Core phải chạy TRƯỚC khi gọi `runInTransaction`
- *   — `work` chỉ nên chứa các lệnh ghi Repository, không chứa phép tính
+ *   quy tắc thiết kế (xem docs/DATABASE_ACCESS.md mục "Transaction"),
+ *   Calculation Core phải chạy TRƯỚC khi gọi `runInTransaction` —
+ *   `work` chỉ nên chứa các lệnh ghi Repository, không chứa phép tính
  *   hoá đơn.
  *
  * Lý do tồn tại:

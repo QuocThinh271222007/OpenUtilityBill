@@ -5,14 +5,14 @@
  * Các hàm THUẦN TUÝ (pure — không DOM, không I/O) xử lý chuỗi cho toàn
  * frontend: escape HTML, định dạng hiển thị tiền VNĐ, chuyển đổi
  * tháng<->billingPeriod, và phân loại dấu của một chuỗi số (để tô màu
- * "chênh lệch"). Tách khỏi views/ để có thể kiểm chứng độc lập (xem
- * docs/FRONTEND.md mục "Frontend testing").
+ * "chênh lệch"). Tách khỏi views/ để có thể kiểm chứng độc lập bằng
+ * unit test thuần, không cần DOM.
  *
  * Important invariant (áp dụng cho MỌI hàm trong file này):
  * KHÔNG BAO GIỜ dùng `Number(...)`/`parseFloat(...)`/`Math.round(...)`
  * trên một giá trị tài chính/đo lường — mọi hàm ở đây chỉ thao tác
  * CHUỖI (string), giữ nguyên độ chính xác tuyệt đối mà backend đã trả
- * về (xem docs/FRONTEND.md mục "Financial string rule").
+ * về (xem docs/FRONTEND.md mục "Quy tắc chuỗi tài chính (quan trọng)").
  *
  * Không chịu trách nhiệm:
  * - tính toán bất kỳ giá trị tài chính nào (cộng/trừ/nhân/chia) — chỉ
@@ -24,7 +24,7 @@
  * nơi views/ chèn text đến từ backend/người dùng (tên cơ sở, tên phòng,
  * địa chỉ, tên biểu giá, mô tả dòng hoá đơn, ...) vào một chuỗi HTML,
  * để không tin tưởng dữ liệu đó chỉ vì nó đến từ backend của chính dự
- * án (xem docs/FRONTEND.md mục "HTML escaping").
+ * án (xem docs/FRONTEND.md mục "Escape HTML").
  */
 export function escapeHtml(value: string): string {
   return value
@@ -95,7 +95,7 @@ export function formatDateDisplay(isoDate: string): string {
 /**
  * `<input type="month">` trả về "YYYY-MM" — ghép thêm "-01" để thành
  * `billingPeriod` ("YYYY-MM-DD") mà API cần. Thuần ghép chuỗi, KHÔNG
- * dùng `Date`/múi giờ local (xem docs/API.md mục "Date contract").
+ * dùng `Date`/múi giờ local (xem docs/API.md mục "Hợp đồng ngày").
  */
 export function monthInputToBillingPeriod(monthValue: string): string {
   return `${monthValue}-01`;
@@ -112,7 +112,8 @@ export type BillingDifferenceStatus = "over" | "under" | "exact";
  * Phân loại DẤU của một chuỗi chênh lệch tiền (`billingDifference`) đã
  * backend tính sẵn — CHỈ kiểm tra HÌNH DẠNG chuỗi (bắt đầu bằng "-",
  * hay toàn chữ số 0), KHÔNG BAO GIỜ `parseFloat`/`Number` để so sánh
- * với 0 (xem docs/API.md mục "Actual vs legal comparison").
+ * với 0 (xem docs/CREATE_INVOICE_WORKFLOW.md mục "actualChargedAmount /
+ * chênh lệch hoá đơn").
  */
 export function classifyBillingDifference(differenceValue: string): BillingDifferenceStatus {
   if (differenceValue.startsWith("-")) {

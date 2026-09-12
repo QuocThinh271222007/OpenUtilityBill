@@ -9,7 +9,7 @@ import { closeDatabaseClient, getDatabaseClient } from "../postgres-client";
  * Chứng minh, bằng PostgreSQL THẬT, rằng NUMERIC và BIGINT đi qua
  * `getDatabaseClient()` (Postgres.js) mà KHÔNG bị ép về JS `number` —
  * đúng hợp đồng chính xác tuyệt đối của dự án (xem
- * docs/DATABASE_ACCESS.md mục "NUMERIC/BIGINT precision boundary").
+ * docs/DATABASE_ACCESS.md mục "Ranh giới độ chính xác `NUMERIC` / `BIGINT`").
  *
  * Không chịu trách nhiệm:
  * - cần một database THẬT để repository unit test khác chạy được — chỉ

@@ -23,8 +23,8 @@ import { InvoiceTotalResult } from "../../calculation/invoice/calculate-invoice-
  * `electricityBillingMethod`/`waterBillingMethod` CỐ Ý là `string`, KHÔNG
  * phải `ElectricityBillingMethod`/`WaterBillingMethod`, vì
  * `CreateInvoiceInput` là một RANH GIỚI NGHIỆP VỤ THỜI GIAN CHẠY (runtime
- * business boundary — ví dụ sẽ nhận dữ liệu từ một Controller/HTTP body
- * trong task sau) và phải TỪ CHỐI giá trị không hợp lệ một cách rõ ràng
+ * business boundary — nhận dữ liệu từ `invoice.controller.ts`/HTTP body,
+ * xem `invoice.http.ts`) và phải TỪ CHỐI giá trị không hợp lệ một cách rõ ràng
  * (`VALIDATION_ERROR`) thay vì chỉ dựa vào union type của TypeScript
  * (vốn chỉ kiểm tra lúc biên dịch, không kiểm tra dữ liệu thời gian
  * chạy thực sự đến từ đâu). `CreateInvoiceService.execute` tự validate

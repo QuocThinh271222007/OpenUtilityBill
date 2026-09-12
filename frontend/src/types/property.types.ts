@@ -7,7 +7,7 @@
  *
  * Bất biến quan trọng:
  * `id` là chuỗi (BIGINT ở backend), KHÔNG BAO GIỜ là `number` — xem
- * docs/API.md mục "Conventions used throughout".
+ * docs/API.md mục "Quy ước dùng xuyên suốt".
  *
  * Không chịu trách nhiệm: validate dữ liệu tại runtime.
  */

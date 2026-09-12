@@ -10,7 +10,7 @@ riêng cho quản lý.
 Các endpoint này tồn tại để một frontend có thể tạo/sửa property và
 room, đặt số người ở, nhập và xem chỉ số công tơ, và cấu hình tariff,
 rồi gọi `POST`/`GET /api/v1/invoices` sẵn có. Giao diện trình duyệt
-bắt buộc (`docs/FRONTEND.md`) nay tiêu thụ toàn bộ các endpoint này.
+(`docs/FRONTEND.md`) nay tiêu thụ toàn bộ các endpoint này.
 
 ## Các endpoint
 
@@ -29,11 +29,11 @@ tài chính lịch sử với khoá ngoại `RESTRICT` (xem migration 001). Ng�
 nghĩa xoá CRUD mù quáng sẽ đòi hỏi các quyết định sản phẩm mà dự án này
 chưa đưa ra: xoá hẳn hay lưu trữ (archive), điều gì xảy ra với tính
 toàn vẹn lịch sử khi một dòng được tham chiếu bị xoá, một thao tác xoá
-có cần khôi phục được không. Không quyết định nào trong số đó là bắt
-buộc cho phạm vi bắt buộc hiện tại, nên DELETE **cố ý chưa được cài đặt** ở bất kỳ
-đâu trong API này — `DELETE_NOT_IMPLEMENTED_BY_DESIGN=true`. Đây là một
-management API cho các field mà phạm vi bắt buộc cần, không phải một
-tuyên bố về CRUD đầy đủ tổng quát.
+có cần khôi phục được không. Không quyết định nào trong số đó là cần
+thiết cho phạm vi hiện tại, nên DELETE **cố ý chưa được cài đặt** ở
+bất kỳ đâu trong API này — `DELETE_NOT_IMPLEMENTED_BY_DESIGN=true`.
+Đây là một management API cho các field hiện được hỗ trợ, không phải
+một tuyên bố về CRUD đầy đủ tổng quát.
 
 ## PATCH so với PUT
 
@@ -395,9 +395,8 @@ xung đột trả về `TARIFF_PERIOD_OVERLAP` (`409`).
 
 Đây là validate ở **mức ứng dụng**
 (`backend/src/modules/tariff/tariff-period-overlap.ts`, dùng chung bởi
-cả hai Service) — schema hiện tại (migration 001, không đổi trong task
-này) không có ràng buộc `EXCLUDE` cho việc này, và thêm một cái nằm
-ngoài phạm vi ở đây. Đây là chống xung đột thông thường ở mức quản trị,
+cả hai Service) — schema hiện tại (migration 001) không có ràng buộc
+`EXCLUDE` cho việc này, và thêm một cái nằm ngoài phạm vi ở đây. Đây là chống xung đột thông thường ở mức quản trị,
 không phải một đảm bảo của database: không có isolation `SERIALIZABLE`
 hay advisory lock nào được thêm để đóng khoảng hở giữa lúc kiểm tra và
 lúc ghi. `CreateInvoiceService` vẫn giữ tuyến phòng thủ thứ hai độc
@@ -441,8 +440,8 @@ liệu này chỉ dùng những giá trị đó như minh hoạ thực tế.
   `date-wire-format.ts`, `result-error-status.ts`, và
   `controller-helpers.ts` (bộ ba
   `isPlainRequestBody`/`sendValidationError`/`sendInternalError` mà mọi
-  Controller trong API này dùng) — được tách ra từ module invoice
-  trong task đó để năm module không mỗi cái mang một bản gần-trùng-lặp.
+  Controller trong API này dùng) — được tách ra từ module invoice để
+  năm module không mỗi cái mang một bản gần-trùng-lặp.
   Hành vi của invoice không đổi; các file của chính nó re-export những
   thứ này ở nơi các import sẵn có cần tiếp tục hoạt động.
 - **Hàm nguyên thuỷ validate dùng chung**: `backend/src/shared/validation/`
@@ -460,13 +459,11 @@ liệu này chỉ dùng những giá trị đó như minh hoạ thực tế.
 ## Test-source typecheck: đã đóng (trước đây là nợ kỹ thuật)
 
 `backend/tsconfig.json` loại trừ `src/**/__tests__/**` khỏi `npm run
-typecheck`, một quy ước có từ trước task này. Điều đó nghĩa là lệnh
-typecheck thông thường không bao giờ tự type-check bất kỳ file
-`*.test.ts` nào. Trước đây, mỗi file test mới/thay đổi chỉ được kiểm
-chứng riêng lẻ bằng một lần gọi `tsc` strict thủ công (không thuộc
-script `npm` thông thường). Trong lần chạy QA phát hành cuối cùng, toàn
-bộ `src/**/__tests__/**` đã được type-check tường minh bằng cùng cách
-đó và đạt **PASS hoàn toàn, 0 lỗi** (bao gồm cả việc sửa các fake
+typecheck`. Điều đó nghĩa là lệnh typecheck thông thường không bao giờ
+tự type-check bất kỳ file `*.test.ts` nào. Một lần gọi `tsc` strict
+thủ công riêng (không thuộc script `npm` thông thường), bao phủ toàn
+bộ `src/**/__tests__/**`, xác nhận **PASS hoàn toàn, 0 lỗi** (bao gồm
+cả việc sửa các fake
 Repository trong `backend/src/modules/invoice/__tests__/fakes.ts` để
 thoả mãn đầy đủ interface Repository mở rộng của chúng, không dùng
 `any`/`as unknown as`/`@ts-ignore`). Lệnh `npm run typecheck` bình

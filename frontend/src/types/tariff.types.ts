@@ -15,7 +15,8 @@
  *
  * `effectiveFrom`/`effectiveTo` dùng CÙNG hình dạng "YYYY-MM-DD" với
  * `billingPeriod`, nhưng KHÔNG bắt buộc ngày 01 — xem
- * docs/MANAGEMENT_API.md mục "Tariff effective dates".
+ * docs/MANAGEMENT_API.md mục "Ngày hiệu lực tariff — quy tắc ngày khác
+ * với billingPeriod".
  */
 export type ElectricityBillingMethod = "QUOTA_TIERED" | "FALLBACK_TIER_FLAT";
 export type WaterBillingMethod = "PER_CUBIC_METER" | "PER_PERSON";

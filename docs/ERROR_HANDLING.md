@@ -2,7 +2,7 @@
 
 Tài liệu này mô tả cách OpenUtilityBill biểu diễn thành công và thất
 bại, và vì sao. Tài liệu cố ý được giữ nhỏ gọn — xem
-`docs/LEARNING_NOTES.md` để biết lý do tránh dùng một framework lỗi lớn
+`docs/TECHNICAL_RATIONALE.md` để biết lý do tránh dùng một framework lỗi lớn
 hơn.
 
 ## 1. Vấn đề với `return false`
@@ -156,8 +156,7 @@ sau này theo đúng cùng hình dạng.
 - Không có hệ thống class `Error` con tuỳ biến (ví dụ
   `RoomNotFoundError extends DomainError extends AppError`). Một object
   `{ code, message }` thuần là đủ để xác định và truyền đạt một thất
-  bại, và dễ đọc hơn nhiều khi review hay bảo vệ trực tiếp so với một
-  cây class.
+  bại, và dễ đọc, dễ bảo trì hơn nhiều so với một cây class.
 - Không có framework xử lý exception toàn cục hay decorator nào.
   Controller dùng một kiểm tra early-return thuần trên
   `result.success`.

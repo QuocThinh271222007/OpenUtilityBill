@@ -27,7 +27,7 @@ import type { Room } from "../types/room.types";
  * Sau bước shape-check tối thiểu ở đây (không rỗng), tính hợp lệ THẬT
  * của tổ hợp previous/current/max (âm, vượt max, rollover, ...) hoàn
  * toàn do backend quyết định (`calculateMeterUsage`) — frontend KHÔNG
- * tái hiện logic đó (xem docs/FRONTEND.md mục "Financial string rule").
+ * tái hiện logic đó (xem docs/FRONTEND.md mục "Quy tắc chuỗi tài chính (quan trọng)").
  * `METER_READING_IN_USE` được hiển thị NGUYÊN VĂN message backend, KHÔNG
  * có cách nào bỏ qua (xem docs/MANAGEMENT_API.md mục "Historical
  * reference protection").

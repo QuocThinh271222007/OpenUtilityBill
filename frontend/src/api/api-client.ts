@@ -18,9 +18,10 @@ const API_V1_PREFIX = "/api/v1";
  *
  * Output: `ApiResult<T>` — backend LUÔN trả body đúng hợp đồng
  * `{ success, data }` / `{ success: false, error: { code, message } }`
- * bất kể status code (xem docs/API.md mục "Success contract"/"Error
- * contract"), nên hàm này CHỈ parse JSON và trả nguyên vẹn, không tự
- * quyết định thành công/thất bại dựa trên `response.ok`.
+ * bất kể status code (xem docs/API.md mục "Quy ước dùng xuyên suốt" —
+ * "Hợp đồng thành công"/"Hợp đồng lỗi"), nên hàm này CHỈ parse JSON và
+ * trả nguyên vẹn, không tự quyết định thành công/thất bại dựa trên
+ * `response.ok`.
  *
  * Điều kiện lỗi:
  * - Lỗi mạng, backend không phản hồi, hoặc body không parse được JSON
@@ -32,7 +33,7 @@ const API_V1_PREFIX = "/api/v1";
  * - hard-code origin (`http://localhost:3000`) — luôn dùng đường dẫn
  *   tương đối, để môi trường dev (Vite proxy) và một bản build production
  *   (được phục vụ cùng origin với backend) đều hoạt động không cần sửa
- *   code (xem docs/FRONTEND.md mục "No hard-coded API origin").
+ *   code (xem docs/FRONTEND.md mục "Ranh giới API client").
  * - throw lỗi ra ngoài — mọi lỗi (mong đợi hoặc không) đều trở thành
  *   một `ApiResult` thất bại, để caller luôn chỉ cần kiểm tra
  *   `result.success`.

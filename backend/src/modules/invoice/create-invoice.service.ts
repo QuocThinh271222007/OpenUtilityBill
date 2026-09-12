@@ -47,7 +47,8 @@ import { isFirstDayOfMonthUtc, isPositiveIntegerId, isValidActualChargedAmountSc
  * (quota điện, nước PER_PERSON, `invoice.tenantCountUsed`) — không đọc
  * lại Room giữa chừng, đảm bảo một nguồn sự thật duy nhất cho cả quy
  * trình tính toán VÀ giá trị được lưu (xem
- * `../invoice/invoice.model.ts` mục "Why Invoice snapshots configuration").
+ * `../invoice/invoice.model.ts` mục "Vì sao Invoice lưu snapshot cấu hình
+ * thay vì tham chiếu dữ liệu "hiện tại"").
  *
  * Không chịu trách nhiệm:
  * - chứa câu SQL nào (không `sql\`...\``, không `sql.unsafe`).

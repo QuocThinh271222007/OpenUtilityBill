@@ -25,7 +25,7 @@ import { CreateMeterReadingInput, MeterReadingManagementDependencies, UpdateMete
  *   Repository khi vi phạm `UNIQUE(room_id, billing_period,
  *   utility_type)`.
  * - `update`: `METER_READING_IN_USE` khi reading đã được một invoice
- *   tham chiếu — xem "Historical protection" bên dưới.
+ *   tham chiếu — xem "Bảo vệ tham chiếu lịch sử" bên dưới.
  *
  * Important invariant — TÁI SỬ DỤNG Calculation Core, không tự viết lại
  * kiểm tra rollover:
@@ -38,7 +38,7 @@ import { CreateMeterReadingInput, MeterReadingManagementDependencies, UpdateMete
  * cần biết tổ hợp có HỢP LỆ hay không, không cần giá trị usage (đó là
  * việc của CreateInvoiceService khi thực sự tính hoá đơn).
  *
- * Historical protection (update):
+ * Bảo vệ tham chiếu lịch sử (update):
  * TRƯỚC khi ghi `update`, Service kiểm tra
  * `meterReadingRepository.isReferencedByInvoice(id)` — nếu MỘT invoice
  * đã dùng reading này (`electricity_reading_id` hoặc `water_reading_id`),
@@ -52,7 +52,7 @@ import { CreateMeterReadingInput, MeterReadingManagementDependencies, UpdateMete
  */
 const UTILITY_TYPES: ReadonlySet<string> = new Set<UtilityType>(["ELECTRICITY", "WATER"]);
 
-/** `NUMERIC(12, 2)`: tối đa 10 chữ số nguyên, 2 chữ số thập phân — xem docs/MANAGEMENT_API.md mục "Meter numeric contract". */
+/** `NUMERIC(12, 2)`: tối đa 10 chữ số nguyên, 2 chữ số thập phân — xem docs/MANAGEMENT_API.md mục "Hợp đồng số (`NUMERIC(12, 2)`)". */
 function isValidMeterDecimalShape(value: string): boolean {
   return isExactDecimalWithinScale(value, { maxIntegerDigits: 10, maxFractionalDigits: 2 });
 }

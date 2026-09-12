@@ -19,7 +19,7 @@ Postgres.js là một *client* PostgreSQL — nó mở kết nối, gửi văn b
 và tham số mà dự án này tự viết, và decode response. Nó không tự sinh
 SQL từ một object model, không tự quản lý schema, và không áp đặt một
 DSL query-building nào. Điều này khớp với nguyên tắc xuyên suốt dự án
-(xem `docs/LEARNING_NOTES.md`) rằng SQL thực tế chạy phải đọc và giải
+(xem `docs/TECHNICAL_RATIONALE.md`) rằng SQL thực tế chạy phải đọc và giải
 thích được chính xác — với một ORM, SQL thực tế thường được sinh gián
 tiếp và khó đoán trước hơn; với một client thuần
 và SQL viết tay, câu query trong file nguồn *chính là* câu query sẽ
@@ -111,8 +111,8 @@ chỉ được coi là một chuỗi literal (không khớp), không bao giờ l
 pháp SQL.
 
 `sql.unsafe(...)` (nhận một chuỗi thô và bỏ qua bảo vệ này) **không
-được dùng ở bất kỳ đâu** trong codebase này — xem kết quả kiểm chứng
-trong báo cáo cuối của task đã đưa tầng này vào.
+được dùng ở bất kỳ đâu** trong codebase này — đã kiểm chứng bằng grep
+trên toàn bộ `backend/src/`.
 
 ## Vòng đời kết nối
 
@@ -188,10 +188,10 @@ việc cấu hình biểu giá điện — xem `docs/TRANSACTIONS.md` mục C).
 
 Cơ chế này đã được kiểm chứng bằng assertion commit/rollback THẬT trên
 PostgreSQL trong
-`backend/src/database/__tests__/transaction.integration.test.ts` — và
-đã thực sự chạy thật (`TRANSACTION_COMMIT_RUNTIME=PASS`,
-`TRANSACTION_ROLLBACK_RUNTIME=PASS`) trong lần chạy runtime closure gần
-nhất, không chỉ tồn tại dưới dạng code chưa chạy.
+`backend/src/database/__tests__/transaction.integration.test.ts` —
+integration test này đã chạy trên PostgreSQL thật và xác nhận
+`TRANSACTION_COMMIT_RUNTIME=PASS`, `TRANSACTION_ROLLBACK_RUNTIME=PASS`,
+không chỉ tồn tại dưới dạng code chưa chạy.
 
 ## Ranh giới độ chính xác `NUMERIC` / `BIGINT`
 
@@ -230,10 +230,9 @@ thức `NUMERIC(p, s)` **scale cố định** (khớp cách các cột schema th
 `"0.08"`; xem "Định dạng chuỗi NUMERIC không được chuẩn hoá" bên dưới),
 và giá trị BIGINT tối đa (`9223372036854775807`, vượt xa
 `Number.MAX_SAFE_INTEGER`) đều được khẳng định round-trip đúng dưới
-dạng chuỗi chính xác. Test này đã thực sự chạy thật trên PostgreSQL
-thật trong lần chạy runtime closure gần nhất
-(`POSTGRES_NUMERIC_RUNTIME=PASS`, `FIXED_SCALE_RUNTIME=PASS`,
-`BIGINT_RUNTIME=PASS`).
+dạng chuỗi chính xác. Test này đã chạy trên PostgreSQL thật và xác
+nhận `POSTGRES_NUMERIC_RUNTIME=PASS`, `FIXED_SCALE_RUNTIME=PASS`,
+`BIGINT_RUNTIME=PASS`.
 
 ### Định dạng chuỗi NUMERIC không được chuẩn hoá
 
@@ -254,7 +253,8 @@ nếu và khi cần, không phải ở ranh giới đọc của Repository.
 
 Code ánh xạ dòng của Repository **không bao giờ** gọi `Number(...)`,
 `parseFloat`, `parseInt`, hay dấu `+` đơn trên một cột dựa trên
-`NUMERIC` hay `BIGINT` — điều này được kiểm chứng (xem báo cáo cuối).
+`NUMERIC` hay `BIGINT` — đã kiểm chứng bằng grep trên toàn bộ tầng
+Repository.
 
 ## Ranh giới `BIGINT` / ID
 
@@ -306,13 +306,13 @@ timezone của session đó từng khác UTC, một `Date` dùng để biểu di
 là `2026-09-01`, hoặc khớp nhầm dòng, tuỳ theo offset.
 
 **Đây là một rủi ro lý thuyết, không phải một bug đã chứng minh.**
-Không có kết nối PostgreSQL sống nào để thực sự test điều này trong
-các task đã xây dựng tầng này, và các database PostgreSQL host bởi
+Chưa có test riêng nào kiểm chứng cụ thể trường hợp timezone session
+khác UTC trên PostgreSQL thật, và các database PostgreSQL host bởi
 Supabase mặc định đặt timezone session là UTC, khiến đây không phải
 vấn đề trong thực tế triển khai của dự án này. Không có thay đổi code
-nào được thực hiện dựa trên review này, theo đúng nguyên tắc: chỉ một
-lỗi đã chứng minh mới đủ lý do thay đổi hành vi, không phải một lỗi lý
-thuyết.
+nào được thực hiện dựa trên đánh giá này, theo đúng nguyên tắc: chỉ
+một lỗi đã chứng minh mới đủ lý do thay đổi hành vi, không phải một
+lỗi lý thuyết.
 
 **Cân nhắc ranh giới tương lai:** nếu điều này từng trở thành mối lo
 (ví dụ cấu hình timezone của database thay đổi, hay một ranh giới API
@@ -321,8 +321,8 @@ hoàn toàn vào `Date` JS + việc ép kiểu phụ thuộc timezone ngầm đ�
 cột `DATE`, và thay vào đó dùng chuỗi `YYYY-MM-DD` chuẩn tại ranh giới
 tham số/trả về của Repository (parse/format tường minh, không bao giờ
 qua các phương thức nhạy cảm với timezone local của `Date` như
-`getDate()`/`getMonth()`). Điều này cần một task nhỏ riêng, không phải
-một thay đổi gộp vào công việc không liên quan.
+`getDate()`/`getMonth()`). Điều này cần một thay đổi riêng, có phạm vi
+rõ ràng, không phải một thay đổi gộp vào công việc không liên quan.
 
 ## Dịch lỗi
 
@@ -373,8 +373,8 @@ frontend.
 ## SQL không phải bí mật; credential mới là bí mật
 
 Văn bản SQL trong repository này (tên bảng, tên cột, hình dạng query)
-không nhạy cảm — nó là mã nguồn hiển thị, như mọi logic khác, và được
-kỳ vọng sẽ được đọc khi bảo vệ trực tiếp. Thứ **phải** giữ bí mật là
+không nhạy cảm — nó là mã nguồn hiển thị, như mọi logic khác, và có
+thể đọc và review công khai. Thứ **phải** giữ bí mật là
 *credential* kết nối: `DATABASE_URL` (chứa mật khẩu), bất kỳ khoá
 service-role nào của Supabase. Những thứ này không bao giờ xuất hiện
 trong file đã commit — `backend/.env.example` chỉ chứa định dạng
@@ -384,11 +384,12 @@ có file test hay source nào nội suy một credential thật.
 ## Cố ý hoãn lại
 
 Nền tảng persistence, luồng ghi hoá đơn (`CreateInvoiceService`, xem
-`docs/CREATE_INVOICE_WORKFLOW.md`), và management API bắt buộc
+`docs/CREATE_INVOICE_WORKFLOW.md`), và management API
 (property/room/meter-reading/tariff — xem `docs/MANAGEMENT_API.md`)
 nay đã được cài đặt đầy đủ. Vẫn cố ý **chưa** cài đặt: DELETE cho bất
 kỳ tài nguyên nào (một quyết định về phạm vi, không phải một lỗ hổng —
-xem `docs/MANAGEMENT_API.md` mục "Không có endpoint DELETE"), một bảng
+xem `docs/MANAGEMENT_API.md` mục "Không có endpoint DELETE (theo
+thiết kế)"), một bảng
 ánh xạ mã lỗi PostgreSQL sang lỗi domain tổng quát (mỗi Repository chỉ
 dịch đúng một case `SQLSTATE 23505` mà nó thực sự cần, qua kiểm tra cấu
 trúc dùng chung `backend/src/database/unique-violation.ts`), và xác

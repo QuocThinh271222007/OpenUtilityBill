@@ -10,9 +10,11 @@ Service phải tuân thủ. Tài liệu này bổ sung cho
 được cài đặt đầy đủ**, cả hai đều đã được kiểm chứng commit/rollback
 thật bằng PostgreSQL thật (xem `docs/CREATE_INVOICE_WORKFLOW.md` cho
 `CreateInvoice`). Thao tác xoá (mục B) vẫn là một ranh giới transaction
-*dự định* cho một task tương lai — chưa có workflow xoá nào được cài
-đặt, vì ứng dụng cố ý chưa có DELETE cho bất kỳ tài nguyên nào (xem
-`docs/MANAGEMENT_API.md` mục "Không có endpoint DELETE").
+*dự định* — nếu chức năng xoá được bổ sung trong tương lai, nó sẽ cần
+tuân theo ranh giới này; hiện chưa có workflow xoá nào được cài đặt, vì
+ứng dụng cố ý chưa có DELETE cho bất kỳ tài nguyên nào (xem
+`docs/MANAGEMENT_API.md` mục "Không có endpoint DELETE (theo thiết
+kế)").
 
 ## ACID, trong bối cảnh OpenUtilityBill
 
@@ -163,7 +165,7 @@ Hành vi commit/rollback thật này đã được kiểm chứng bằng Postgre
 thật —
 `backend/src/repositories/__tests__/postgres-electricity-tariff-unit-of-work.integration.test.ts`.
 
-Script seed (`database/seeds/001_competition_defaults.sql`) đã theo
+Script seed (`database/seeds/001_default_tariffs.sql`) đã theo
 đúng cùng mẫu này: một `BEGIN`/`COMMIT` bọc quanh cả insert biểu giá
 lẫn sáu insert tier của nó.
 

@@ -17,12 +17,12 @@ import { loadDatabaseConfig } from "../config/database.config";
  * - tự triển khai connection pool. Postgres.js TỰ quản lý pool/kết nối
  *   bên trong một instance `Sql` — gọi `postgres(...)` ĐÚNG MỘT LẦN rồi
  *   dùng lại instance đó cho mọi query, không tự viết logic pool riêng
- *   (xem docs/DATABASE_ACCESS.md mục "Connection lifecycle").
+ *   (xem docs/DATABASE_ACCESS.md mục "Vòng đời kết nối").
  * - biết gì về HTTP/Express.
  * - override parser cho NUMERIC/BIGINT. Hành vi MẶC ĐỊNH của Postgres.js
  *   (trả cả hai dưới dạng `string`, không có parser đăng ký sẵn cho OID
  *   1700/20) đã đúng với hợp đồng chính xác tuyệt đối của dự án — xem
- *   docs/DATABASE_ACCESS.md mục "NUMERIC/BIGINT precision boundary" và
+ *   docs/DATABASE_ACCESS.md mục "Ranh giới độ chính xác `NUMERIC` / `BIGINT`" và
  *   `__tests__/postgres-client.numeric.integration.test.ts`. KHÔNG thêm
  *   custom type parser ở đây trừ khi có bằng chứng hành vi mặc định
  *   thay đổi.
@@ -75,7 +75,7 @@ export async function closeDatabaseClient(): Promise<void> {
  * Giữ nguyên đối tượng lỗi gốc cho ngữ cảnh debug, nhưng Repository gọi
  * hàm này PHẢI tự dịch sang một mã lỗi Result chung chung (ví dụ
  * DATABASE_READ_FAILED) trước khi trả về caller — xem
- * docs/DATABASE_ACCESS.md mục "Error translation".
+ * docs/DATABASE_ACCESS.md mục "Dịch lỗi".
  */
 export function logDatabaseError(context: string, error: unknown): void {
   console.error(`[database] ${context} thất bại:`, error);

@@ -122,7 +122,8 @@ do `Number(...)`/`parseFloat(...)` bị liệt vào danh sách cấm trong mọi
 Rút gọn phân số dùng thuật toán Euclid tìm ước chung lớn nhất (GCD):
 lặp lại phép chia lấy dư giữa hai số cho tới khi dư bằng 0, số chia cuối
 cùng chính là GCD. `62.5 = 625/10`, GCD(625, 10) = 5, rút gọn thành
-`125/2`. Không cần đi sâu hơn mức này trừ khi được hỏi thêm lúc bảo vệ.
+`125/2`. Mức chi tiết này là đủ để hiểu và triển khai; không cần đi
+sâu hơn cho phạm vi tài liệu này.
 
 ## 9. Ranh giới nội bộ vs. công khai (BigInt chỉ ở bên trong)
 
@@ -147,7 +148,7 @@ REST API / JSON / frontend
 
 Cách này giữ được độ chính xác tuyệt đối, an toàn cho JSON, và khớp với
 cách PostgreSQL `NUMERIC` cũng dùng chuỗi ở ranh giới dữ liệu (xem
-`docs/DATABASE_DESIGN.md` mục "NUMERIC vs FLOAT").
+`docs/DATABASE_DESIGN.md` mục "`NUMERIC` so với `FLOAT`").
 
 ## 10. Vì sao không dùng decimal.js
 
@@ -209,7 +210,7 @@ tròn giá trị trung gian" mà cả tài liệu này lẫn database đều tuy
 tuân theo. `database/migrations/002_preserve_invoice_item_precision.sql`
 sửa lỗi này bằng cách nới `invoice_items.quantity` và `.amount` thành
 `NUMERIC` không giới hạn scale — xem chi tiết đầy đủ trong
-`docs/DATABASE_DESIGN.md` mục "Invoice item precision" và migration đó.
+`docs/DATABASE_DESIGN.md` mục "Độ chính xác của invoice item" và migration đó.
 
 Quy tắc chung rút ra: bất cứ khi nào một cột database sẽ lưu một giá trị
 TRUNG GIAN (chưa qua bước làm tròn cuối cùng) do Calculation Core tính
@@ -261,4 +262,4 @@ hoá đơn.
 | `tenantCount`, `tierNumber`, `fallbackTierNumber` | `number` | Số đếm nguyên an toàn, không liên quan phép chia/nhân tài chính |
 
 Xem `docs/CALCULATION_CORE.md` cho pipeline tính toán đầy đủ và
-`docs/LEARNING_NOTES.md` cho lý do chọn kiến trúc tổng thể của dự án.
+`docs/TECHNICAL_RATIONALE.md` cho lý do chọn kiến trúc tổng thể của dự án.

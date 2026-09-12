@@ -18,17 +18,16 @@
  *
  * Biểu diễn ID:
  * `id`, `propertyId` là `string` (BIGINT ở database) — xem
- * ../property/property.model.ts mục "ID representation" và
+ * ../property/property.model.ts mục "Biểu diễn ID" và
  * docs/DATABASE_ACCESS.md.
  *
  * Không chịu trách nhiệm:
  * - tự đảm bảo hoá đơn cũ không đổi khi `tenantCount` thay đổi sau này.
  *   Việc đó là trách nhiệm của `Invoice.tenantCountUsed` (xem
  *   ../invoice/invoice.model.ts và docs/DATABASE_DESIGN.md mục
- *   "Historical snapshot principle").
+ *   "Snapshot lịch sử có chủ đích").
  * - biểu diễn thay đổi số người ở giữa tháng (mid-month occupancy
- *   change) — chưa cần ở giai đoạn này.
- * - có Repository/Service/Controller đi kèm ở task này.
+ *   change) — chưa có yêu cầu cụ thể cho việc này.
  *
  * Lý do tồn tại riêng biệt:
  * Room là điểm neo (anchor) mà MeterReading và Invoice tham chiếu tới

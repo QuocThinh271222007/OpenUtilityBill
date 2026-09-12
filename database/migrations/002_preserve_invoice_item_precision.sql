@@ -47,7 +47,7 @@
 -- tính, dù cả hai đều "đúng" theo logic riêng của chúng.
 --
 -- Lưu ý: bộ dữ liệu MẶC ĐỊNH hiện tại
--- (database/seeds/001_competition_defaults.sql) dùng ngưỡng bậc là số
+-- (database/seeds/001_default_tariffs.sql) dùng ngưỡng bậc là số
 -- nguyên (50, 100), nên rủi ro này KHÔNG xuất hiện với cấu hình mặc
 -- định. Nhưng schema phải đúng với MỌI cấu hình hợp lệ mà CHECK
 -- constraint hiện tại cho phép (threshold_kwh > 0, không giới hạn số
@@ -65,7 +65,7 @@
 -- thập phân bất kể quota/threshold là bao nhiêu — nới rộng cột này sẽ
 -- không bảo vệ thêm giá trị nào, chỉ thêm một cột "không giới hạn"
 -- không có lý do cụ thể (đi ngược nguyên tắc "không đổi cột chỉ vì đối
--- xứng" của task này).
+-- xứng").
 --
 -- invoices.calculated_total và invoices.actual_charged_amount là SỐ
 -- TIỀN VNĐ CUỐI CÙNG, đã qua bước half-up rounding — đây là mối quan

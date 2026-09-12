@@ -18,8 +18,9 @@ import { ValidatedElectricityTier } from "./validate-electricity-config";
  * Bất biến quan trọng:
  * Dùng VÒNG LẶP (iterative), KHÔNG dùng đệ quy — các bậc giá là một
  * dãy tuyến tính hữu hạn, không phải cấu trúc cây/đồ thị cần đệ quy để
- * duyệt (cùng nguyên tắc với docs/LEARNING_NOTES.md mục "Vì sao chưa
- * dùng đệ quy"). Ngưỡng mỗi bậc bị giới hạn KHÔNG được làm tròn khi
+ * duyệt (cùng nguyên tắc với docs/TECHNICAL_RATIONALE.md mục "Vì sao
+ * chưa dùng đệ quy (recursion) cho việc tính bậc thang tariff"). Ngưỡng
+ * mỗi bậc bị giới hạn KHÔNG được làm tròn khi
  * nhân với quotaFactor (ví dụ 50 × 1.25 = 62.5, giữ nguyên).
  *
  * Không chịu trách nhiệm:

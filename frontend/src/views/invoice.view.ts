@@ -14,7 +14,7 @@ import type { Invoice, InvoiceItem } from "../types/invoice.types";
  * MỌI số tiền hiển thị (`item.amount`, `invoice.calculatedTotal`,
  * `invoice.actualChargedAmount`, `billingDifference`) đến TRỰC TIẾP từ
  * API, KHÔNG được tính lại/suy ra bằng phép toán JS ở đây — xem
- * docs/FRONTEND.md mục "Financial string rule". Bảng breakdown dùng
+ * docs/FRONTEND.md mục "Quy tắc chuỗi tài chính (quan trọng)". Bảng breakdown dùng
  * NGUYÊN VĂN `item.amount`, KHÔNG dựng lại từ quantity × unitPrice.
  *
  * Không chịu trách nhiệm: gọi API, quyết định khi nào submit.

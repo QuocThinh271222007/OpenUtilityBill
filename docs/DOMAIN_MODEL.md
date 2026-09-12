@@ -35,9 +35,13 @@ Invoice ───tham chiếu───▶ MeterReading (electricityReadingId, b�
 Invoice ───tham chiếu───▶ MeterReading (waterReadingId, tuỳ chọn)
 ```
 
-Quan hệ được biểu diễn dưới dạng **ID khoá ngoại** (`roomId: number`,
-`tariffId: number`, ...), không bao giờ dưới dạng object lồng
-nhau/nhúng vào nhau. Xem "Không có phụ thuộc vòng tròn" bên dưới.
+Quan hệ được biểu diễn dưới dạng **ID khoá ngoại** (`roomId: string`,
+`tariffId: string`, ...), không bao giờ dưới dạng object lồng
+nhau/nhúng vào nhau. Cột gốc trong PostgreSQL là `BIGINT`; ở ranh giới
+domain/API/Repository, TypeScript biểu diễn ID dưới dạng `string`
+(không phải `number`), vì một `BIGINT` lớn không thể biểu diễn an toàn
+đầy đủ bằng `number` của JS — xem `docs/DATABASE_ACCESS.md` mục "Ranh
+giới `BIGINT` / ID". Xem "Không có phụ thuộc vòng tròn" bên dưới.
 
 ## RentalProperty
 
@@ -103,9 +107,15 @@ và "Nguyên tắc snapshot lịch sử" trong `docs/DATABASE_DESIGN.md`.
   như trùng lặp (`electricity_readings`, `water_readings`) hay các cột
   không liên quan bị nhồi vào chung một dòng.
 
-**Cố ý chưa biểu diễn:** phép tính rollover công tơ (điều gì xảy ra khi
-`currentReading` vòng qua vượt `meterMaximumValue`). Schema giữ lại
-`meterMaximumValue` để Calculation Core có thể cài đặt điều đó sau này.
+**Ranh giới với phép tính rollover:** `MeterReading` chỉ lưu giá trị
+công tơ THÔ (`previousReading`, `currentReading`, `meterMaximumValue`)
+— nó không tự tính usage. Phép tính rollover (điều gì xảy ra khi
+`currentReading` vòng qua vượt `meterMaximumValue`) đã được cài đặt ở
+Calculation Core (`calculateMeterUsage`,
+`backend/src/calculation/meter/calculate-meter-usage.ts`), và được
+`MeterReadingManagementService`/`CreateInvoiceService` gọi khi cần usage
+thực tế. Database chỉ lưu lại các giá trị thô cần cho phép tính đó,
+không lưu usage đã tính.
 
 ## ElectricityTariff
 
@@ -243,8 +253,8 @@ khiến một hoá đơn **ổn định về mặt lịch sử** — xem `docs/D
 
 ## Không có phụ thuộc vòng tròn
 
-Mọi quan hệ ở trên được biểu diễn dưới dạng một ID số thuần
-(`roomId: number`, `tariffId: number`, ...), không bao giờ dưới dạng
+Mọi quan hệ ở trên được biểu diễn dưới dạng một ID dạng chuỗi thuần
+(`roomId: string`, `tariffId: string`, ...), không bao giờ dưới dạng
 một đồ thị object lồng nhau/nhúng vào nhau
 (`room.property.rooms[0].property...`). Điều này giữ cho mỗi model:
 
@@ -264,5 +274,5 @@ của chính nó" theo cách một cây thư mục hay một luồng bình luậ
 làm). Mọi quan hệ đều là một tham chiếu khoá ngoại phẳng tới một *loại*
 thực thể *khác*. Cả TypeScript lẫn SQL đều hỗ trợ đệ quy, nhưng không
 có gì mang tính đệ quy để mô hình hoá ở đây — khoá ngoại thuần đơn giản
-hơn và đã đủ dùng. Xem `docs/LEARNING_NOTES.md` để thấy cùng lý do này
-áp dụng cho việc lặp qua các tier biểu giá.
+hơn và đã đủ dùng. Xem `docs/TECHNICAL_RATIONALE.md` để thấy cùng lý do
+này áp dụng cho việc lặp qua các tier biểu giá.

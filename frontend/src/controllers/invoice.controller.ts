@@ -18,15 +18,16 @@ import type { Room } from "../types/room.types";
 
 /**
  * Trách nhiệm:
- * Điều phối trang "Hóa đơn" — MÀN HÌNH DEMO QUAN TRỌNG NHẤT: tạo hóa
- * đơn mới (POST), xử lý trường hợp đã tồn tại (409
+ * Điều phối trang "Hóa đơn" — MÀN HÌNH TRUNG TÂM của workflow tạo/đọc
+ * hoá đơn: tạo hóa đơn mới (POST), xử lý trường hợp đã tồn tại (409
  * INVOICE_ALREADY_EXISTS -> đề nghị tải hóa đơn đã lưu), và đọc lại một
  * hóa đơn LỊCH SỬ (GET, không tính lại) — xem docs/CREATE_INVOICE_WORKFLOW.md.
  *
  * Bất biến quan trọng:
  * KHÔNG BAO GIỜ tính toán số tiền ở đây — chỉ gửi input, hiển thị kết
  * quả `CreateInvoiceResult`/`GetInvoiceResult` NGUYÊN VẸN từ backend
- * (xem docs/FRONTEND.md mục "Financial string rule"). `actualChargedAmount`
+ * (xem docs/FRONTEND.md mục "Quy tắc chuỗi tài chính (quan trọng)").
+ * `actualChargedAmount`
  * trống -> gửi `null`, KHÔNG BAO GIỜ gửi chuỗi rỗng `""`.
  *
  * Không chịu trách nhiệm: gọi lại Calculation Core, dựng lại breakdown từ
@@ -132,7 +133,7 @@ async function submitCreateInvoice(): Promise<void> {
     electricityBillingMethod: electricitySelect.value,
     waterBillingMethod: waterSelect.value,
     // Bỏ trống -> gửi null, KHÔNG BAO GIỜ gửi chuỗi rỗng "" (xem
-    // docs/API.md mục "actualChargedAmount scale corrective" — "" không
+    // docs/API.md mục "Sửa lỗi scale `actualChargedAmount`" — "" không
     // phải một chuỗi thập phân hợp lệ).
     actualChargedAmount: actualRaw.length === 0 ? null : actualRaw,
   };

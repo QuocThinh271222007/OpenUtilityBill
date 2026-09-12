@@ -12,7 +12,8 @@
  *
  * Vì sao dùng `getUTCDate()`, không phải `getDate()`:
  * `getDate()` dùng múi giờ LOCAL của máy chủ, có thể trả sai ngày tuỳ
- * cấu hình hệ thống — xem docs/DATABASE_ACCESS.md mục "DATE boundary".
+ * cấu hình hệ thống — xem docs/DATABASE_ACCESS.md mục "Ranh giới `DATE` —
+ * đã review, chưa thay đổi (cân nhắc tương lai)".
  */
 export function isFirstDayOfMonthUtc(date: Date): boolean {
   return !Number.isNaN(date.getTime()) && date.getUTCDate() === 1;

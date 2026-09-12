@@ -12,7 +12,8 @@ import type { MeterReading } from "../types/meter-reading.types";
  *
  * Không chịu trách nhiệm: gọi API, kiểm tra rollover/hợp lệ số liệu (backend là nơi
  * xác thực duy nhất qua calculateMeterUsage — xem
- * docs/MANAGEMENT_API.md mục "Rollover / reading-combination validity").
+ * docs/MANAGEMENT_API.md mục "Tính hợp lệ rollover / tổ hợp chỉ số —
+ * dùng lại, không cài đặt lại").
  */
 export function renderMeterReadingPage(container: HTMLElement): void {
   container.innerHTML = `

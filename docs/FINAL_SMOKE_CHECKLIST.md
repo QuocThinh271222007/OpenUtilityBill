@@ -1,18 +1,17 @@
 # Checklist smoke test cuối cùng (thực hiện thủ công)
 
-**Trạng thái: CHƯA được bất kỳ agent nào thực thi.** Phiên làm việc này
-không có công cụ điều khiển trình duyệt nào được bật (Claude in Chrome
-đã cài nhưng không bật cho phiên này), và không có Playwright/Cypress/
-Selenium nào được thêm vào (việc thêm một công cụ như vậy nằm ngoài
-phạm vi các task này). Mọi bằng chứng runtime KHÔNG liên quan trình
-duyệt (PostgreSQL thật, transaction thật, đọc/ghi Repository thật, REST
-API tạo/đọc hoá đơn thật, typecheck + build backend/frontend, health
-endpoint, dev server backend/frontend cùng Vite proxy `/api`) đã được
-chạy thật — xem báo cáo runtime closure để biết bằng chứng chi tiết.
-**Chỉ riêng thao tác click-through trong trình duyệt bên dưới là chưa
-được xác minh bởi agent.** Checklist này cần được thực hiện thủ công
-trên trình duyệt và xác nhận kết quả trước khi coi giao diện trình
-duyệt bắt buộc là sẵn sàng phát hành.
+Kiểm thử click-through trên trình duyệt chưa được thực hiện. Checklist
+dưới đây dùng để xác nhận luồng giao diện trước khi phát hành, không
+dùng Playwright/Cypress/Selenium hay bất kỳ công cụ điều khiển trình
+duyệt tự động nào.
+
+Các phần không liên quan trình duyệt đã được xác minh: backend chạy
+thật với PostgreSQL thật (transaction, đọc/ghi Repository, REST API
+tạo/đọc hoá đơn), typecheck và build của backend/frontend đều đạt,
+health endpoint và dev server backend/frontend cùng Vite proxy `/api`
+hoạt động đúng. Riêng thao tác click-through trong trình duyệt bên
+dưới vẫn cần thực hiện thủ công và xác nhận kết quả trước khi coi
+giao diện trình duyệt là sẵn sàng phát hành.
 
 ## Chuẩn bị
 
@@ -118,11 +117,11 @@ trống kế tiếp).
 5. [ ] Nhập chỉ số công tơ nước cho cùng tháng đó: chỉ số cũ `0`, chỉ
        số mới `12`.
 6. [ ] Mở màn hình cấu hình biểu giá điện — xác nhận biểu giá seed mặc
-       định "Competition Default Electricity Tariff" (6 bậc) hiển thị
-       đúng (VAT `0.0800`, số người/định mức `4`, bậc dự phòng `3`).
+       định "Biểu giá điện mặc định" (6 bậc) hiển thị đúng (VAT `0.0800`,
+       số người/định mức `4`, bậc dự phòng `3`).
 7. [ ] Mở màn hình cấu hình biểu giá nước — xác nhận biểu giá seed mặc
-       định "Competition Default Water Tariff" hiển thị đúng giá/VAT/
-       phí môi trường.
+       định "Biểu giá nước mặc định" hiển thị đúng giá/VAT/phí môi
+       trường.
 8. [ ] Vào màn hình Hóa đơn, tạo hoá đơn cho phòng/tháng đó với phương
        pháp `QUOTA_TIERED` (điện) + `PER_CUBIC_METER` (nước).
 9. [ ] Xác nhận phần breakdown của hoá đơn hiển thị đủ dòng cho từng
@@ -155,7 +154,8 @@ trống kế tiếp).
 
 Ứng dụng **cố ý không có** endpoint/nút xoá (DELETE) cho bất kỳ tài
 nguyên nào (property/room/meter reading/tariff/invoice) — xem
-`docs/MANAGEMENT_API.md` mục "No DELETE endpoints". Vì vậy:
+`docs/MANAGEMENT_API.md` mục "Không có endpoint DELETE (theo thiết
+kế)". Vì vậy:
 
 - **Không cần** dọn dẹp property/room/invoice vừa tạo qua giao diện —
   việc đó không thể thực hiện được vì không có tính năng xoá, và đây

@@ -8,7 +8,7 @@
  * phạm UNIQUE cụ thể sang một domain error code (invoice, room,
  * meter-reading, tariff) — KHÔNG xây dựng một khung (framework) dịch
  * SQLSTATE tổng quát cho mọi constraint có thể có (xem
- * docs/DATABASE_ACCESS.md mục "Error translation").
+ * docs/DATABASE_ACCESS.md mục "Dịch lỗi").
  *
  * `code` ở đây LÀ SQLSTATE do PostgreSQL trả về, không phải một field do
  * Postgres.js tự đặt tên tuỳ ý — xem

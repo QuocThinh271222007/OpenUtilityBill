@@ -273,7 +273,7 @@ async function submitElectricityTariffForm(): Promise<void> {
   // peoplePerQuotaUnit/fallbackTierNumber là số nguyên đếm được (INTEGER
   // ở backend, không phải NUMERIC tài chính) — an toàn dùng
   // valueAsNumber/Number sau khi kiểm tra là số nguyên hợp lệ (xem
-  // docs/FRONTEND.md mục "Integer vs. financial decimal fields").
+  // docs/FRONTEND.md mục "Field số nguyên và field thập phân tài chính").
   const peoplePerQuotaUnit = peopleInput.valueAsNumber;
   if (!Number.isInteger(peoplePerQuotaUnit) || peoplePerQuotaUnit <= 0) {
     showGlobalAlert("warning", "Số người / định mức phải là số nguyên dương.");

@@ -19,8 +19,8 @@ import { closeDatabaseClient, getDatabaseClient } from "../../../database/postgr
  * dependency mới — xem "Lý do tồn tại" bên dưới). `app.listen(0)`
  * cấp một cổng ngẫu nhiên còn trống; `fetch` (built-in từ Node 18+) gọi
  * request HTTP THẬT tới server đó — đây là cách nhẹ nhất để có một
- * round-trip HTTP thật mà không thêm thư viện test mới (supertest bị
- * cấm rõ ràng ở task này).
+ * round-trip HTTP thật mà không thêm thư viện test mới (`supertest`
+ * cố ý không được dùng trong dự án này).
  *
  * Không chịu trách nhiệm:
  * - chạm tới dữ liệu không liên quan — mọi fixture dùng tiền tố tên
@@ -64,7 +64,7 @@ async function createFixtures(sql: Sql, suffix: string, billingPeriod: string): 
   // cùng có hiệu lực tại cùng một billingPeriod -> Service gọi
   // findApplicableTariffForPeriod nhận AMBIGUOUS_TARIFF_CONFIGURATION giả
   // -> POST /api/v1/invoices trả 422 không ổn định — đây là nguyên nhân
-  // THẬT đã phát hiện được khi chạy runtime closure.
+  // THẬT đã phát hiện được khi chạy test này trên PostgreSQL thật.
   const [electricityTariff] = await sql`
     INSERT INTO electricity_tariffs (
       name, effective_from, effective_to, electricity_vat_rate, people_per_quota_unit, fallback_tier_number

@@ -30,8 +30,9 @@ import { GetInvoiceDependencies, GetInvoiceInput, GetInvoiceResult } from "./get
  * KHÔNG phải tính lại hoá đơn từ chỉ số công tơ/tariff. Đọc lại một
  * invoice cũ, sau khi tariff/tenant count đã đổi, PHẢI trả về đúng số
  * tiền đã tính tại thời điểm tạo hoá đơn đó — xem
- * docs/CREATE_INVOICE_WORKFLOW.md mục "Room snapshot" và
- * `../invoice/invoice.model.ts` mục "Why Invoice snapshots configuration".
+ * docs/CREATE_INVOICE_WORKFLOW.md mục "Snapshot của room (số người ở)" và
+ * `../invoice/invoice.model.ts` mục "Vì sao Invoice lưu snapshot cấu hình
+ * thay vì tham chiếu dữ liệu "hiện tại"".
  *
  * Không chịu trách nhiệm:
  * - tính lại breakdown — `items` là dữ liệu ĐÃ LƯU, đọc nguyên văn qua

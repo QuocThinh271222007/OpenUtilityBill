@@ -52,6 +52,6 @@ phân phối cùng, mã nguồn của repository này.
 - Một cảnh báo mức độ trung bình tồn tại trong `qs` (một dependency
   transitive của `express` 4.x) tại thời điểm viết tài liệu này
   (GHSA-x5fp-wj9c-mxmx, GHSA-4mjr-xmp4-gh2g). Hiện chưa có bản sửa nào
-  khả dụng mà không cần nâng phiên bản chính của Express, việc đó nằm
-  ngoài phạm vi task này. Được theo dõi cho một lần review dependency
-  trong tương lai.
+  khả dụng mà không cần nâng phiên bản chính của Express; dependency
+  này chưa được nâng cấp trong phiên bản hiện tại và cần đánh giá trong
+  đợt bảo trì dependency tiếp theo.

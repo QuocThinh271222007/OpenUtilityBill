@@ -7,7 +7,8 @@ import { clearGlobalAlerts } from "../views/shared.view";
  * Trách nhiệm:
  * Một bộ định tuyến (router) phía trình duyệt CỰC NHỎ, dựa trên
  * `location.hash` — KHÔNG dùng thư viện router nào (xem docs/FRONTEND.md
- * mục "No router dependency"). Ánh xạ `#/dashboard`, `#/properties`,
+ * mục "Điều hướng — dựa trên hash, không dùng thư viện router"). Ánh xạ
+ * `#/dashboard`, `#/properties`,
  * `#/rooms`, `#/readings`, `#/invoices`, `#/tariffs` sang hàm render
  * của từng screen, và điều phối việc chuyển trang KHÔNG reload trang
  * (`hashchange` event).
@@ -25,7 +26,7 @@ import { clearGlobalAlerts } from "../views/shared.view";
  * - tự parse tham số động trong hash (ví dụ `#/invoices/123`) — mọi
  *   route hiện tại là đường dẫn TĨNH; các screen tự giữ trạng thái lựa
  *   chọn (property/room/kỳ) qua state module nội bộ của Controller đó,
- *   không qua URL — đủ cho phạm vi bắt buộc hiện tại.
+ *   không qua URL — đủ cho phạm vi hiện tại.
  */
 export interface RouteDefinition {
   hash: string;

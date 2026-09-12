@@ -34,12 +34,13 @@ Repository của B.
 
 Microservices nghĩa là nhiều process triển khai độc lập, có gọi mạng
 giữa chúng, và cần hạ tầng (service discovery, message queue,
-container) để điều phối. Với một dự án thi cá nhân, domain nhỏ và đã
-hiểu rõ (tính hoá đơn tiện ích cho nhà trọ), chi phí đó không mang lại
-lợi ích gì — nó chỉ thêm nhiều thành phần khó chạy, khó debug, và khó
-giải thích khi bảo vệ trực tiếp. Modular Monolith mang lại cùng mức độ
-tách biệt trách nhiệm nội bộ mà không cần độ phức tạp triển khai và
-mạng đó. Xem `docs/LEARNING_NOTES.md` để biết thêm về đánh đổi này.
+container) để điều phối. Với domain nhỏ và đã hiểu rõ (tính hoá đơn
+tiện ích cho nhà trọ) cùng nhu cầu triển khai như một đơn vị duy nhất,
+chi phí đó không mang lại lợi ích gì — nó chỉ thêm nhiều thành phần
+khó chạy, khó debug, và khó bảo trì. Modular Monolith mang lại cùng
+mức độ tách biệt trách nhiệm nội bộ mà không cần độ phức tạp triển
+khai và mạng đó. Xem `docs/TECHNICAL_RATIONALE.md` để biết thêm về
+đánh đổi này.
 
 ## 2. MVC, mở rộng thêm Service và Repository
 
@@ -59,10 +60,11 @@ mở rộng MVC với hai tầng bổ sung:
 ### Vì sao Service tồn tại
 
 Nếu không có tầng Service, Controller sẽ phải làm cả validate, tra cứu
-database, và tính toán cùng lúc — "ví dụ xấu" được mô tả trong đề bài
-dự án. Việc duy nhất của một Service là quyết định *cái gì xảy ra theo
-thứ tự nào*. Điều này giữ Controller mỏng (chỉ lo HTTP) và giữ logic
-tính toán có thể unit-test độc lập mà không cần chạy HTTP server.
+database, và tính toán cùng lúc — một anti-pattern phổ biến khiến
+Controller khó test và khó bảo trì. Việc duy nhất của một Service là
+quyết định *cái gì xảy ra theo thứ tự nào*. Điều này giữ Controller
+mỏng (chỉ lo HTTP) và giữ logic tính toán có thể unit-test độc lập mà
+không cần chạy HTTP server.
 
 ### Vì sao Repository tồn tại
 
@@ -181,8 +183,8 @@ hình hoá lại ở tầng Service.
 
 - Database là PostgreSQL, host bởi Supabase.
 - Truy cập bằng SQL trực tiếp qua client **Postgres.js** (không ORM) —
-  xem `docs/LEARNING_NOTES.md` và `docs/DATABASE_ACCESS.md` để biết vì
-  sao.
+  xem `docs/TECHNICAL_RATIONALE.md` và `docs/DATABASE_ACCESS.md` để
+  biết vì sao.
 - Mọi truy cập database được cô lập đằng sau interface Repository
   (`backend/src/repositories/*.repository.ts`) với implementation
   Postgres dưới `backend/src/repositories/postgres/`. Controller và
@@ -199,12 +201,13 @@ hình hoá lại ở tầng Service.
 
 Một module ở đây nghĩa là "một trách nhiệm, một đầu vào rõ ràng, một
 đầu ra rõ ràng, một đường thành công/thất bại rõ ràng" — không phải
-"một handler khổng lồ làm mọi thứ". Ví dụ trong đề bài dự án
-(`ValidateInvoiceInput`, `LoadRoom`, `CalculateElectricityTax`, v.v.)
-chính là hình dạng dự định cho phần tính toán hoá đơn. Module nhỏ thì:
+"một handler khổng lồ làm mọi thứ". Các hàm nhỏ, đặt tên rõ ràng theo
+đúng việc chúng làm (`ValidateInvoiceInput`, `LoadRoom`,
+`CalculateElectricityTax`, v.v.) chính là hình dạng dự định cho phần
+tính toán hoá đơn. Module nhỏ thì:
 
 - Dễ unit-test độc lập hơn.
-- Dễ giải thích riêng lẻ khi review hay bảo vệ trực tiếp hơn.
+- Dễ giải thích và review riêng lẻ hơn.
 - Dễ thay đổi mà không phá vỡ logic không liên quan hơn.
 
 ## 8. Module và Service — thuật ngữ dùng trong dự án này

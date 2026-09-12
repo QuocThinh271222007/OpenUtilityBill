@@ -8,9 +8,9 @@ import { Room } from "../modules/room/room.model";
  * `NewRentalProperty`/`UpdateRentalProperty` (`property.repository.ts`).
  *
  * `UpdateRoom` CỐ Ý không có `propertyId` — di chuyển room giữa các
- * property mang ý nghĩa lịch sử không cần thiết cho phạm vi bắt buộc
- * hiện tại (xem docs/MANAGEMENT_API.md mục "PATCH /api/v1/rooms/:roomId"
- * — propertyId không đổi được trên PATCH).
+ * property mang ý nghĩa lịch sử không cần thiết cho phạm vi hiện tại
+ * (xem docs/MANAGEMENT_API.md mục "PATCH /api/v1/rooms/:roomId" —
+ * propertyId không đổi được trên PATCH).
  */
 export interface NewRoom {
   propertyId: string;

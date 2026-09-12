@@ -114,22 +114,23 @@ input của chính nó — ví dụ, `calculateMeterUsage` tự kiểm tra lại
 tự tuyến tính, bằng vòng lặp `for`. Tier không phải là cây hay đồ thị —
 "tier tiếp theo trong một danh sách đã sắp xếp" không có gì mang tính
 đệ quy — nên một vòng lặp dễ đọc, dễ bước qua từng bước, và dễ suy luận
-hơn đệ quy. Đây là cùng lý do đã ghi trong `docs/LEARNING_NOTES.md`
-("Vì sao chưa dùng đệ quy"), nay áp dụng cho một cài đặt cụ thể.
+hơn đệ quy. Đây là cùng lý do đã ghi trong `docs/TECHNICAL_RATIONALE.md`
+("Vì sao chưa dùng đệ quy (recursion) cho việc tính bậc thang tariff"),
+nay áp dụng cho một cài đặt cụ thể.
 
 ## Vì sao Calculation Core không phụ thuộc database
 
 Phép tính biểu giá điện/nước là giá trị cốt lõi của dự án này và là
-phần nhiều khả năng nhất bị đối chiếu với các test case ẩn. Giữ nó là
-TypeScript thuần, không phụ thuộc Express, HTML, hay một client
-database nghĩa là:
+phần có yêu cầu cao nhất về tính đúng đắn số học. Giữ nó là TypeScript
+thuần, không phụ thuộc Express, HTML, hay một client database nghĩa
+là:
 
 - Có thể unit-test trong vài mili-giây, không cần chạy server hay
   database.
 - Cùng một input luôn cho ra cùng một output, bất kể trạng thái
-  database, môi trường server, hay trình duyệt — đúng thứ mà một hệ
-  thống chấm test ẩn cần (kết quả xác định, không phụ thuộc môi
-  trường).
+  database, môi trường server, hay trình duyệt — kết quả xác định,
+  không phụ thuộc môi trường, dễ tái lập (reproducible) giữa các lần
+  chạy.
 - Một tầng Controller/Service có thể gọi trực tiếp các hàm này, truyền
   vào bất kỳ cấu hình nào nó đã đọc sẵn — Calculation Core không bao
   giờ tự quay lại đọc database.
@@ -140,7 +141,7 @@ Không có file nào dưới `backend/src/calculation/` (ngoài `__tests__/`)
 chứa hằng số biểu giá cụ thể (`1984`, `0.08`, `8500`, ...). Mọi giá
 trị như vậy đều là tham số hàm, lấy từ cấu hình biểu giá vốn sẽ đến từ
 database. Nơi duy nhất các hằng số này tồn tại là fixture chỉ-dùng-cho-
-test, `backend/src/calculation/__tests__/fixtures/competition-defaults.ts`
+test, `backend/src/calculation/__tests__/fixtures/default-tariffs.ts`
 — xem comment đầu file đó để biết vì sao ranh giới này quan trọng.
 
 ## Số người ở bằng không

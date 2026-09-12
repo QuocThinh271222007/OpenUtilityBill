@@ -20,8 +20,8 @@ import { Result, ok, fail } from "../shared/result";
  * Không chịu trách nhiệm:
  * - kết nối database — đó là việc của `database/postgres-client.ts`.
  * - là một config framework tổng quát. Chỉ đọc đúng MỘT biến môi
- *   trường mà task này cần; không suy đoán thêm các biến khác (pool
- *   size, timeout, ...) chưa có yêu cầu cụ thể.
+ *   trường cần dùng; không suy đoán thêm các biến khác (pool size,
+ *   timeout, ...) chưa có yêu cầu cụ thể.
  * - in giá trị `DATABASE_URL` (có thể chứa mật khẩu) ra thông điệp lỗi
  *   — thông điệp chỉ nói "thiếu/rỗng", không bao giờ lặp lại nội dung
  *   biến môi trường.

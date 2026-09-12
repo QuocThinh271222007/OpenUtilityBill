@@ -16,7 +16,7 @@ import { MeterReadingRepository, NewMeterReading, UpdateMeterReading } from "../
  * - ép `previous_reading`/`current_reading`/`meter_maximum_value` về
  *   `number`. Cột database là NUMERIC — giữ nguyên `string` xuyên suốt,
  *   đúng hợp đồng của `MeterReading` domain model (xem
- *   docs/DATABASE_ACCESS.md mục "NUMERIC precision boundary").
+ *   docs/DATABASE_ACCESS.md mục "Ranh giới độ chính xác `NUMERIC` / `BIGINT`").
  * - dùng `sql.unsafe` — mọi tham số được truyền qua `${...}`.
  */
 interface MeterReadingRow {
